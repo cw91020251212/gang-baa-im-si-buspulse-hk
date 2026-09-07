@@ -468,6 +468,9 @@ let alarms = loadAlarms();
 // A single route-level key is not enough: after the user skips one bus, the
 // following bus must still be allowed to trigger a new notification.
 const alarmSeen = new Map();
+// Backup timers based on the last ETA received. They complement API polling:
+// if a poll misses the exact alert window, the countdown can still notify.
+const alarmFallbackTimers = new Map();
 function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false }; } }
 function loadAlarms() { try { return JSON.parse(localStorage.getItem(ALARM_KEY) || '{}') || {}; } catch { return {}; } }
 function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} }
@@ -679,6 +682,7 @@ function shell() {
 function toggleAlarm(id, button) {
   alarms[id] = !alarms[id];
   alarmSeen.delete(id);
+  clearAlarmFallbackTimers(id);
   saveAlarms();
   button.classList.toggle('on', !!alarms[id]);
   button.textContent = '🔔';
@@ -734,6 +738,33 @@ function notifyArrival(it, min, tripKey) {
       try { new Notification('巴士就嚟到站', { body, tag: 'buspulse-' + uid(it) + '-' + encodeURIComponent(String(tripKey || Date.now())) }); } catch {}
     });
   }
+}
+function clearAlarmFallbackTimers(id) {
+  const timers = alarmFallbackTimers.get(id);
+  if (timers) timers.forEach(t => clearTimeout(t));
+  alarmFallbackTimers.delete(id);
+}
+function scheduleAlarmFallbacks(it, res) {
+  const id = uid(it);
+  clearAlarmFallbackTimers(id);
+  if (!alarms[id] || !res || res.err || !res.etas?.length) return;
+  const now = Date.now(), leadMs = Math.max(0, Number(prefs.lead) * 60000);
+  const timers = new Map();
+  res.etas.forEach(e => {
+    const at = Date.parse(e.iso || '');
+    if (!Number.isFinite(at)) return;
+    const key = String(at);
+    // Only schedule a reasonable future window; refreshes will rebuild it.
+    const delay = at - leadMs - now;
+    if (delay <= 0 || delay > 2 * 60 * 60 * 1000) return;
+    timers.set(key, setTimeout(() => {
+      timers.delete(key);
+      const mins = Math.round((at - Date.now()) / 60000);
+      // Feed the same de-duplication path as a normal API refresh.
+      checkAlarms(it, { etas:[{ iso:e.iso, min:mins, rmk:e.rmk || '', sched:false }] });
+    }, delay));
+  });
+  if (timers.size) alarmFallbackTimers.set(id, timers);
 }
 function checkAlarms(it, res) {
   if (!alarms[uid(it)] || !res || res.err || !res.etas?.length) return;
@@ -1177,7 +1208,12 @@ async function refresh() {
     const snapshot = items.slice();
     const results = await Promise.all(snapshot.map(fetchETA));
     snapshot.forEach((it, i) => {
-      if (items.some(x => uid(x) === uid(it))) { latestResults.set(uid(it), results[i]); paint(it, results[i]); checkAlarms(it, results[i]); }
+      if (items.some(x => uid(x) === uid(it))) {
+        latestResults.set(uid(it), results[i]);
+        paint(it, results[i]);
+        scheduleAlarmFallbacks(it, results[i]);
+        checkAlarms(it, results[i]);
+      }
     });
     renderPip();
     const anyOK = results.some(r => !r.err);

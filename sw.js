@@ -1,6 +1,6 @@
 /* BusPulse HK — service worker
    只 cache app shell；到站數據永遠走網絡，絕不 cache。 */
-const SHELL = 'buspulse-hk-shell-v16';
+const SHELL = 'buspulse-hk-shell-v17';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
