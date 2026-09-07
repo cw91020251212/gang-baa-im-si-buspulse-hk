@@ -464,6 +464,9 @@ function loadGetoff() { try { return JSON.parse(localStorage.getItem(GETOFF_KEY)
 function saveGetoff() { try { localStorage.setItem(GETOFF_KEY, JSON.stringify(getoff)); } catch {} }
 let prefs = loadPrefs();
 let alarms = loadAlarms();
+// Each route keeps the individual trips that have already triggered an alert.
+// A single route-level key is not enough: after the user skips one bus, the
+// following bus must still be allowed to trigger a new notification.
 const alarmSeen = new Map();
 function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false }; } }
 function loadAlarms() { try { return JSON.parse(localStorage.getItem(ALARM_KEY) || '{}') || {}; } catch { return {}; } }
@@ -702,7 +705,7 @@ function ringBell() {
   document.body.classList.remove('alert-active'); void document.body.offsetWidth; document.body.classList.add('alert-active'); setTimeout(() => document.body.classList.remove('alert-active'), 9000);
   if (navigator.vibrate) navigator.vibrate([420,120,420,120,420,280,420,120,420,120,420,500,420,120,420]);
 }
-function notifyArrival(it, min) {
+function notifyArrival(it, min, tripKey) {
   const body = it.route + ' 往 ' + (it.dest || '') + '，約 ' + (Math.max(0,min)) + ' 分鐘到 ' + (it.stopName || '');
   ringBell();
   const card = board.querySelector('[data-id="' + cssEscape(uid(it)) + '"]');
@@ -714,7 +717,10 @@ function notifyArrival(it, min) {
         body,
         icon: './icon-192.png',
         badge: './icon-192.png',
-        tag: 'buspulse-' + uid(it),
+        // Give every bus trip its own notification identity.  Reusing only
+        // the route id lets some Android notification managers replace the
+        // previous card without producing a new alert sound/vibration.
+        tag: 'buspulse-' + uid(it) + '-' + encodeURIComponent(String(tripKey || Date.now())),
         renotify: true,
         vibrate: prefs.systemSilent ? [] : [260,100,260,100,260],
         silent: !!prefs.systemSilent,
@@ -725,18 +731,48 @@ function notifyArrival(it, min) {
       if (reg.active) reg.active.postMessage({ type:'BUS_ARRIVAL', title:'巴士就嚟到站', badgeNumber:1, ...notification });
       else reg.showNotification('巴士就嚟到站', notification);
     }).catch(() => {
-      try { new Notification('巴士就嚟到站', { body, tag: 'buspulse-' + uid(it) }); } catch {}
+      try { new Notification('巴士就嚟到站', { body, tag: 'buspulse-' + uid(it) + '-' + encodeURIComponent(String(tripKey || Date.now())) }); } catch {}
     });
   }
 }
 function checkAlarms(it, res) {
   if (!alarms[uid(it)] || !res || res.err || !res.etas?.length) return;
-  const eta = res.etas.find(e => !e.sched && e.min >= 0) || res.etas[0];
-  if (!eta || eta.min > Number(prefs.lead)) return;
-  const key = eta.iso || String(eta.min);
-  if (alarmSeen.get(uid(it)) === key) return;
-  alarmSeen.set(uid(it), key);
-  notifyArrival(it, eta.min);
+  const id = uid(it);
+  const lead = Number(prefs.lead);
+  const seen = alarmSeen.get(id) || [];
+
+  // Prefer the nearest real-time bus that is inside the alert window.  Do
+  // not use the first API row blindly: it may be a scheduled row or a bus
+  // already passing the stop.  The next bus is checked again on every poll.
+  const candidates = res.etas
+    .filter(e => !e.sched && e.min >= 0 && e.min <= lead)
+    .sort((a, b) => a.min - b.min);
+  if (!candidates.length) return;
+
+  // ETA timestamps are the best trip identifier exposed by these APIs.  Keep
+  // a small history instead of one value, so a skipped bus cannot suppress
+  // the following bus.  The 60-second tolerance prevents a live ETA that is
+  // adjusted by the API from sounding repeatedly as the same bus.
+  const tripTime = e => {
+    const t = Date.parse(e.iso || '');
+    return Number.isFinite(t) ? t : null;
+  };
+  const eta = candidates.find(e => {
+    const t = tripTime(e);
+    return t == null ? !seen.some(x => x.fallback === String(e.min))
+      : !seen.some(x => x.time != null && Math.abs(x.time - t) <= 60000);
+  });
+  if (!eta) return;
+
+  const time = tripTime(eta);
+  const record = time == null ? { fallback: String(eta.min), at: Date.now() } : { time, at: Date.now() };
+  seen.push(record);
+  // Retain only recent history; this prevents a long-running page from
+  // growing memory forever while preserving several upcoming trips.
+  const cutoff = Date.now() - 6 * 60 * 60 * 1000;
+  alarmSeen.set(id, seen.filter(x => x.at >= cutoff).slice(-12));
+  const key = time == null ? String(eta.min) + '-' + record.at : String(time);
+  notifyArrival(it, eta.min, key);
 }
 async function openGetoffSetup(it) {
   openSheet();
