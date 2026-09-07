@@ -746,7 +746,10 @@ function checkAlarms(it, res) {
   // "Scheduled Bus" after the first real-time row, so excluding them would
   // make the alarm ring once and then stop for the rest of the route.
   const candidates = res.etas
-    .filter(e => e.min >= 0 && e.min <= lead)
+    // A 25-second poll or a slow API response can make a due bus show as
+    // -1/-2 minutes. It is still worth alerting instead of silently missing
+    // the first notification.
+    .filter(e => e.min >= -2 && e.min <= lead)
     .sort((a, b) => a.min - b.min);
   if (!candidates.length) return;
 
@@ -1169,17 +1172,25 @@ function paint(it, res) {
 async function refresh() {
   if (inFlight || !items.length) return;
   inFlight = true;
-  dot.className = 'dot';
-  const snapshot = items.slice();
-  const results = await Promise.all(snapshot.map(fetchETA));
-  snapshot.forEach((it, i) => {
-    if (items.some(x => uid(x) === uid(it))) { latestResults.set(uid(it), results[i]); paint(it, results[i]); checkAlarms(it, results[i]); }
-  renderPip();
-  });
-  const anyOK = results.some(r => !r.err);
-  if (anyOK) lastOK = Date.now();
-  dot.className = 'dot' + (anyOK ? '' : ' err');
-  inFlight = false;
+  try {
+    dot.className = 'dot';
+    const snapshot = items.slice();
+    const results = await Promise.all(snapshot.map(fetchETA));
+    snapshot.forEach((it, i) => {
+      if (items.some(x => uid(x) === uid(it))) { latestResults.set(uid(it), results[i]); paint(it, results[i]); checkAlarms(it, results[i]); }
+    });
+    renderPip();
+    const anyOK = results.some(r => !r.err);
+    if (anyOK) lastOK = Date.now();
+    dot.className = 'dot' + (anyOK ? '' : ' err');
+  } catch (e) {
+    // Keep the 25-second loop alive if an unexpected rendering/notification
+    // error escapes one of the per-route handlers.
+    dot.className = 'dot err';
+    console.warn('BusPulse refresh failed', e);
+  } finally {
+    inFlight = false;
+  }
 }
 
 /* clock + staleness indicator */
