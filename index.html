@@ -741,11 +741,12 @@ function checkAlarms(it, res) {
   const lead = Number(prefs.lead);
   const seen = alarmSeen.get(id) || [];
 
-  // Prefer the nearest real-time bus that is inside the alert window.  Do
-  // not use the first API row blindly: it may be a scheduled row or a bus
-  // already passing the stop.  The next bus is checked again on every poll.
+  // Prefer the nearest bus that is inside the alert window. Scheduled rows
+  // are valid upcoming buses too: KMB commonly returns later buses as
+  // "Scheduled Bus" after the first real-time row, so excluding them would
+  // make the alarm ring once and then stop for the rest of the route.
   const candidates = res.etas
-    .filter(e => !e.sched && e.min >= 0 && e.min <= lead)
+    .filter(e => e.min >= 0 && e.min <= lead)
     .sort((a, b) => a.min - b.min);
   if (!candidates.length) return;
 
