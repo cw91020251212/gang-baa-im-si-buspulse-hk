@@ -592,6 +592,21 @@ const esc = s => String(s == null ? '' : s)
 const cssEscape = s => (globalThis.CSS && typeof CSS.escape === 'function') ? CSS.escape(String(s)) : String(s).replace(/[^a-zA-Z0-9_-]/g, ch => '\\' + ch.charCodeAt(0).toString(16) + ' ');
 let lastOK = 0, inFlight = false;
 const latestResults = new Map();
+// Keep a short-lived ETA snapshot so a temporary API/network failure does not
+// erase the user's countdown or cancel an alarm that was already knowable.
+const ETA_CACHE_KEY = 'busboard.eta-snapshot.v1';
+const ETA_CACHE_MAX_AGE = 20 * 60 * 1000;
+function loadEtaSnapshots() { try { const raw = JSON.parse(localStorage.getItem(ETA_CACHE_KEY) || '{}'); return raw && typeof raw === 'object' ? raw : {}; } catch { return {}; } }
+let etaSnapshots = loadEtaSnapshots();
+function saveEtaSnapshots() { try { localStorage.setItem(ETA_CACHE_KEY, JSON.stringify(etaSnapshots)); } catch {} }
+function cacheEta(id, etas) { if (!etas?.length) return; etaSnapshots[id] = { savedAt: Date.now(), etas: etas.map(e => ({...e})) }; saveEtaSnapshots(); }
+function cachedEta(id) {
+  const entry = etaSnapshots[id];
+  if (!entry || Date.now() - Number(entry.savedAt) > ETA_CACHE_MAX_AGE || !Array.isArray(entry.etas)) return null;
+  const etas = entry.etas.map(e => ({...e, min: e.iso ? Math.round((Date.parse(e.iso) - Date.now()) / 60000) : e.min}))
+    .filter(e => e.iso && Number.isFinite(Date.parse(e.iso)) && e.min >= -2);
+  return etas.length ? { etas, err: null, stale: true, cachedAt: entry.savedAt } : null;
+}
 let pipWindow = null;
 const mapCache = new Map();
 const routeStopsCache = new Map();
@@ -744,10 +759,10 @@ function clearAlarmFallbackTimers(id) {
   if (timers) timers.forEach(t => clearTimeout(t));
   alarmFallbackTimers.delete(id);
 }
-function scheduleAlarmFallbacks(it, res) {
+function scheduleAlarmFallbacks(it, res, options = {}) {
   const id = uid(it);
   clearAlarmFallbackTimers(id);
-  if (!alarms[id] || !res || res.err || !res.etas?.length) return;
+  if (!alarms[id] || !res || !res.etas?.length) return;
   const now = Date.now(), leadMs = Math.max(0, Number(prefs.lead) * 60000);
   const timers = new Map();
   res.etas.forEach(e => {
@@ -756,7 +771,7 @@ function scheduleAlarmFallbacks(it, res) {
     const key = String(at);
     // Only schedule a reasonable future window; refreshes will rebuild it.
     const delay = at - leadMs - now;
-    if (delay <= 0 || delay > 2 * 60 * 60 * 1000) return;
+    if (delay <= 0 || delay > (options.stale ? 20 : 120) * 60 * 1000) return;
     timers.set(key, setTimeout(() => {
       timers.delete(key);
       const mins = Math.round((at - Date.now()) / 60000);
@@ -1171,7 +1186,7 @@ function paint(it, res) {
   const old = card.querySelector('.rmk, .none');
   if (old) old.remove();
 
-  if (res.err) {
+  if (res.err && !res.stale) {
     slot.innerHTML = '<div class="eta"><div class="m" style="font-size:14px;color:var(--faint)">—</div>' +
                      '<div class="u">' + esc(res.err) + '</div></div>';
     return;
@@ -1182,18 +1197,20 @@ function paint(it, res) {
     return;
   }
   slot.innerHTML = res.etas.map((e, i) => {
+    const liveMin = e.iso && Number.isFinite(Date.parse(e.iso)) ? Math.round((Date.parse(e.iso) - Date.now()) / 60000) : e.min;
     const hhmm = new Date(e.iso).toLocaleTimeString('en-GB',
       { hour:'2-digit', minute:'2-digit', hour12:false });
     const cls = ['eta', 'i' + Math.min(i, 2)];
     if (e.sched) cls.push('sch');
     let big;
-    if (e.min <= 0) { cls.push('arr'); big = '<div class="eta-main"><div class="m">即將到達</div></div>'; }
-    else            { big = '<div class="eta-main"><div class="m">' + e.min + '</div><div class="u">分鐘</div></div>'; }
+    if (liveMin <= 0) { cls.push('arr'); big = '<div class="eta-main"><div class="m">即將到達</div></div>'; }
+    else            { big = '<div class="eta-main"><div class="m">' + liveMin + '</div><div class="u">分鐘</div></div>'; }
     return '<div class="' + cls.join(' ') + '">' + big +
            '<div class="t">' + hhmm + '</div></div>';
   }).join('');
 
   const rmks = [...new Set(res.etas.map(e => e.rmk).filter(Boolean))];
+  if (res.stale) rmks.unshift('網絡暫時中斷，以下按上次估算倒數');
   if (rmks.length) {
     card.insertAdjacentHTML('beforeend',
       '<div class="rmk">' + rmks.map(r => '<span>&#9432; ' + esc(r) + '</span>').join('') + '</div>');
@@ -1209,10 +1226,14 @@ async function refresh() {
     const results = await Promise.all(snapshot.map(fetchETA));
     snapshot.forEach((it, i) => {
       if (items.some(x => uid(x) === uid(it))) {
-        latestResults.set(uid(it), results[i]);
-        paint(it, results[i]);
-        scheduleAlarmFallbacks(it, results[i]);
-        checkAlarms(it, results[i]);
+        const id = uid(it), fresh = results[i];
+        if (!fresh.err && fresh.etas.length) cacheEta(id, fresh.etas);
+        const fallback = fresh.err || !fresh.etas.length ? cachedEta(id) : null;
+        const display = fallback || fresh;
+        latestResults.set(id, display);
+        paint(it, display);
+        scheduleAlarmFallbacks(it, display, { stale: !!display.stale });
+        checkAlarms(it, display);
       }
     });
     renderPip();
