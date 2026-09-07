@@ -1,5 +1,9 @@
 # BusPulse HK 修改紀錄
 
+## 2026-09-08 — 修正 Service Worker 未就緒時通知無聲無息消失
+
+舊程式直接等待 `navigator.serviceWorker.ready`，如果手機當時未完成註冊、正在使用舊快取，或者 Service Worker 啟動失敗，整個系統通知流程會一直等候，連原本的直接系統通知 fallback 都不會執行。現在會主動嘗試註冊 Service Worker，最多等候 1.8 秒；若仍未就緒，會立即改用瀏覽器系統通知，避免一次背景註冊問題令提示完全消失。Service Worker shell 更新至 `buspulse-hk-shell-v19`。
+
 ## 2026-09-07 — API 暫時失效時保留 ETA 倒數及鬧鐘
 
 每次成功讀取 ETA 後，程式會在本機保存最多 20 分鐘的短期 ETA 快照。當下一次 API 連線失敗或只回傳空資料時，只要快照仍未過期，畫面會繼續按預計到站時間倒數，並標示「網絡暫時中斷，以下按上次估算倒數」，而不是直接顯示空白。到站鬧鐘亦會使用這個估算時間作後備，避免一次短暫斷線令已知的提醒被取消；估算後備計時器最多只安排未來 20 分鐘，避免長時間使用過期資料。Service Worker shell 更新至 `buspulse-hk-shell-v18`。

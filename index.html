@@ -724,6 +724,16 @@ function ringBell() {
   document.body.classList.remove('alert-active'); void document.body.offsetWidth; document.body.classList.add('alert-active'); setTimeout(() => document.body.classList.remove('alert-active'), 9000);
   if (navigator.vibrate) navigator.vibrate([420,120,420,120,420,280,420,120,420,120,420,500,420,120,420]);
 }
+async function notificationRegistration(timeoutMs = 1800) {
+  if (!('serviceWorker' in navigator)) return null;
+  try {
+    const registration = await Promise.race([
+      navigator.serviceWorker.getRegistration().then(reg => reg || navigator.serviceWorker.register('sw.js')),
+      new Promise(resolve => setTimeout(() => resolve(null), timeoutMs))
+    ]);
+    return registration || null;
+  } catch { return null; }
+}
 function notifyArrival(it, min, tripKey) {
   const body = it.route + ' 往 ' + (it.dest || '') + '，約 ' + (Math.max(0,min)) + ' 分鐘到 ' + (it.stopName || '');
   ringBell();
@@ -731,8 +741,7 @@ function notifyArrival(it, min, tripKey) {
   if (card) { card.classList.remove('alert-flash'); void card.offsetWidth; card.classList.add('alert-flash'); setTimeout(() => card.classList.remove('alert-flash'), 12000); }
   if ('Notification' in window && Notification.permission === 'granted') {
     navigator.setAppBadge?.(1).catch?.(() => {});
-    navigator.serviceWorker?.ready.then(reg => {
-      const notification = {
+    const notification = {
         body,
         icon: './icon-192.png',
         badge: './icon-192.png',
@@ -745,13 +754,17 @@ function notifyArrival(it, min, tripKey) {
         silent: !!prefs.systemSilent,
         requireInteraction: true,
         data: { url: './' }
-      };
-      // 優先交由 Service Worker 顯示，手機切到背景時比頁面通知更可靠。
-      if (reg.active) reg.active.postMessage({ type:'BUS_ARRIVAL', title:'巴士就嚟到站', badgeNumber:1, ...notification });
-      else reg.showNotification('巴士就嚟到站', notification);
-    }).catch(() => {
-      try { new Notification('巴士就嚟到站', { body, tag: 'buspulse-' + uid(it) + '-' + encodeURIComponent(String(tripKey || Date.now())) }); } catch {}
-    });
+    };
+    notificationRegistration().then(reg => {
+      // Service Worker available: use it for background-friendly notification.
+      if (reg?.active) {
+        reg.active.postMessage({ type:'BUS_ARRIVAL', title:'巴士就嚟到站', badgeNumber:1, ...notification });
+        return;
+      }
+      // Do not wait forever for navigator.serviceWorker.ready. If registration
+      // is unavailable, still issue a normal system notification immediately.
+      try { new Notification('巴士就嚟到站', notification); } catch {}
+    }).catch(() => { try { new Notification('巴士就嚟到站', notification); } catch {} });
   }
 }
 function clearAlarmFallbackTimers(id) {
