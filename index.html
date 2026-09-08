@@ -1322,19 +1322,45 @@ setInterval(() => {
   wakeAlarmPlans();
 }, 1000);
 
-/* auto refresh every 25s, pause when tab hidden, resume on focus */
+/*
+   Keep polling as a self-correcting timeout rather than a chained interval.
+   Browsers still throttle/suspend hidden pages, but this avoids accumulating
+   drift after a throttled callback and makes the first refresh after resume
+   immediate. The alarm fallback timers remain active between polls.
+*/
 let timer = null;
+let nextRefreshAt = 0;
+let loopRunning = false;
 function startLoop() {
   stopLoop();
+  loopRunning = true;
   refresh();
-  timer = setInterval(refresh, 25000);
+  const schedule = () => {
+    if (!loopRunning) return;
+    const now = Date.now();
+    nextRefreshAt = Math.max(nextRefreshAt + 25000, now + 25000);
+    timer = setTimeout(async () => {
+      timer = null;
+      await refresh();
+      schedule();
+    }, Math.max(1000, nextRefreshAt - now));
+  };
+  nextRefreshAt = Date.now();
+  schedule();
 }
-function stopLoop() { if (timer) { clearInterval(timer); timer = null; } }
+function stopLoop() { loopRunning = false; if (timer) { clearTimeout(timer); timer = null; } }
 
 document.addEventListener('visibilitychange', () => {
-  // 不要因為切去音樂／聊天 App 就停止提醒；回到前景時立即補一次更新。
-  if (!document.hidden) { wakeAlarmPlans(); refresh(); }
+  // 不要因為切去音樂／聊天 App 就停止提醒；回到前景時立即補一次更新，
+  // 並重排下一次輪詢，避免背景節流造成長時間漂移。
+  if (!document.hidden) {
+    wakeAlarmPlans();
+    refresh();
+    startLoop();
+  }
 });
+window.addEventListener('pageshow', () => { wakeAlarmPlans(); refresh(); });
+window.addEventListener('online', () => { wakeAlarmPlans(); refresh(); });
 $('#refreshBtn').addEventListener('click', () => { refresh(); });
 /* ===================================================================
    SETTINGS SHEET

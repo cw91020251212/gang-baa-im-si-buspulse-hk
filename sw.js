@@ -1,6 +1,6 @@
 /* BusPulse HK — service worker
    只 cache app shell；到站數據永遠走網絡，絕不 cache。 */
-const SHELL = 'buspulse-hk-shell-v19';
+const SHELL = 'buspulse-hk-shell-v20';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -59,6 +59,24 @@ self.addEventListener('message', e => {
     ? self.registration.setAppBadge(Math.max(1, Number(data.badgeNumber) || 1)).catch(() => {})
     : Promise.resolve();
   e.waitUntil(Promise.all([self.registration.showNotification(title, options), badge]));
+});
+
+// Web Push is the browser-supported way to wake a PWA after its page has
+// been suspended. GitHub Pages has no push server in this project yet, but
+// handling push events here makes the notification channel ready for one.
+self.addEventListener('push', e => {
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; } catch { data = { body: e.data?.text?.() || '' }; }
+  const title = data.title || '港巴即時提醒';
+  const options = {
+    body: data.body || '巴士到站提醒',
+    icon: './icon-192.png', badge: './icon-192.png',
+    tag: data.tag || 'buspulse-push', renotify: true,
+    vibrate: data.silent ? [] : [260, 100, 260],
+    silent: !!data.silent, requireInteraction: true,
+    data: { url: './' }
+  };
+  e.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', e => {
