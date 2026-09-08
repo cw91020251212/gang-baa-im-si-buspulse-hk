@@ -471,6 +471,25 @@ const alarmSeen = new Map();
 // Backup timers based on the last ETA received. They complement API polling:
 // if a poll misses the exact alert window, the countdown can still notify.
 const alarmFallbackTimers = new Map();
+const ALARM_PLAN_KEY = 'busboard.alarm-plan.v1';
+const ALARM_STEP_MS = 20000;
+function loadAlarmPlans() { try { const raw = JSON.parse(localStorage.getItem(ALARM_PLAN_KEY) || '{}'); return raw && typeof raw === 'object' ? raw : {}; } catch { return {}; } }
+let alarmPlans = loadAlarmPlans();
+function saveAlarmPlans() { try { localStorage.setItem(ALARM_PLAN_KEY, JSON.stringify(alarmPlans)); } catch {} }
+function rememberAlarmPlan(it, e, at) {
+  const id = uid(it), key = String(at);
+  const list = Array.isArray(alarmPlans[id]) ? alarmPlans[id] : [];
+  if (!list.some(x => String(x.key) === key)) {
+    list.push({ key, at, iso:e.iso, min:Number(e.min), rmk:e.rmk || '', route:it.route, stopName:it.stopName });
+    alarmPlans[id] = list.slice(-12); saveAlarmPlans();
+  }
+}
+function forgetAlarmPlan(id, key) {
+  if (!Array.isArray(alarmPlans[id])) return;
+  alarmPlans[id] = alarmPlans[id].filter(x => String(x.key) !== String(key));
+  if (!alarmPlans[id].length) delete alarmPlans[id];
+  saveAlarmPlans();
+}
 function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false }; } }
 function loadAlarms() { try { return JSON.parse(localStorage.getItem(ALARM_KEY) || '{}') || {}; } catch { return {}; } }
 function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} }
@@ -698,6 +717,7 @@ function toggleAlarm(id, button) {
   alarms[id] = !alarms[id];
   alarmSeen.delete(id);
   clearAlarmFallbackTimers(id);
+  if (!alarms[id]) { delete alarmPlans[id]; saveAlarmPlans(); }
   saveAlarms();
   button.classList.toggle('on', !!alarms[id]);
   button.textContent = '🔔';
@@ -772,6 +792,27 @@ function clearAlarmFallbackTimers(id) {
   if (timers) timers.forEach(t => clearTimeout(t.handle || t));
   alarmFallbackTimers.delete(id);
 }
+function runAlarmPlan(it, plan) {
+  const id = uid(it), now = Date.now(), at = Number(plan.at);
+  if (!Number.isFinite(at)) { forgetAlarmPlan(id, plan.key); return; }
+  const mins = Math.round((at - now) / 60000);
+  // If the browser was asleep, still deliver a late reminder rather than
+  // silently losing it. Normal live alarms remain governed by lead time.
+  if (mins <= Number(prefs.lead) && mins >= -30) {
+    checkAlarms(it, { etas:[{ iso:plan.iso, min:mins, rmk:plan.rmk || '', sched:false }] });
+    if ((alarmSeen.get(id) || []).some(x => x.time != null && Math.abs(x.time - at) <= 60000)) forgetAlarmPlan(id, plan.key);
+  }
+}
+function wakeAlarmPlans() {
+  const now = Date.now();
+  items.forEach(it => {
+    const id = uid(it);
+    (alarmPlans[id] || []).slice().forEach(plan => {
+      if (Number(plan.at) - now <= 3 * 60 * 60 * 1000) runAlarmPlan(it, plan);
+      if (Number(plan.at) < now - 10 * 60 * 1000) forgetAlarmPlan(id, plan.key);
+    });
+  });
+}
 function scheduleAlarmFallbacks(it, res, options = {}) {
   const id = uid(it);
   if (!alarms[id] || !res || !res.etas?.length) return;
@@ -789,6 +830,7 @@ function scheduleAlarmFallbacks(it, res, options = {}) {
     const at = Date.parse(e.iso || '');
     if (!Number.isFinite(at)) return;
     const key = String(at);
+    rememberAlarmPlan(it, e, at);
     if (timers.has(key)) return;
     // A small margin helps when the browser wakes a throttled background
     // timer late. checkAlarms still de-duplicates the same trip.
@@ -797,13 +839,12 @@ function scheduleAlarmFallbacks(it, res, options = {}) {
     if (delay <= 0 || delay > (options.stale ? 20 : 120) * 60 * 1000) return;
     const handle = setTimeout(() => {
       timers.delete(key);
-      const mins = Math.round((at - Date.now()) / 60000);
-      // Feed the same de-duplication path as a normal API refresh.
-      checkAlarms(it, { etas:[{ iso:e.iso, min:mins, rmk:e.rmk || '', sched:false }] });
+      runAlarmPlan(it, { key, at, iso:e.iso, min:e.min, rmk:e.rmk || '' });
     }, delay);
     timers.set(key, { handle, at });
   });
   if (timers.size) alarmFallbackTimers.set(id, timers);
+  wakeAlarmPlans();
 }
 function checkAlarms(it, res) {
   if (!alarms[uid(it)] || !res || res.err || !res.etas?.length) return;
@@ -1278,6 +1319,7 @@ async function refresh() {
 setInterval(() => {
   clock.textContent = new Date().toLocaleTimeString('en-GB', { hour12:prefs.time12 });
   if (lastOK && Date.now() - lastOK > 75000 && !inFlight) dot.className = 'dot stale';
+  wakeAlarmPlans();
 }, 1000);
 
 /* auto refresh every 25s, pause when tab hidden, resume on focus */
@@ -1291,7 +1333,7 @@ function stopLoop() { if (timer) { clearInterval(timer); timer = null; } }
 
 document.addEventListener('visibilitychange', () => {
   // 不要因為切去音樂／聊天 App 就停止提醒；回到前景時立即補一次更新。
-  if (!document.hidden) refresh();
+  if (!document.hidden) { wakeAlarmPlans(); refresh(); }
 });
 $('#refreshBtn').addEventListener('click', () => { refresh(); });
 /* ===================================================================
