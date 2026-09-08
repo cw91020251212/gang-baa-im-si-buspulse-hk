@@ -98,6 +98,14 @@ body{
 @keyframes topAlert{0%,100%{filter:brightness(1)}50%{filter:brightness(1.65);box-shadow:0 0 22px rgba(255,98,98,.45)}}
 .getoff-btn{border:1px solid rgba(99,216,137,.32);background:rgba(99,216,137,.08);color:#a7f1bf;border-radius:8px;height:28px;padding:0 7px;font:700 11px/1 inherit;cursor:pointer;flex:none}.getoff-btn.on{background:rgba(99,216,137,.2);border-color:rgba(99,216,137,.65);color:#70f09b}.alarm-btn,.alight-btn{border:1px solid rgba(133,169,255,.28);background:rgba(108,140,255,.1);color:#b9c9ff;border-radius:8px;height:28px;padding:0 7px;font:700 16px/1 inherit;cursor:pointer;flex:none;position:relative}.alarm-btn:not(.on){color:#e5ecf7;background:rgba(220,230,245,.08);border-color:rgba(220,230,245,.4);filter:grayscale(1) brightness(1.45)}.alarm-btn:not(.on)::after{content:"";position:absolute;left:5px;right:5px;top:13px;height:2px;border-radius:2px;background:#e5ecf7;transform:rotate(-43deg)}.alarm-btn.on{background:rgba(255,209,102,.18);border-color:rgba(255,209,102,.55);color:#ffd166;filter:none}.alight-btn{font-size:11px;color:#a7f1bf;border-color:rgba(99,216,137,.3);background:rgba(99,216,137,.1)}
 .pref-row{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin-bottom:7px;font-size:12.5px}.pref-row small{display:block;color:var(--faint);font-size:10px;margin-top:3px}.pref-select{background:var(--card2);border:1px solid var(--line);color:var(--tx);border-radius:8px;padding:7px 8px;font:600 12px inherit}.toggle{width:44px;height:25px;border-radius:15px;border:1px solid var(--line);background:#3a465a;position:relative;cursor:pointer}.toggle::after{content:"";position:absolute;width:19px;height:19px;top:2px;left:2px;border-radius:50%;background:#cbd5e1;transition:.18s}.toggle.on{background:var(--now)}.toggle.on::after{left:21px;background:#071a14}
+.diag-title{margin:14px 0 7px;font-weight:800;font-size:12px;color:var(--dim)}
+.diag-box{border:1px solid var(--line);border-radius:11px;padding:4px 11px;background:var(--card);margin-bottom:8px}
+.diag-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;font-size:12px;border-bottom:1px solid var(--line)}
+.diag-row:last-child{border-bottom:none}
+.diag-row span{color:var(--dim)}
+.diag-row b{color:var(--tx);font-variant-numeric:tabular-nums;text-align:right}
+.diag-warn{margin:8px 0;padding:9px 10px;border-radius:9px;background:rgba(255,209,102,.12);border:1px solid rgba(255,209,102,.4);color:#ffd166;font-size:11.5px;line-height:1.5}
+.diag-log{font-size:11px;color:var(--faint);padding:4px 0;font-variant-numeric:tabular-nums}
 .test-tools{margin:10px 0;border:1px solid var(--line);border-radius:12px;padding:0 10px;background:var(--card2)}.test-tools summary{cursor:pointer;padding:12px 2px;color:var(--muted);font-weight:800}.test-tools[open] summary{color:var(--now)}.test-tools .pref-row:first-of-type{margin-top:2px}.test-notify-row{display:flex;align-items:center;gap:8px}.test-notify-row .wide{flex:1}.test-countdown{display:inline-grid;place-items:center;min-width:54px;height:40px;padding:0 9px;border-radius:10px;background:#fff;color:#c62828;border:2px solid #ff6262;font:900 15px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:-.4px;box-shadow:0 0 0 2px rgba(255,98,98,.18);white-space:nowrap}.test-countdown.ready{color:var(--faint);border-color:var(--line);background:var(--card2);box-shadow:none;font-size:11px}
 body.font-large .card{font-size:17px}body.font-large .rt{font-size:29px}body.font-large .dest{font-size:14px}body.font-large .stop{font-size:13.5px}body.font-large .stop b{font-size:14px}body.font-large .fare{font-size:12px}body.font-large .eta .m{font-size:25px}body.font-large .eta .u,body.font-large .eta .t{font-size:11px}body.font-large .rmk,body.font-large .none{font-size:12.5px}body.font-large .map-head-btn,body.font-large .alarm-btn{transform:scale(1.08)}body.font-large .foot{font-size:12px}body.font-large .sbody{font-size:15px}body.font-large .sbody .lbl{font-size:12px}body.font-large .sbody .hint{font-size:12.5px}body.font-large .sbody .li .n{font-size:18px}body.font-large .sbody .li .d{font-size:13.5px}body.font-large .sbody .sv .n{font-size:16.5px}body.font-large .sbody .sv .d{font-size:13px}body.font-large .sbody .wide{font-size:15px}body.font-large .sbody .pref-row{font-size:14.5px}body.font-large .sbody .pref-row small{font-size:11.5px}body.font-large .sbody .pref-select{font-size:14px}
 body.font-large .clock{font-size:15px}body.font-large .brandcopy small{font-size:10.5px}body.font-large .iconbtn{font-size:17px}
@@ -564,8 +572,12 @@ const DEFAULTS = [
     seq:1,  stopId:'001032', stopName:'中環 (交易廣場)', dest:'赤柱市場' }
 ];
 
-let items = load();
+// 次序要緊：load() 冇儲存記錄時會 fallback 讀 userDefaults，所以
+// userDefaults 必須先初始化。倒轉次序會喺「未儲存任何車站」嘅情況下
+// （第一次開、或瀏覽器清咗網站資料）觸發 TDZ ReferenceError，令整段
+// script 中斷 —— 時鐘、車牌、所有鬧鐘一律唔運作。
 let userDefaults = loadUserDefaults();
+let items = load();
 
 function loadUserDefaults() {
   try { const a = JSON.parse(localStorage.getItem(DEFAULTS_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch { return []; }
@@ -799,7 +811,9 @@ function runAlarmPlan(it, plan) {
   // If the browser was asleep, still deliver a late reminder rather than
   // silently losing it. Normal live alarms remain governed by lead time.
   if (mins <= Number(prefs.lead) && mins >= -30) {
-    checkAlarms(it, { etas:[{ iso:plan.iso, min:mins, rmk:plan.rmk || '', sched:false }] });
+    // Pass the same -30 allowance through, otherwise checkAlarms' default
+    // -2 floor discards the replay and the catch-up alarm stays silent.
+    checkAlarms(it, { etas:[{ iso:plan.iso, min:mins, rmk:plan.rmk || '', sched:false }] }, { lateFloor:-30 });
     if ((alarmSeen.get(id) || []).some(x => x.time != null && Math.abs(x.time - at) <= 60000)) forgetAlarmPlan(id, plan.key);
   }
 }
@@ -846,10 +860,13 @@ function scheduleAlarmFallbacks(it, res, options = {}) {
   if (timers.size) alarmFallbackTimers.set(id, timers);
   wakeAlarmPlans();
 }
-function checkAlarms(it, res) {
+function checkAlarms(it, res, options = {}) {
   if (!alarms[uid(it)] || !res || res.err || !res.etas?.length) return;
   const id = uid(it);
   const lead = Number(prefs.lead);
+  // Default keeps the original live-poll behaviour; runAlarmPlan passes a
+  // wider floor so a bus missed during sleep can still be announced.
+  const lateFloor = Number.isFinite(options.lateFloor) ? options.lateFloor : -2;
   const seen = alarmSeen.get(id) || [];
 
   // Prefer the nearest bus that is inside the alert window. Scheduled rows
@@ -860,7 +877,11 @@ function checkAlarms(it, res) {
     // A 25-second poll or a slow API response can make a due bus show as
     // -1/-2 minutes. It is still worth alerting instead of silently missing
     // the first notification.
-    .filter(e => e.min >= -2 && e.min <= lead)
+    // lateFloor lets a caller widen this window: runAlarmPlan() replays a
+    // plan after the phone was asleep, where the bus is already several
+    // minutes past due. Without that allowance the replay was filtered out
+    // here and the catch-up reminder never fired.
+    .filter(e => e.min >= lateFloor && e.min <= lead)
     .sort((a, b) => a.min - b.min);
   if (!candidates.length) return;
 
@@ -999,6 +1020,48 @@ async function requestNotifications() {
     if (Notification.permission === 'default') await Notification.requestPermission();
     if (Notification.permission === 'granted') await navigator.serviceWorker?.ready;
   } catch {}
+}
+/* -------------------------------------------------------------------
+   背景提醒診斷
+   報告瀏覽器實際批准咗咩，令「冇響鬧」可以查清原因，而唔係靠猜。
+   ------------------------------------------------------------------- */
+function renderDiagnostics() {
+  const el = document.querySelector('#diagBox');
+  if (!el) return;
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = window.matchMedia?.('(display-mode: standalone)')?.matches
+    || window.navigator.standalone === true;
+  const perm = ('Notification' in window) ? Notification.permission : 'unsupported';
+  const armed = Object.values(alarms).filter(Boolean).length;
+  const planCount = Object.values(alarmPlans).reduce((n, l) => n + (Array.isArray(l) ? l.length : 0), 0);
+  const rows = [
+    ['系統通知權限', perm === 'granted' ? '✓ 已允許' : perm === 'denied' ? '✗ 已封鎖' : '⚠ 未決定（請撳上面允許）'],
+    ['Service Worker', ('serviceWorker' in navigator) ? '✓' : '✗'],
+    ['已開啟鬧鐘', armed + ' 條'],
+    ['已排定補發計劃', planCount + ' 個'],
+    ['上次成功更新', lastOK ? Math.round((Date.now() - lastOK) / 1000) + ' 秒前' : '未更新']
+  ];
+  let html = rows.map(([k, v]) => '<div class="diag-row"><span>' + k + '</span><b>' + esc(v) + '</b></div>').join('');
+  if (ios && !standalone) {
+    html += '<div class="diag-warn">⚠ iPhone／iPad 必須先用 Safari「分享 → 加入主畫面」，再由主畫面圖示開啟，通知才會運作。</div>';
+  }
+  if (perm === 'denied') {
+    html += '<div class="diag-warn">⚠ 通知已被封鎖，所有背景提醒都唔會出現，請到瀏覽器設定重新開啟。</div>';
+  }
+  const plans = [];
+  Object.entries(alarmPlans).forEach(([id, list]) => {
+    (Array.isArray(list) ? list : []).forEach(p => plans.push(p));
+  });
+  plans.sort((a, b) => Number(a.at) - Number(b.at));
+  const lines = plans.slice(0, 6).map(p => {
+    const t = new Date(Number(p.at)).toLocaleTimeString('en-GB', { hour12:false });
+    const mins = Math.round((Number(p.at) - Date.now()) / 60000);
+    return '<div class="diag-log">' + t + ' · ' + esc(p.route || '') + ' ' + esc(p.stopName || '')
+      + ' · ' + (mins >= 0 ? '仲有 ' + mins + ' 分鐘' : Math.abs(mins) + ' 分鐘前') + '</div>';
+  }).join('');
+  html += '<div class="diag-title">已排定提醒</div>' + (lines || '<div class="diag-log">暫時未有排定提醒</div>');
+  el.innerHTML = html;
 }
 function updateNotificationButton() {
   const button = $('#notifyBtn');
@@ -1391,6 +1454,9 @@ function viewPrefs() {
     '<div class="hint" id="testNotifyStatus">未安排測試；撳掣後請立即將網站放到背景。</div>' +
     '</details>' +
     '<div class="lbl">外觀</div>' +
+    '<div class="diag-title">背景提醒診斷</div>' +
+    '<div class="diag-box" id="diagBox"></div>' +
+    '<div class="hint">背景提醒受手機系統限制。最穩定嘅做法：將本網站「加入主畫面」以 App 形式開啟，並喺系統設定將本 App 嘅電池優化設為「不受限制」。</div>' +
     '<div class="pref-row"><div>字體大小<small>只影響主畫面閱讀大小</small></div><select class="pref-select" id="fontSel"><option value="normal">標準</option><option value="large">較大</option></select></div>' +
     '<div class="pref-row"><div>時間顯示<small>ETA 卡片時間及頂部時鐘</small></div><select class="pref-select" id="timeSel"><option value="false">24 小時制</option><option value="true">12 小時制</option></select></div>' +
     '<div class="pref-row"><div>顏色模式<small>可以選擇黑暗或光明版</small></div><select class="pref-select" id="themeSel"><option value="dark">黑暗模式</option><option value="light">光明模式</option></select></div>' +
@@ -1405,7 +1471,8 @@ function viewPrefs() {
   $('#fontSel').addEventListener('change', e => { prefs.font=e.target.value; savePrefs(); applyPrefs(); });
   $('#timeSel').addEventListener('change', e => { prefs.time12=e.target.value === 'true'; savePrefs(); });
   $('#themeSel').addEventListener('change', e => { prefs.theme=e.target.value; savePrefs(); applyPrefs(); });
-  $('#notifyBtn').addEventListener('click', async () => { await requestNotifications(); updateNotificationButton(); });
+  $('#notifyBtn').addEventListener('click', async () => { await requestNotifications(); updateNotificationButton(); renderDiagnostics(); });
+  renderDiagnostics();
   $('#testNotifyBtn').addEventListener('click', () => scheduleTestNotification(Number($('#testDelaySel').value)));
   $('#prefsBack').addEventListener('click', viewHome);
 }
