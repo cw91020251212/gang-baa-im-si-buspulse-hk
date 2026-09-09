@@ -7,8 +7,8 @@ crons = ["* * * * *"]
 
 [[kv_namespaces]]
 binding = "SUBSCRIPTIONS"
-id = "replace-with-production-kv-id"
-preview_id = "replace-with-preview-kv-id"
+id = "647bc864beb8433da9a3ec896e02d01c"
+preview_id = "647bc864beb8433da9a3ec896e02d01c"
 
 [vars]
 # Set secrets with: wrangler secret put VAPID_SUBJECT
