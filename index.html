@@ -178,7 +178,7 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
   text-align:left; color:var(--tx); font-family:inherit; width:100%;
 }
 .li:active{background:var(--card2); transform:scale(.99)}
-.li{transition:transform .15s ease, background .15s ease}.place-route-group{margin:12px 0 16px}.place-route-group>.lbl{display:flex;align-items:baseline;gap:7px;margin-bottom:6px}.place-route-group>.lbl b{font-size:18px;color:var(--now)}.place-route-group>.lbl small{font-size:11px;color:var(--faint);font-weight:500}.place-route-group em{color:var(--faint);font-style:normal}
+.li{transition:transform .15s ease, background .15s ease}.place-route-group{margin:12px 0 16px}.place-route-group>.lbl{display:flex;align-items:baseline;gap:7px;margin-bottom:6px}.place-route-group>.lbl b{font-size:18px;color:var(--now)}.place-route-group>.lbl small{font-size:11px;color:var(--faint);font-weight:500}.place-route-group em{color:var(--faint);font-style:normal}.route-unavailable{opacity:.62;cursor:default;pointer-events:none}.route-unavailable .n,.route-unavailable .d{color:var(--faint)}
 .li .n{font-size:16px;font-weight:800;min-width:44px;flex:none}
 .li .d{font-size:11.5px;color:var(--dim);flex:1;min-width:0;line-height:1.5}
 .li .d s{display:block;color:var(--faint);text-decoration:none;font-size:10.5px;margin-top:1px}
@@ -1624,9 +1624,14 @@ function renderPlaceResults(results) {
     if (!g) { g={route:v.route, items:[]}; byRoute.set(v.route,g); groups.push(g); }
     g.items.push({...v,__index:i});
   });
-  return groups.map(g => '<div class="place-route-group"><div class="lbl"><b>'+esc(g.route)+'</b> <small>'+g.items.length+' 個方向'+(g.items.some(v=>v.officialOneWay)?' · 官方只列此方向':'')+'</small></div><div class="list">'+g.items.map(v=>
-    '<button class="li" data-place-v="'+v.__index+'"><span class="n">'+esc(v.route)+'</span><span class="d">'+esc(v.dirLabel)+'<br><small>上車附近：'+esc(v.placeStart.name)+' · 落車附近：'+esc(v.placeEnd.name)+(v.officialOneWay?'<br><em>官方資料只提供此方向，未列回程</em>':'')+'<br>'+esc(v.extra)+'</small></span><span class="a">›</span></button>'
-  ).join('')+'</div></div>').join('');
+  return groups.map(g => {
+    const rows=g.items.map(v => '<button class="li" data-place-v="'+v.__index+'"><span class="n">'+esc(v.route)+'</span><span class="d">'+esc(v.dirLabel)+'<br><small>上車附近：'+esc(v.placeStart.name)+' · 落車附近：'+esc(v.placeEnd.name)+'<br>'+esc(v.extra)+'</small></span><span class="a">›</span></button>');
+    if (g.items.length===1 && g.items[0].officialOneWay) {
+      const v=g.items[0];
+      rows.push('<div class="li route-unavailable"><span class="n">'+esc(v.route)+'</span><span class="d">'+esc(v.dest)+' → '+esc(v.origin)+'<br><small>官方未提供相反方向班次</small></span><span class="a">—</span></div>');
+    }
+    return '<div class="place-route-group"><div class="lbl"><b>'+esc(g.route)+'</b> <small>'+((g.items.length===1 && g.items[0].officialOneWay)?'單向資料':'兩個方向')+'</small></div><div class="list">'+rows.join('')+'</div></div>';
+  }).join('');
 }
 async function doPlaceSearch(fromQ,toQ) {
   const out=$('#placeOut'); if(!fromQ||!toQ){out.innerHTML='<div class="msg">請輸入起點及終點</div>';return;}
