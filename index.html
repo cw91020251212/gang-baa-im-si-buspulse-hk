@@ -741,7 +741,7 @@ function toggleAlarm(id, button) {
   } else button.title = '開關到站提醒';
 }
 let audioCtx = null;
-function unlockAudio() { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch {} }
+function unlockAudio() { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'closed') audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch {} }
 function ringBell() {
   if (prefs.webSound === false) return;
   try {
