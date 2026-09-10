@@ -1628,7 +1628,7 @@ function renderPlaceResults(results) {
     const rows=g.items.map(v => '<button class="li" data-place-v="'+v.__index+'"><span class="n">'+esc(v.route)+'</span><span class="d">'+esc(v.dirLabel)+'<br><small>上車附近：'+esc(v.placeStart.name)+' · 落車附近：'+esc(v.placeEnd.name)+'<br>'+esc(v.extra)+'</small></span><span class="a">›</span></button>');
     if (g.items.length===1 && g.items[0].officialOneWay) {
       const v=g.items[0];
-      rows.push('<div class="route-unavailable"><span><s>'+esc(v.route)+'</s> 相反方向</span><small>官方未提供相反方向班次</small></div>');
+      rows.push('<div class="route-unavailable"><span><s>'+esc(v.route)+'</s> '+esc(v.dest)+' → '+esc(v.origin)+'</span><small>官方未提供相反方向班次</small></div>');
     }
     return '<div class="place-route-group"><div class="lbl"><b>'+esc(g.route)+'</b> <small>'+((g.items.length===1 && g.items[0].officialOneWay)?'單向資料':'兩個方向')+'</small></div><div class="list">'+rows.join('')+'</div></div>';
   }).join('');
@@ -1699,7 +1699,7 @@ async function doSearch(q) {
   out.innerHTML = '<div class="lbl">揀方向（' + vs.length + ' 個可用方向）</div>' + groups.map(g => {
     const rows=g.items.map(v => '<button class="li" data-v="'+v.__index+'"><span class="n">'+esc(v.route)+'</span><span class="d">'+esc(v.dirLabel)+(v.extra?'<s>'+esc(v.extra)+'</s>':'')+'</span><span class="a">›</span></button>');
     if (g.items.length===1 && g.items[0].co !== 'GMB') {
-      const v=g.items[0]; rows.push('<div class="route-unavailable"><span><s>'+esc(v.route)+'</s> 相反方向</span><small>官方未提供相反方向班次</small></div>');
+      const v=g.items[0]; rows.push('<div class="route-unavailable"><span><s>'+esc(v.route)+'</s> '+esc(v.dest)+' → '+esc(v.origin)+'</span><small>官方未提供相反方向班次</small></div>');
     }
     return '<div class="place-route-group"><div class="lbl"><b>'+esc(g.route)+'</b> <small>'+((g.items.length===1 && g.items[0].co !== 'GMB')?'單向資料':'兩個方向')+'</small></div><div class="list">'+rows.join('')+'</div></div>';
   }).join('');
