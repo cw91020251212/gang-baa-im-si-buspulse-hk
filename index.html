@@ -1560,6 +1560,72 @@ function viewHome() {
   }
 }
 
+/* ---------- place-to-place route search ---------- */
+async function geocodeHK(q) {
+  const aliases = {
+    '大埔':[22.45,114.16],'沙田':[22.38,114.19],'旺角':[22.319,114.169],'尖沙咀':[22.296,114.172],
+    '荃灣':[22.371,114.113],'觀塘':[22.312,114.225],'屯門':[22.391,113.977],'元朗':[22.445,114.034],
+    '粉嶺':[22.492,114.139],'上水':[22.502,114.127],'馬鞍山':[22.425,114.23],'將軍澳':[22.307,114.258],
+    '葵涌':[22.356,114.129],'青衣':[22.35,114.108],'九龍塘':[22.337,114.176],'中環':[22.281,114.158],
+    '銅鑼灣':[22.28,114.185],'北角':[22.29,114.2],'香港仔':[22.248,114.155],
+    'tai po':[22.45,114.16],'sha tin':[22.38,114.19],'mong kok':[22.319,114.169],'tsim sha tsui':[22.296,114.172],
+    'tsuen wan':[22.371,114.113],'kwun tong':[22.312,114.225]
+  };
+  const key = q.trim().toLowerCase();
+  const local = Object.keys(aliases).find(k => key === k || key.includes(k));
+  if (local) return {lat:aliases[local][0],lng:aliases[local][1],label:q};
+  const d = await getJSON('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=hk&q=' + encodeURIComponent(q + ', Hong Kong'), 12000);
+  const x = d?.[0];
+  if (!x) throw new Error('no-place');
+  return { lat:Number(x.lat), lng:Number(x.lon), label:x.display_name.split(',').slice(0,2).join(',') };
+}
+function distanceKm(a,b) { return Math.hypot((a.lat-b.lat)*111, (a.lng-b.lng)*102); }
+async function searchPlaceRoutes(fromQ, toQ) {
+  const [from,to] = await Promise.all([geocodeHK(fromQ), geocodeHK(toQ)]);
+  const idx = (await cached('place-index', () => getJSON('./place-index.json'))).routes || [];
+  const results=[];
+  for (const r of idx) {
+    let start=null, end=null;
+    for (const st of r.stops) {
+      if (!Number.isFinite(st.lat) || !Number.isFinite(st.lng)) continue;
+      const d1=distanceKm(from,st), d2=distanceKm(to,st);
+      if (!start || d1 < start.d) start={...st,d:d1};
+      if (!end || d2 < end.d) end={...st,d:d2};
+    }
+    if (!start || !end || start.d > 3.5 || end.d > 3.5) continue;
+    // Prefer routes whose nearest stops follow the actual direction.
+    if (start.seq >= end.seq) continue;
+    const score=start.d+end.d;
+    results.push({ co:'KMB', route:r.route, bound:r.bound==='O'?'outbound':'inbound', dir:r.bound,
+      service_type:r.service_type, origin:r.orig_tc, dest:r.dest_tc,
+      dirLabel:r.orig_tc+' → '+r.dest_tc, extra:'起點約 '+start.d.toFixed(1)+' km · 終點約 '+end.d.toFixed(1)+' km',
+      placeStart:start, placeEnd:end, placeScore:score });
+  }
+  results.sort((a,b)=>a.placeScore-b.placeScore);
+  return {from,to,results:results.slice(0,60)};
+}
+function viewPlaceSearch() {
+  sTitle.textContent='由起點搵終點';
+  sBody.innerHTML='<div class="lbl">起點地區／地標</div><input class="tin" id="fromPlace" placeholder="例如 大埔、沙田站、旺角" autocomplete="off">'+
+    '<div class="lbl">終點地區／地標</div><input class="tin" id="toPlace" placeholder="例如 沙田、荃灣、觀塘" autocomplete="off">'+
+    '<div class="hint">程式會按官方站點座標，列出起點及終點附近約 3.5 公里內、而且方向順序正確嘅九巴／龍運路線。你可以逐條比較後自己取捨。</div>'+
+    '<button class="wide p" id="placeGo">搜尋可能路線</button><div id="placeOut"></div><button class="wide" id="placeBack">← 返回</button>';
+  sBody.scrollTop=0;
+  $('#placeBack').addEventListener('click',viewSearch);
+  $('#placeGo').addEventListener('click',()=>doPlaceSearch($('#fromPlace').value.trim(),$('#toPlace').value.trim()));
+}
+async function doPlaceSearch(fromQ,toQ) {
+  const out=$('#placeOut'); if(!fromQ||!toQ){out.innerHTML='<div class="msg">請輸入起點及終點</div>';return;}
+  out.innerHTML='<div class="msg"><span class="spin"></span>掃描官方站點及路線…</div>';
+  try {
+    const x=await searchPlaceRoutes(fromQ,toQ);
+    if(!x.results.length){out.innerHTML='<div class="msg">暫時搵唔到符合條件嘅直達路線。可以改用更具體嘅地區／地標，或者改用路線號碼搜尋。</div>';return;}
+    window.__placeVs=x.results;
+    out.innerHTML='<div class="lbl">可能路線（'+x.results.length+'）</div><div class="hint">起點：'+esc(x.from.label)+'<br>終點：'+esc(x.to.label)+'</div><div class="list">'+x.results.map((v,i)=>'<button class="li" data-place-v="'+i+'"><span class="n">'+esc(v.route)+'</span><span class="d">'+esc(v.dirLabel)+'<br><small>上車附近：'+esc(v.placeStart.name)+' · 落車附近：'+esc(v.placeEnd.name)+'<br>'+esc(v.extra)+'</small></span><span class="a">›</span></button>').join('')+'</div>';
+    out.querySelectorAll('[data-place-v]').forEach(b=>b.addEventListener('click',()=>viewStops(window.__placeVs[+b.dataset.placeV])));
+  } catch(e){out.innerHTML='<div class="msg">地區搜尋暫時失敗，請檢查網絡或改用較具體名稱再試。</div>';}
+}
+
 /* ---------- view 2: search route number ---------- */
 function viewSearch() {
   sTitle.textContent = '加新路線';
@@ -1571,6 +1637,7 @@ function viewSearch() {
         (c === 'KMB' ? '九巴／龍運' : c === 'CTB' ? '城巴／新巴' : '綠色小巴') +
         '</button>').join('') +
     '</div>' +
+    '<button class="wide" id="placeModeBtn">⌖ 由起點／終點搵路線</button>' +
     '<div class="lbl">路線號碼</div>' +
     '<input class="tin" id="rIn" placeholder="例如 1A、89、往 108…" autocomplete="off" ' +
       'autocapitalize="characters" enterkeyhint="search">' +
@@ -1586,6 +1653,7 @@ function viewSearch() {
     $('#rOut').innerHTML = '';
   }));
   $('#backBtn').addEventListener('click', viewHome);
+  $('#placeModeBtn').addEventListener('click', viewPlaceSearch);
   const inp = $('#rIn');
   $('#goBtn').addEventListener('click', () => doSearch(inp.value.trim()));
   let searchTimer;
