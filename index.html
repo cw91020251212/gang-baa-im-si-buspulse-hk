@@ -178,7 +178,7 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
   text-align:left; color:var(--tx); font-family:inherit; width:100%;
 }
 .li:active{background:var(--card2); transform:scale(.99)}
-.li{transition:transform .15s ease, background .15s ease}
+.li{transition:transform .15s ease, background .15s ease}.place-route-group{margin:12px 0 16px}.place-route-group>.lbl{display:flex;align-items:baseline;gap:7px;margin-bottom:6px}.place-route-group>.lbl b{font-size:18px;color:var(--now)}.place-route-group>.lbl small{font-size:11px;color:var(--faint);font-weight:500}
 .li .n{font-size:16px;font-weight:800;min-width:44px;flex:none}
 .li .d{font-size:11.5px;color:var(--dim);flex:1;min-width:0;line-height:1.5}
 .li .d s{display:block;color:var(--faint);text-decoration:none;font-size:10.5px;margin-top:1px}
@@ -1614,14 +1614,26 @@ function viewPlaceSearch() {
   $('#placeBack').addEventListener('click',viewSearch);
   $('#placeGo').addEventListener('click',()=>doPlaceSearch($('#fromPlace').value.trim(),$('#toPlace').value.trim()));
 }
+function renderPlaceResults(results) {
+  window.__placeVs=results;
+  const groups=[];
+  const byRoute=new Map();
+  results.forEach((v,i)=>{
+    let g=byRoute.get(v.route);
+    if (!g) { g={route:v.route, items:[]}; byRoute.set(v.route,g); groups.push(g); }
+    g.items.push({...v,__index:i});
+  });
+  return groups.map(g => '<div class="place-route-group"><div class="lbl"><b>'+esc(g.route)+'</b> <small>'+g.items.length+' 個方向</small></div><div class="list">'+g.items.map(v=>
+    '<button class="li" data-place-v="'+v.__index+'"><span class="n">'+esc(v.route)+'</span><span class="d">'+esc(v.dirLabel)+'<br><small>上車附近：'+esc(v.placeStart.name)+' · 落車附近：'+esc(v.placeEnd.name)+'<br>'+esc(v.extra)+'</small></span><span class="a">›</span></button>'
+  ).join('')+'</div></div>').join('');
+}
 async function doPlaceSearch(fromQ,toQ) {
   const out=$('#placeOut'); if(!fromQ||!toQ){out.innerHTML='<div class="msg">請輸入起點及終點</div>';return;}
   out.innerHTML='<div class="msg"><span class="spin"></span>掃描官方站點及路線…</div>';
   try {
     const x=await searchPlaceRoutes(fromQ,toQ);
     if(!x.results.length){out.innerHTML='<div class="msg">暫時搵唔到符合條件嘅直達路線。可以改用更具體嘅地區／地標，或者改用路線號碼搜尋。</div>';return;}
-    window.__placeVs=x.results;
-    out.innerHTML='<div class="lbl">可能路線（'+x.results.length+'）</div><div class="hint">起點：'+esc(x.from.label)+'<br>終點：'+esc(x.to.label)+'</div><div class="list">'+x.results.map((v,i)=>'<button class="li" data-place-v="'+i+'"><span class="n">'+esc(v.route)+'</span><span class="d">'+esc(v.dirLabel)+'<br><small>上車附近：'+esc(v.placeStart.name)+' · 落車附近：'+esc(v.placeEnd.name)+'<br>'+esc(v.extra)+'</small></span><span class="a">›</span></button>').join('')+'</div>';
+    out.innerHTML='<div class="lbl">可能路線（'+x.results.length+' 個方向）</div><div class="hint">起點：'+esc(x.from.label)+'<br>終點：'+esc(x.to.label)+'<br>相同路線號碼已經分組；每個方向仍然可以獨立選擇。</div>'+renderPlaceResults(x.results);
     out.querySelectorAll('[data-place-v]').forEach(b=>b.addEventListener('click',()=>viewStops(window.__placeVs[+b.dataset.placeV])));
   } catch(e){out.innerHTML='<div class="msg">地區搜尋暫時失敗，請檢查網絡或改用較具體名稱再試。</div>';}
 }
