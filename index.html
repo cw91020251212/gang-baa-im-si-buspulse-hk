@@ -784,8 +784,9 @@ async function notifyArrival(it, min, tripKey) {
         // previous card without producing a new alert sound/vibration.
         tag: 'buspulse-' + uid(it) + '-' + encodeURIComponent(String(tripKey || Date.now())),
         renotify: true,
-        vibrate: prefs.systemSilent ? [] : [260,100,260,100,260],
-        silent: !!prefs.systemSilent,
+        // 「只用系統通知聲」必須明確要求系統播放聲音；唔沿用測試用的靜音偏好。
+        vibrate: [260,100,260,100,260],
+        silent: false,
         requireInteraction: true,
         data: { url: './' }
     };
@@ -1468,7 +1469,7 @@ function viewPrefs() {
   $('#leadSel').addEventListener('change', e => { prefs.lead=+e.target.value; savePrefs(); });
   $('#soundSel').addEventListener('change', e => { prefs.sound=e.target.value; savePrefs(); });
   $('#soundLenSel').addEventListener('change', e => { prefs.soundLen=e.target.value; savePrefs(); });
-  $('#webSoundSel').addEventListener('change', e => { prefs.webSound=e.target.value === 'true'; savePrefs(); });
+  $('#webSoundSel').addEventListener('change', e => { prefs.webSound=e.target.value === 'true'; if (!prefs.webSound) prefs.systemSilent=false; savePrefs(); });
   $('#previewSoundBtn').addEventListener('click', () => { unlockAudio(); ringBell(); });
   $('#fontSel').addEventListener('change', e => { prefs.font=e.target.value; savePrefs(); applyPrefs(); });
   $('#timeSel').addEventListener('change', e => { prefs.time12=e.target.value === 'true'; savePrefs(); });
