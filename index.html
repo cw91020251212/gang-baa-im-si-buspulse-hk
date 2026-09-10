@@ -498,7 +498,7 @@ function forgetAlarmPlan(id, key) {
   if (!alarmPlans[id].length) delete alarmPlans[id];
   saveAlarmPlans();
 }
-function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false }; } }
+function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true }; } }
 function loadAlarms() { try { return JSON.parse(localStorage.getItem(ALARM_KEY) || '{}') || {}; } catch { return {}; } }
 function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} }
 function saveAlarms() { try { localStorage.setItem(ALARM_KEY, JSON.stringify(alarms)); } catch {} }
@@ -773,7 +773,7 @@ async function notifyArrival(it, min, tripKey) {
   await ringBell();
   const card = board.querySelector('[data-id="' + cssEscape(uid(it)) + '"]');
   if (card) { card.classList.remove('alert-flash'); void card.offsetWidth; card.classList.add('alert-flash'); setTimeout(() => card.classList.remove('alert-flash'), 12000); }
-  if ('Notification' in window && Notification.permission === 'granted') {
+  if (prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission === 'granted') {
     navigator.setAppBadge?.(1).catch?.(() => {});
     const notification = {
         body,
@@ -988,7 +988,7 @@ function updateGetoff(it, coords) {
   const before=Math.max(0,state.targetSeq-nearest.seq);
   const note=document.querySelector('#getoffNote'); if(note) note.textContent=nearest.seq >= state.targetSeq ? '已接近／到達目標站：' + state.targetName : '目前接近第 ' + nearest.seq + ' 站，距離目標約 ' + before + ' 個站';
   const key=state.targetSeq + ':' + nearest.seq;
-  if (before <= 1 && nearest.seq < state.targetSeq && state.alertKey !== key) { state.alertKey=key; saveGetoff(); ringBell(); if(navigator.vibrate) navigator.vibrate([300,120,300,120,500]); const card=board.querySelector('[data-id="'+cssEscape(uid(it))+'"]'); if(card){card.classList.remove('alert-flash');void card.offsetWidth;card.classList.add('alert-flash');setTimeout(()=>card.classList.remove('alert-flash'),12000);} if('Notification' in window && Notification.permission==='granted') navigator.serviceWorker?.ready.then(reg=>reg.showNotification('就嚟落車喇',{body:it.route+' 下一個站：'+state.targetName,icon:'./icon-192.png',tag:'getoff-'+uid(it),requireInteraction:true})).catch(()=>{}); }
+  if (before <= 1 && nearest.seq < state.targetSeq && state.alertKey !== key) { state.alertKey=key; saveGetoff(); ringBell(); if(navigator.vibrate) navigator.vibrate([300,120,300,120,500]); const card=board.querySelector('[data-id="'+cssEscape(uid(it))+'"]'); if(card){card.classList.remove('alert-flash');void card.offsetWidth;card.classList.add('alert-flash');setTimeout(()=>card.classList.remove('alert-flash'),12000);} if(prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission==='granted') navigator.serviceWorker?.ready.then(reg=>reg.showNotification('就嚟落車喇',{body:it.route+' 下一個站：'+state.targetName,icon:'./icon-192.png',tag:'getoff-'+uid(it),requireInteraction:true,silent:false})).catch(()=>{}); }
 }
 
 function renderPip() {
@@ -1071,8 +1071,8 @@ function updateNotificationButton() {
   if (!button) return;
   if (!('Notification' in window)) { button.textContent = '此瀏覽器不支援通知'; button.disabled = true; return; }
   if (Notification.permission === 'granted') {
-    button.textContent = '系統通知已允許 ✓';
-    button.disabled = true;
+    button.textContent = prefs.notificationsEnabled === false ? '系統通知已暫停（撳此開啟）' : '系統通知已允許 ✓（撳此暫停）';
+    button.disabled = false;
   } else if (Notification.permission === 'denied') {
     button.textContent = '通知已封鎖，請到瀏覽器設定開啟';
     button.disabled = false;
@@ -1080,6 +1080,12 @@ function updateNotificationButton() {
     button.textContent = '允許系統通知';
     button.disabled = false;
   }
+}
+async function toggleNotificationSetting() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'granted') { await requestNotifications(); updateNotificationButton(); return; }
+  prefs.notificationsEnabled = prefs.notificationsEnabled === false;
+  savePrefs(); updateNotificationButton(); renderDiagnostics();
 }
 async function sendTestNotification() {
   if (!('Notification' in window)) { alert('此瀏覽器不支援系統通知'); return false; }
@@ -1474,7 +1480,7 @@ function viewPrefs() {
   $('#fontSel').addEventListener('change', e => { prefs.font=e.target.value; savePrefs(); applyPrefs(); });
   $('#timeSel').addEventListener('change', e => { prefs.time12=e.target.value === 'true'; savePrefs(); });
   $('#themeSel').addEventListener('change', e => { prefs.theme=e.target.value; savePrefs(); applyPrefs(); });
-  $('#notifyBtn').addEventListener('click', async () => { await requestNotifications(); updateNotificationButton(); renderDiagnostics(); });
+  $('#notifyBtn').addEventListener('click', toggleNotificationSetting);
   renderDiagnostics();
   $('#testNotifyBtn').addEventListener('click', () => scheduleTestNotification(Number($('#testDelaySel').value)));
   $('#prefsBack').addEventListener('click', viewHome);
