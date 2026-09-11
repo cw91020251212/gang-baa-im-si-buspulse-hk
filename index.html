@@ -1906,6 +1906,8 @@ if ('serviceWorker' in navigator) {
 shell();
 updateBackgroundPushButton();
 startLoop();
+// 開站時重同步，清理舊版本可能遺留、但目前已沒有啟用鬧鐘的 Worker 訂閱。
+if (pushWorkerUrl()) syncPushSubscription();
 </script>
 </body>
 </html>
