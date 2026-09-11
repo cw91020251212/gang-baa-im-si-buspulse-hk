@@ -37,6 +37,8 @@ body{
 .brandmark{width:31px;height:31px;border-radius:10px;display:grid;place-items:center;flex:none;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;font-size:10px;font-weight:900;letter-spacing:-.4px;box-shadow:0 5px 16px var(--glow)}
 .brandcopy{flex:1;min-width:0}.brandcopy h1{line-height:1.1}.brandcopy small{display:block;color:var(--faint);font-size:9px;font-weight:700;letter-spacing:.45px;margin-top:3px}
 .clock{font-variant-numeric:tabular-nums; font-size:13px; color:var(--dim); font-weight:600}
+.push-state{border:1px solid rgba(54,224,160,.35);background:rgba(54,224,160,.1);color:#8af0c5;border-radius:8px;padding:5px 7px;font:700 10px/1.1 inherit;cursor:pointer;white-space:nowrap}
+.push-state.off{border-color:rgba(170,183,204,.3);background:rgba(170,183,204,.08);color:var(--dim)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--now);flex:none}
 .dot.stale{background:var(--soon)}
 .dot.err{background:var(--kmb)}
@@ -229,6 +231,7 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
   <div class="brandcopy"><h1>港巴即時</h1><small>BusPulse HK · 香港實時到站</small></div>
   <span class="dot" id="dot"></span>
   <span class="clock" id="clock">--:--:--</span>
+  <button class="push-state" id="pushStateBtn" title="背景提醒運行中；撳此開關">背景提醒：運行中</button>
   <button class="iconbtn" id="prefsBtn" title="顯示設定" aria-label="顯示設定">⚙</button>
   <button class="iconbtn" id="refreshBtn" title="即刻更新" aria-label="即刻更新">&#8635;</button>
 </div>
@@ -554,6 +557,13 @@ function updateBackgroundPushButton() {
   const off=backgroundPushDisabled(); button.textContent=off ? '重新開啟' : '真正關閉';
   button.classList.toggle('danger', !off); button.title=off ? '重新開啟背景推送' : '取消 Push 登記並停止所有背景提醒';
   button.onclick=off ? enableBackgroundPush : disableBackgroundPush;
+  const top=$('#pushStateBtn');
+  if (top) {
+    top.textContent=off ? '背景提醒：已關閉' : '背景提醒：運行中';
+    top.classList.toggle('off', off);
+    top.title=off ? '背景提醒已關閉；撳此重新開啟' : '背景提醒運行中；撳此真正關閉';
+    top.onclick=off ? enableBackgroundPush : disableBackgroundPush;
+  }
 }
 async function enableBackgroundPush() {
   const base=pushWorkerUrl();
@@ -1882,6 +1892,7 @@ if ('serviceWorker' in navigator) {
    BOOT
    =================================================================== */
 shell();
+updateBackgroundPushButton();
 startLoop();
 </script>
 </body>
