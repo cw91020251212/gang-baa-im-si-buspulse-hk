@@ -1073,11 +1073,12 @@ async function openMiniWindow(button) {
 }
 
 async function requestNotifications() {
-  if (!('Notification' in window)) return;
+  if (!('Notification' in window)) return 'unsupported';
   try {
     if (Notification.permission === 'default') await Notification.requestPermission();
     if (Notification.permission === 'granted') await navigator.serviceWorker?.ready;
-  } catch {}
+    return Notification.permission;
+  } catch { return Notification.permission || 'error'; }
 }
 /* -------------------------------------------------------------------
    背景提醒診斷
@@ -1819,7 +1820,14 @@ function addItem(v, s) {
     : { co:'CTB', route:v.route, bound:v.bound, dir:v.dir,
         seq:s.seq, stopId:s.id, stopName:s.name, dest:v.dest };
   if (items.some(x => uid(x) === uid(it))) { viewHome(); return; }
-  items.push(it); save(); shell(); refresh(); viewHome();
+  // 新增路線預設開啟到站提醒；系統通知仍須由瀏覽器要求使用者批准，
+  // 但批准後會自動完成 Push 登記，唔需要朋友另外搵設定頁或撳 🔔。
+  items.push(it);
+  alarms[uid(it)] = true;
+  save(); saveAlarms(); shell(); refresh(); viewHome();
+  requestNotifications().then(permission => {
+    if (permission === 'granted') syncPushSubscription();
+  }).catch(() => {});
 }
 
 /* ===================================================================
