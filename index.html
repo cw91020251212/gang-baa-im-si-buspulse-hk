@@ -762,6 +762,7 @@ function shell() {
 }
 
 function toggleAlarm(id, button) {
+  if (activeAlarmAlerts.has(id)) { stopAlarmAlert(id); return; }
   alarms[id] = !alarms[id];
   alarmSeen.delete(id);
   clearAlarmFallbackTimers(id);
@@ -778,6 +779,18 @@ function toggleAlarm(id, button) {
   if (pushWorkerUrl()) syncPushSubscription();
 }
 let audioCtx = null;
+const activeAlarmAlerts = new Map();
+const activeSoundNodes = new Set();
+function stopAlarmAlert(id) {
+  const alert = activeAlarmAlerts.get(id);
+  if (alert?.notification) { try { alert.notification.close(); } catch {} }
+  if (alert?.card) { alert.card.classList.remove('alert-flash'); }
+  activeAlarmAlerts.delete(id);
+  activeSoundNodes.forEach(node => { try { node.stop(); } catch {} });
+  activeSoundNodes.clear();
+  document.body.classList.remove('alert-active');
+  navigator.vibrate?.(0);
+}
 async function unlockAudio() { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'closed') audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') await audioCtx.resume(); return audioCtx; } catch { return null; } }
 async function ringBell() {
   if (prefs.webSound === false) return false;
@@ -789,7 +802,7 @@ async function ringBell() {
     const melody = melodies[prefs.sound] || melodies.triple;
     const rounds = prefs.sound === 'alarm' ? 2 : 3;
     const lengthFactor = prefs.soundLen === 'short' ? .72 : prefs.soundLen === 'long' ? 1.18 : 1;
-    for (let round = 0; round < rounds; round++) melody.forEach((offset, i) => { const at = now + round * (melody[melody.length - 1] + .85) * lengthFactor + offset * lengthFactor; const o=ctx.createOscillator(), g=ctx.createGain(); o.type='sine'; o.frequency.value=i%3===1?988:740; g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(.28, at+.025); g.gain.exponentialRampToValueAtTime(.0001, at+.3*lengthFactor); o.connect(g).connect(ctx.destination); o.start(at); o.stop(at+.32*lengthFactor); });
+    for (let round = 0; round < rounds; round++) melody.forEach((offset, i) => { const at = now + round * (melody[melody.length - 1] + .85) * lengthFactor + offset * lengthFactor; const o=ctx.createOscillator(), g=ctx.createGain(); activeSoundNodes.add(o); o.onended=()=>activeSoundNodes.delete(o); o.type='sine'; o.frequency.value=i%3===1?988:740; g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(.28, at+.025); g.gain.exponentialRampToValueAtTime(.0001, at+.3*lengthFactor); o.connect(g).connect(ctx.destination); o.start(at); o.stop(at+.32*lengthFactor); });
   } catch { return false; }
   document.body.classList.remove('alert-active'); void document.body.offsetWidth; document.body.classList.add('alert-active'); setTimeout(() => document.body.classList.remove('alert-active'), 9000);
   if (navigator.vibrate) navigator.vibrate([420,120,420,120,420,280,420,120,420,120,420,500,420,120,420]);
@@ -806,10 +819,12 @@ async function notificationRegistration(timeoutMs = 1800) {
   } catch { return null; }
 }
 async function notifyArrival(it, min, tripKey) {
+  const id = uid(it);
   const body = it.route + ' 往 ' + (it.dest || '') + '，約 ' + (Math.max(0,min)) + ' 分鐘到 ' + (it.stopName || '');
   const webPlayed = await ringBell();
-  const card = board.querySelector('[data-id="' + cssEscape(uid(it)) + '"]');
-  if (card) { card.classList.remove('alert-flash'); void card.offsetWidth; card.classList.add('alert-flash'); setTimeout(() => card.classList.remove('alert-flash'), 12000); }
+  const card = board.querySelector('[data-id="' + cssEscape(id) + '"]');
+  const alert = {card, notification:null}; activeAlarmAlerts.set(id, alert);
+  if (card) { card.classList.remove('alert-flash'); void card.offsetWidth; card.classList.add('alert-flash'); alert.timer=setTimeout(() => { card.classList.remove('alert-flash'); if(activeAlarmAlerts.get(id)===alert) activeAlarmAlerts.delete(id); }, 12000); }
   if (prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission === 'granted') {
     navigator.setAppBadge?.(1).catch?.(() => {});
     const notification = {
@@ -830,11 +845,11 @@ async function notifyArrival(it, min, tripKey) {
     const deliver = async () => {
       // 前景直接交畀 Edge Notification，避免 SW 更新通知但唔播聲。
       if (!document.hidden) {
-        try { new Notification('巴士就嚟到站', notification); return true; } catch {}
+        try { alert.notification = new Notification('巴士就嚟到站', notification); return true; } catch {}
       }
       const reg = await notificationRegistration();
       if (reg?.active) { reg.active.postMessage({ type:'BUS_ARRIVAL', title:'巴士就嚟到站', badgeNumber:1, ...notification }); return true; }
-      try { new Notification('巴士就嚟到站', notification); return true; } catch { return false; }
+      try { alert.notification = new Notification('巴士就嚟到站', notification); return true; } catch { return false; }
     };
     deliver().then(ok => {
       if (!ok && !webPlayed) setTimeout(() => { try { new Notification('巴士就嚟到站', notification); } catch {} }, 300);
