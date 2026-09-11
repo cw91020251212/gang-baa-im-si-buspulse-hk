@@ -466,7 +466,8 @@ const DEFAULTS_KEY = 'busboard.user-defaults.v1';
 const PREF_KEY = 'busboard.preferences.v1';
 const ALARM_KEY = 'busboard.alarms.v1';
 const PUSH_URL_KEY = 'busboard.push-worker-url.v1';
-function pushWorkerUrl() { try { return localStorage.getItem(PUSH_URL_KEY) || ''; } catch { return ''; } }
+const DEFAULT_PUSH_WORKER_URL = 'https://gang-baa-im-si-buspulse-hk.cw9102025.workers.dev';
+function pushWorkerUrl() { try { return localStorage.getItem(PUSH_URL_KEY) || DEFAULT_PUSH_WORKER_URL; } catch { return DEFAULT_PUSH_WORKER_URL; } }
 function savePushWorkerUrl(value) { try { localStorage.setItem(PUSH_URL_KEY, value.trim().replace(/\/$/, '')); } catch {} }
 const GETOFF_KEY = 'busboard.getoff.v1';
 let getoff = loadGetoff();
@@ -1509,7 +1510,7 @@ function viewPrefs() {
     '<button class="wide" id="notifyBtn">允許系統通知</button>' +
     '<div class="pref-row"><div>真正背景推送<small>伺服器每分鐘查巴士 ETA；切去其他 App／鎖屏仍可通知</small></div><button class="wide" id="pushBtn" style="width:auto;margin:0">開啟</button></div>' +
     '<input class="tin" id="pushUrl" placeholder="背景推送伺服器網址（部署後填入）" value="" />' +
-    '<div class="hint" id="pushStatus">未連接背景推送伺服器；目前只使用本機即時提醒。</div>' +
+    '<div class="hint" id="pushStatus">已連接背景推送伺服器；撳「開啟」登記呢部手機。</div>' +
     '<details class="test-tools"><summary>測試工具</summary>' +
     '<div class="pref-row"><div>提示聲款式<small>測試前景網站提示聲效果</small></div><select class="pref-select" id="soundSel"><option value="double">兩下叮噹</option><option value="triple">三下提示</option><option value="alarm">鬧鐘長響</option></select></div>' +
     '<div class="pref-row"><div>提示聲長度<small>只影響網站前景播放嘅聲效</small></div><select class="pref-select" id="soundLenSel"><option value="short">較短</option><option value="normal">標準</option><option value="long">較長</option></select></div>' +
