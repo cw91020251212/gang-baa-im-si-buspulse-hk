@@ -519,15 +519,25 @@ function pushRoutePayload() {
 }
 function pushStatus(text, good=false) { const el=document.querySelector('#pushStatus'); if(el){ el.textContent=text; el.style.color=good?'#70f09b':''; } }
 function base64UrlToBytes(value) { const pad='='.repeat((4-value.length%4)%4), raw=atob((value+pad).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(raw, c=>c.charCodeAt(0)); }
+async function deletePushSubscription(base, sub) {
+  if (!base || !sub) return;
+  const res=await fetch(base+'/subscribe',{method:'DELETE',headers:{'content-type':'application/json'},body:JSON.stringify(sub.toJSON())});
+  if (!res.ok) throw new Error('刪除背景訂閱失敗（'+res.status+'）');
+}
 async function syncPushSubscription() {
   const base=pushWorkerUrl(), routes=pushRoutePayload();
-  if (backgroundPushDisabled() || !base || !routes.length || !('serviceWorker' in navigator)) return;
+  if (!base || !('serviceWorker' in navigator)) return;
   try {
     const reg=await navigator.serviceWorker.ready;
     if (!reg.pushManager) throw new Error('此裝置未提供 Push；Android 請先用 Chrome 加入主畫面');
+    let sub=await reg.pushManager.getSubscription();
+    if (backgroundPushDisabled() || !routes.length) {
+      if (sub) await deletePushSubscription(base, sub);
+      if (!routes.length) pushStatus('✓ 已停止背景查詢：目前冇任何路線開啟鬧鐘',true);
+      return;
+    }
     const keyRes=await fetch(base+'/vapid-public-key'); if(!keyRes.ok) throw new Error('讀取推送設定失敗');
     const {publicKey}=await keyRes.json();
-    let sub=await reg.pushManager.getSubscription();
     if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:base64UrlToBytes(publicKey)});
     const res=await fetch(base+'/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({subscription:sub.toJSON(),routes})});
     if(!res.ok) throw new Error('同步路線失敗（'+res.status+'）');
@@ -545,7 +555,7 @@ async function disableBackgroundPush() {
     const reg=await navigator.serviceWorker?.ready;
     const sub=await reg?.pushManager?.getSubscription();
     if (sub) {
-      await fetch(base+'/subscribe',{method:'DELETE',headers:{'content-type':'application/json'},body:JSON.stringify(sub.toJSON())});
+      await deletePushSubscription(base, sub);
       await sub.unsubscribe();
     }
   } catch {}
@@ -686,6 +696,7 @@ function cleanupOrphanAlarms() {
 function clearAllArrivalAlarms() {
   if (!confirm('確定要關閉所有路線嘅到站鬧鐘嗎？之後可以逐條重新開啟。')) return;
   alarms = {}; alarmSeen.clear(); saveAlarms(); closeArrivalNotifications(); shell();
+  if (pushWorkerUrl()) syncPushSubscription();
   const n=document.querySelector('#alarmClearNote'); if(n) n.textContent='所有到站鬧鐘已關閉。';
 }
 cleanupOrphanAlarms();
@@ -1622,6 +1633,7 @@ function viewHome() {
   sBody.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
     const removed = items[+b.dataset.del], id = removed && uid(removed);
     items.splice(+b.dataset.del, 1); if (id) { delete alarms[id]; alarmSeen.delete(id); delete getoff[id]; saveAlarms(); saveGetoff(); }
+    if (pushWorkerUrl()) syncPushSubscription();
     save(); closeArrivalNotifications(); shell(); refresh(); viewHome();
   }));
   sBody.querySelectorAll('[data-up]').forEach(b => b.addEventListener('click', () => {
