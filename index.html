@@ -35,7 +35,7 @@ body{
 }
 .top h1{font-size:17px; font-weight:800; letter-spacing:.3px; flex:1; background:linear-gradient(100deg,#fff 20%,#a9baff); -webkit-background-clip:text; background-clip:text; color:transparent}
 .brandmark{width:31px;height:31px;border-radius:10px;display:grid;place-items:center;flex:none;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;font-size:10px;font-weight:900;letter-spacing:-.4px;box-shadow:0 5px 16px var(--glow)}
-.brandcopy{flex:1;min-width:0}.brandcopy h1{line-height:1.1}.brandcopy small{display:block;color:var(--faint);font-size:9px;font-weight:700;letter-spacing:.45px;margin-top:3px}
+.brandcopy{flex:1;min-width:0}.brandcopy h1{line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brandcopy small{display:block;color:var(--faint);font-size:9px;font-weight:700;letter-spacing:.45px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .clock{font-variant-numeric:tabular-nums; font-size:13px; color:var(--dim); font-weight:600}
 .push-state{border:1px solid rgba(54,224,160,.35);background:rgba(54,224,160,.1);color:#8af0c5;border-radius:8px;padding:5px 7px;font:700 10px/1.1 inherit;cursor:pointer;white-space:nowrap}
 .push-state.off{border-color:rgba(170,183,204,.3);background:rgba(170,183,204,.08);color:var(--dim)}
@@ -48,6 +48,10 @@ body{
   display:grid;place-items:center; flex:none;
 }
 .iconbtn:active{background:#2a3240}
+@media(max-width:500px){
+  .top{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:6px;padding-left:10px;padding-right:10px}
+  .push-state{grid-column:2 / -1;grid-row:2;justify-self:start;margin-top:1px;margin-bottom:1px}
+}
 /* ---------- board ---------- */
 .board{padding:12px 12px 0; display:flex; flex-direction:column; gap:10px}
 .card{
