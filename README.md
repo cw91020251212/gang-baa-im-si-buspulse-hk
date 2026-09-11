@@ -16,6 +16,7 @@ A lightweight Progressive Web App for checking real-time Hong Kong bus arrival i
 - Offer a `▣ 開啟最上層小窗` action using the browser Document Picture-in-Picture API where supported; the small window shows simplified live ETA cards. Android devices without this API can use system split-screen mode instead.
 - Installable as a PWA on supported mobile browsers.
 - Optional true background push on Android: the browser subscribes to Web Push and the included Cloudflare Worker checks the official ETA APIs every minute, so notifications can appear above WhatsApp or other apps.
+- A Cantonese step-by-step deployment guide is available in [CLOUDFLARE-BACKGROUND-PUSH-GUIDE.md](CLOUDFLARE-BACKGROUND-PUSH-GUIDE.md), including an architecture diagram, Cloudflare KV setup, VAPID secrets, Cron Trigger checks, and Android testing.
 - Mobile-first interface with a compact, colourful arrival board.
 
 ## Map notes

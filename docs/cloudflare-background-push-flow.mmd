@@ -1,0 +1,15 @@
+flowchart LR
+    A[Android Chrome / 已加入主畫面 PWA] -->|允許通知 + 訂閱 Web Push| B[GitHub Pages 前端]
+    B -->|POST subscription + 已開鬧鐘路線| C[Cloudflare Worker]
+    C -->|儲存訂閱及防重複| D[(Workers KV)]
+    C -->|每分鐘 Cron Trigger| E[香港巴士 ETA API]
+    E -->|KMB / 城巴 / 專線小巴 ETA| C
+    C -->|VAPID Web Push| F[Android 系統通知]
+    F -->|切去 WhatsApp / 鎖屏都可見| A
+
+    classDef app fill:#dbeafe,stroke:#2563eb,color:#111827
+    classDef cloud fill:#fef3c7,stroke:#d97706,color:#111827
+    classDef data fill:#dcfce7,stroke:#16a34a,color:#111827
+    class A,B,F app
+    class C,D cloud
+    class E data
