@@ -1,0 +1,18 @@
+name = "buspulse-background-worker"
+main = "src/index.js"
+compatibility_date = "2026-09-08"
+
+[triggers]
+crons = ["* * * * *"]
+
+[[kv_namespaces]]
+binding = "SUBSCRIPTIONS"
+id = "647bc864beb8433da9a3ec896e02d01c"
+preview_id = "647bc864beb8433da9a3ec896e02d01c"
+
+[vars]
+# Set secrets with: wrangler secret put VAPID_SUBJECT
+# wrangler secret put VAPID_PUBLIC_KEY
+# wrangler secret put VAPID_PRIVATE_KEY
+# ALLOWED_ORIGIN should be the deployed GitHub Pages origin.
+ALLOWED_ORIGIN = "https://cw91020251212.github.io"

@@ -465,6 +465,9 @@ const KEY = 'busboard.items.v1';
 const DEFAULTS_KEY = 'busboard.user-defaults.v1';
 const PREF_KEY = 'busboard.preferences.v1';
 const ALARM_KEY = 'busboard.alarms.v1';
+const PUSH_URL_KEY = 'busboard.push-worker-url.v1';
+function pushWorkerUrl() { try { return localStorage.getItem(PUSH_URL_KEY) || ''; } catch { return ''; } }
+function savePushWorkerUrl(value) { try { localStorage.setItem(PUSH_URL_KEY, value.trim().replace(/\/$/, '')); } catch {} }
 const GETOFF_KEY = 'busboard.getoff.v1';
 let getoff = loadGetoff();
 let getoffWatch = null;
@@ -500,6 +503,39 @@ function forgetAlarmPlan(id, key) {
 }
 function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true }; } }
 function loadAlarms() { try { return JSON.parse(localStorage.getItem(ALARM_KEY) || '{}') || {}; } catch { return {}; } }
+function pushRoutePayload() {
+  return items.filter(it => alarms[uid(it)]).slice(0, 20).map(it => ({
+    co:it.co, route:it.route, seq:it.seq, dir:it.dir, service_type:it.service_type,
+    stopId:it.stopId, route_id:it.route_id, route_seq:it.route_seq,
+    dest:it.dest || '', stopName:it.stopName || ''
+  }));
+}
+function pushStatus(text, good=false) { const el=document.querySelector('#pushStatus'); if(el){ el.textContent=text; el.style.color=good?'#70f09b':''; } }
+function base64UrlToBytes(value) { const pad='='.repeat((4-value.length%4)%4), raw=atob((value+pad).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(raw, c=>c.charCodeAt(0)); }
+async function syncPushSubscription() {
+  const base=pushWorkerUrl(), routes=pushRoutePayload();
+  if (!base || !routes.length || !('serviceWorker' in navigator)) return;
+  try {
+    const reg=await navigator.serviceWorker.ready;
+    if (!reg.pushManager) throw new Error('此裝置未提供 Push；Android 請先用 Chrome 加入主畫面');
+    const keyRes=await fetch(base+'/vapid-public-key'); if(!keyRes.ok) throw new Error('讀取推送設定失敗');
+    const {publicKey}=await keyRes.json();
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:base64UrlToBytes(publicKey)});
+    const res=await fetch(base+'/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({subscription:sub.toJSON(),routes})});
+    if(!res.ok) throw new Error('同步路線失敗（'+res.status+'）');
+    pushStatus('✓ 已開啟真正背景提醒；切去其他 App 都會收到通知',true);
+  } catch(e) { pushStatus(e.message || '背景推送未能開啟'); }
+}
+async function enableBackgroundPush() {
+  const base=pushWorkerUrl();
+  if(!base) { pushStatus('請先填入背景推送伺服器網址'); return; }
+  if(!('Notification' in window)) { pushStatus('此瀏覽器不支援系統通知'); return; }
+  const perm=Notification.permission==='granted' ? 'granted' : await Notification.requestPermission();
+  if(perm!=='granted') { pushStatus('你拒絕咗系統通知，請到 Android 設定重新允許'); return; }
+  await syncPushSubscription();
+}
+
 function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} }
 function saveAlarms() { try { localStorage.setItem(ALARM_KEY, JSON.stringify(alarms)); } catch {} }
 function backupFile() {
@@ -739,6 +775,7 @@ function toggleAlarm(id, button) {
     // 以按鈕點擊作為使用者手勢，直接申請系統通知權限。
     requestNotifications();
   } else button.title = '開關到站提醒';
+  if (pushWorkerUrl()) syncPushSubscription();
 }
 let audioCtx = null;
 async function unlockAudio() { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'closed') audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') await audioCtx.resume(); return audioCtx; } catch { return null; } }
@@ -1455,6 +1492,9 @@ function viewPrefs() {
   '<div class="lbl">到站／落車提醒</div>' +
     '<div class="pref-row"><div>提早幾多分鐘響鬧<small>揀咗路線卡上方嘅 🔔 後生效；卡片所選站頭就係提醒目標站</small></div><select class="pref-select" id="leadSel"><option value="1">1 分鐘</option><option value="2">2 分鐘</option><option value="3">3 分鐘</option><option value="5">5 分鐘</option></select></div>' +
     '<button class="wide" id="notifyBtn">允許系統通知</button>' +
+    '<div class="pref-row"><div>真正背景推送<small>伺服器每分鐘查巴士 ETA；切去其他 App／鎖屏仍可通知</small></div><button class="wide" id="pushBtn" style="width:auto;margin:0">開啟</button></div>' +
+    '<input class="tin" id="pushUrl" placeholder="背景推送伺服器網址（部署後填入）" value="" />' +
+    '<div class="hint" id="pushStatus">未連接背景推送伺服器；目前只使用本機即時提醒。</div>' +
     '<details class="test-tools"><summary>測試工具</summary>' +
     '<div class="pref-row"><div>提示聲款式<small>測試前景網站提示聲效果</small></div><select class="pref-select" id="soundSel"><option value="double">兩下叮噹</option><option value="triple">三下提示</option><option value="alarm">鬧鐘長響</option></select></div>' +
     '<div class="pref-row"><div>提示聲長度<small>只影響網站前景播放嘅聲效</small></div><select class="pref-select" id="soundLenSel"><option value="short">較短</option><option value="normal">標準</option><option value="long">較長</option></select></div>' +
@@ -1472,7 +1512,7 @@ function viewPrefs() {
     '<div class="pref-row"><div>時間顯示<small>ETA 卡片時間及頂部時鐘</small></div><select class="pref-select" id="timeSel"><option value="false">24 小時制</option><option value="true">12 小時制</option></select></div>' +
     '<div class="pref-row"><div>顏色模式<small>可以選擇黑暗或光明版</small></div><select class="pref-select" id="themeSel"><option value="dark">黑暗模式</option><option value="light">光明模式</option></select></div>' +
     '<button class="wide" id="prefsBack">← 返回路線設定</button>';
-  $('#leadSel').value = String(prefs.lead); $('#soundSel').value = prefs.sound; $('#soundLenSel').value = prefs.soundLen; $('#webSoundSel').value = String(prefs.webSound !== false); $('#fontSel').value = prefs.font; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
+  $('#leadSel').value = String(prefs.lead); $('#pushUrl').value=pushWorkerUrl(); if(pushWorkerUrl()) pushStatus('已設定推送伺服器；請按「開啟」同步路線。'); $('#soundSel').value = prefs.sound; $('#soundLenSel').value = prefs.soundLen; $('#webSoundSel').value = String(prefs.webSound !== false); $('#fontSel').value = prefs.font; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
   updateNotificationButton();
   $('#leadSel').addEventListener('change', e => { prefs.lead=+e.target.value; savePrefs(); });
   $('#soundSel').addEventListener('change', e => { prefs.sound=e.target.value; savePrefs(); });
@@ -1483,6 +1523,8 @@ function viewPrefs() {
   $('#timeSel').addEventListener('change', e => { prefs.time12=e.target.value === 'true'; savePrefs(); });
   $('#themeSel').addEventListener('change', e => { prefs.theme=e.target.value; savePrefs(); applyPrefs(); });
   $('#notifyBtn').addEventListener('click', toggleNotificationSetting);
+  $('#pushUrl').addEventListener('change', e => { savePushWorkerUrl(e.target.value); pushStatus(pushWorkerUrl() ? '已儲存伺服器網址；請按「開啟」啟用。' : '未連接背景推送伺服器。'); });
+  $('#pushBtn').addEventListener('click', enableBackgroundPush);
   renderDiagnostics();
   $('#testNotifyBtn').addEventListener('click', () => scheduleTestNotification(Number($('#testDelaySel').value)));
   $('#prefsBack').addEventListener('click', viewHome);

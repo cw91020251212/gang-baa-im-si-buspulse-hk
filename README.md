@@ -15,6 +15,7 @@ A lightweight Progressive Web App for checking real-time Hong Kong bus arrival i
 - Provide display preferences for font size, 12/24-hour time, and dark/light mode.
 - Offer a `▣ 開啟最上層小窗` action using the browser Document Picture-in-Picture API where supported; the small window shows simplified live ETA cards. Android devices without this API can use system split-screen mode instead.
 - Installable as a PWA on supported mobile browsers.
+- Optional true background push on Android: the browser subscribes to Web Push and the included Cloudflare Worker checks the official ETA APIs every minute, so notifications can appear above WhatsApp or other apps.
 - Mobile-first interface with a compact, colourful arrival board.
 
 ## Map notes
@@ -23,7 +24,9 @@ The map uses Leaflet with OpenStreetMap tiles. Stop coordinates come from the pu
 
 Fare labels use the Transport Department's biweekly public route-and-fare GeoJSON. A compact `fare-index.json` is committed for reliable browser loading because the original public file is large and does not provide browser CORS headers. The public dataset provides the route's `fullFare` value; it does not expose a complete stop-by-stop sectional fare table, so the label is the official full-route fare rather than an inferred segment fare.
 
-Alerts run while the page is open or active. The app uses self-correcting refresh scheduling, persisted ETA-based fallback alarm plans, and a Service Worker notification path. When the page returns from the background, after a network recovery, or after the browser restores it, the app immediately refreshes and re-checks missed alarms. Mobile browsers may still suspend JavaScript and audio when the page is fully closed or the device is locked; allowing notifications, installing the PWA, excluding it from battery optimisation, and keeping it active provide the most reliable reminder behavior. Guaranteed alerts while the app is suspended require a server-side Web Push sender; the Service Worker is ready to receive Web Push, but this static GitHub Pages project does not currently include that sender.
+Alerts have two layers. The static GitHub Pages app uses self-correcting refresh scheduling, persisted ETA-based fallback alarm plans, and a Service Worker notification path while the page is open or backgrounded. The included `worker/` directory adds the true background layer: after it is deployed with Cloudflare Worker + KV + VAPID secrets, the app can subscribe the Android browser and sync only routes with an enabled alarm. The Worker checks the official ETA APIs every minute, de-duplicates each bus trip, and sends Web Push directly to the Android system notification tray even when the page is suspended.
+
+On Android, open the site in Chrome, allow notifications, use **「加入主畫面」**, open the installed app once, add a route, enable its bell, then open settings and enter the deployed Worker URL under **真正背景推送**. Android system notification permission and battery optimisation settings still control delivery. GitHub Pages alone cannot run a server-side poller, and this repository intentionally does not contain VAPID private keys.
 
 The mini-window is a best-effort browser feature. `documentPictureInPicture` support varies by browser and platform; the UI reports when it is unavailable and does not break the normal page. The mini-window is refreshed whenever the main page receives fresh ETA data.
 
