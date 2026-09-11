@@ -467,8 +467,11 @@ const PREF_KEY = 'busboard.preferences.v1';
 const ALARM_KEY = 'busboard.alarms.v1';
 const PUSH_URL_KEY = 'busboard.push-worker-url.v1';
 const DEFAULT_PUSH_WORKER_URL = 'https://gang-baa-im-si-buspulse-hk.cw9102025.workers.dev';
+const PUSH_DISABLED_KEY = 'busboard.push-disabled.v1';
 function pushWorkerUrl() { try { return localStorage.getItem(PUSH_URL_KEY) || DEFAULT_PUSH_WORKER_URL; } catch { return DEFAULT_PUSH_WORKER_URL; } }
 function savePushWorkerUrl(value) { try { localStorage.setItem(PUSH_URL_KEY, value.trim().replace(/\/$/, '')); } catch {} }
+function backgroundPushDisabled() { try { return localStorage.getItem(PUSH_DISABLED_KEY) === '1'; } catch { return false; } }
+function saveBackgroundPushDisabled(value) { try { localStorage.setItem(PUSH_DISABLED_KEY, value ? '1' : '0'); } catch {} }
 const GETOFF_KEY = 'busboard.getoff.v1';
 let getoff = loadGetoff();
 let getoffWatch = null;
@@ -515,7 +518,7 @@ function pushStatus(text, good=false) { const el=document.querySelector('#pushSt
 function base64UrlToBytes(value) { const pad='='.repeat((4-value.length%4)%4), raw=atob((value+pad).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(raw, c=>c.charCodeAt(0)); }
 async function syncPushSubscription() {
   const base=pushWorkerUrl(), routes=pushRoutePayload();
-  if (!base || !routes.length || !('serviceWorker' in navigator)) return;
+  if (backgroundPushDisabled() || !base || !routes.length || !('serviceWorker' in navigator)) return;
   try {
     const reg=await navigator.serviceWorker.ready;
     if (!reg.pushManager) throw new Error('此裝置未提供 Push；Android 請先用 Chrome 加入主畫面');
@@ -528,13 +531,40 @@ async function syncPushSubscription() {
     pushStatus('✓ 已開啟真正背景提醒；切去其他 App 都會收到通知',true);
   } catch(e) { pushStatus(e.message || '背景推送未能開啟'); }
 }
+async function disableBackgroundPush() {
+  saveBackgroundPushDisabled(true);
+  Object.keys(alarms).forEach(id => { alarms[id] = false; });
+  Object.keys(alarmPlans).forEach(id => delete alarmPlans[id]);
+  alarmFallbackTimers.forEach(timers => timers.forEach(t => clearTimeout(t.handle)));
+  alarmFallbackTimers.clear(); alarmSeen.clear(); saveAlarms(); saveAlarmPlans();
+  const base=pushWorkerUrl();
+  try {
+    const reg=await navigator.serviceWorker?.ready;
+    const sub=await reg?.pushManager?.getSubscription();
+    if (sub) {
+      await fetch(base+'/subscribe',{method:'DELETE',headers:{'content-type':'application/json'},body:JSON.stringify(sub.toJSON())});
+      await sub.unsubscribe();
+    }
+  } catch {}
+  pushStatus('✓ 已真正關閉：伺服器不再查呢部手機，路線鬧鐘亦已全部停止。',true);
+  updateBackgroundPushButton(); renderDiagnostics(); shell();
+}
+function updateBackgroundPushButton() {
+  const button=$('#pushBtn'); if (!button) return;
+  const off=backgroundPushDisabled(); button.textContent=off ? '重新開啟' : '真正關閉';
+  button.classList.toggle('danger', !off); button.title=off ? '重新開啟背景推送' : '取消 Push 登記並停止所有背景提醒';
+  button.onclick=off ? enableBackgroundPush : disableBackgroundPush;
+}
 async function enableBackgroundPush() {
   const base=pushWorkerUrl();
   if(!base) { pushStatus('請先填入背景推送伺服器網址'); return; }
   if(!('Notification' in window)) { pushStatus('此瀏覽器不支援系統通知'); return; }
   const perm=Notification.permission==='granted' ? 'granted' : await Notification.requestPermission();
   if(perm!=='granted') { pushStatus('你拒絕咗系統通知，請到 Android 設定重新允許'); return; }
+  saveBackgroundPushDisabled(false);
+  items.forEach(it => { alarms[uid(it)] = true; }); saveAlarms();
   await syncPushSubscription();
+  updateBackgroundPushButton();
 }
 
 function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} }
@@ -1509,7 +1539,8 @@ function viewPrefs() {
   '<div class="lbl">到站／落車提醒</div>' +
     '<div class="pref-row"><div>提早幾多分鐘響鬧<small>揀咗路線卡上方嘅 🔔 後生效；卡片所選站頭就係提醒目標站</small></div><select class="pref-select" id="leadSel"><option value="1">1 分鐘</option><option value="2">2 分鐘</option><option value="3">3 分鐘</option><option value="5">5 分鐘</option></select></div>' +
     '<button class="wide" id="notifyBtn">允許系統通知</button>' +
-    '<div class="pref-row"><div>真正背景推送<small>伺服器每分鐘查巴士 ETA；切去其他 App／鎖屏仍可通知</small></div><button class="wide" id="pushBtn" style="width:auto;margin:0">開啟</button></div>' +
+    '<div class="pref-row"><div>真正背景推送<small>伺服器每分鐘查巴士 ETA；「真正關閉」會取消 Push 登記、停止伺服器查詢及本機鬧鐘</small></div><button class="wide" id="pushBtn" style="width:auto;margin:0">真正關閉</button></div>' +
+    '<div class="hint">⚠ 如果唔再需要背景提醒，請撳「真正關閉」。否則背景 Worker 會繼續每分鐘檢查，持續消耗 Cloudflare Workers／KV 用量；只關閉手機通知聲或 Badge 並唔等於停止背景服務。</div>' +
     '<input class="tin" id="pushUrl" placeholder="背景推送伺服器網址（部署後填入）" value="" />' +
     '<div class="hint" id="pushStatus">已連接背景推送伺服器；撳「開啟」登記呢部手機。</div>' +
     '<div class="pref-row"><div>Cloudflare 用量<small>只會開啟 Cloudflare 官方管理頁；BusPulse HK 不會讀取或顯示帳戶用量。</small></div><a class="wide" href="https://dash.cloudflare.com/5989bdd689f97c9274b758913d4e6651/workers/overview" target="_blank" rel="noopener" style="width:auto;margin:0;text-decoration:none;text-align:center">查看用量</a></div>' +
@@ -1532,6 +1563,7 @@ function viewPrefs() {
     '<button class="wide" id="prefsBack">← 返回路線設定</button>';
   $('#leadSel').value = String(prefs.lead); $('#pushUrl').value=pushWorkerUrl(); if(pushWorkerUrl()) pushStatus('已設定推送伺服器；請按「開啟」同步路線。'); $('#soundSel').value = prefs.sound; $('#soundLenSel').value = prefs.soundLen; $('#webSoundSel').value = String(prefs.webSound !== false); $('#fontSel').value = prefs.font; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
   updateNotificationButton();
+  updateBackgroundPushButton();
   $('#leadSel').addEventListener('change', e => { prefs.lead=+e.target.value; savePrefs(); });
   $('#soundSel').addEventListener('change', e => { prefs.sound=e.target.value; savePrefs(); });
   $('#soundLenSel').addEventListener('change', e => { prefs.soundLen=e.target.value; savePrefs(); });
@@ -1542,7 +1574,6 @@ function viewPrefs() {
   $('#themeSel').addEventListener('change', e => { prefs.theme=e.target.value; savePrefs(); applyPrefs(); });
   $('#notifyBtn').addEventListener('click', toggleNotificationSetting);
   $('#pushUrl').addEventListener('change', e => { savePushWorkerUrl(e.target.value); pushStatus(pushWorkerUrl() ? '已儲存伺服器網址；請按「開啟」啟用。' : '未連接背景推送伺服器。'); });
-  $('#pushBtn').addEventListener('click', enableBackgroundPush);
   renderDiagnostics();
   $('#testNotifyBtn').addEventListener('click', () => scheduleTestNotification(Number($('#testDelaySel').value)));
   $('#prefsBack').addEventListener('click', viewHome);
@@ -1824,9 +1855,9 @@ function addItem(v, s) {
   // 新增路線預設開啟到站提醒；系統通知仍須由瀏覽器要求使用者批准，
   // 但批准後會自動完成 Push 登記，唔需要朋友另外搵設定頁或撳 🔔。
   items.push(it);
-  alarms[uid(it)] = true;
+  alarms[uid(it)] = !backgroundPushDisabled();
   save(); saveAlarms(); shell(); refresh(); viewHome();
-  requestNotifications().then(permission => {
+  if (!backgroundPushDisabled()) requestNotifications().then(permission => {
     if (permission === 'granted') syncPushSubscription();
   }).catch(() => {});
 }
