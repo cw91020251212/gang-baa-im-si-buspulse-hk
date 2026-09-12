@@ -7,6 +7,7 @@ const API = {
 };
 const LEAD_MINUTES = 2;
 const MAX_SUBSCRIPTIONS = 5000;
+const INDEX_KEY = 'meta:active-subscriptions';
 
 function cors(origin, env) {
   const allowed = env.ALLOWED_ORIGIN || '*';
@@ -19,6 +20,23 @@ function keyFor(subscription) { return 'sub:' + btoa(subscription.endpoint).repl
 function validSubscription(s) { return s && typeof s.endpoint === 'string' && s.endpoint.startsWith('https://') && s.keys && typeof s.keys.p256dh === 'string' && typeof s.keys.auth === 'string'; }
 function validItem(it) { return it && ['KMB', 'CTB', 'GMB'].includes(it.co) && typeof it.route === 'string' && typeof it.seq !== 'undefined'; }
 async function getJSON(url) { const r = await fetch(url, { headers: { accept: 'application/json' } }); if (!r.ok) throw new Error('API ' + r.status); return r.json(); }
+async function readIndex(env) {
+  const value = await env.SUBSCRIPTIONS.get(INDEX_KEY, 'json');
+  return Array.isArray(value) ? value.filter(k => typeof k === 'string' && k.startsWith('sub:')).slice(0, MAX_SUBSCRIPTIONS) : [];
+}
+async function writeIndex(env, keys) {
+  const unique = [...new Set(keys)].filter(k => typeof k === 'string' && k.startsWith('sub:')).slice(0, MAX_SUBSCRIPTIONS);
+  await env.SUBSCRIPTIONS.put(INDEX_KEY, JSON.stringify(unique));
+  return unique;
+}
+async function addToIndex(env, key) {
+  const keys = await readIndex(env);
+  if (!keys.includes(key)) await writeIndex(env, [...keys, key]);
+}
+async function removeFromIndex(env, key) {
+  const keys = await readIndex(env);
+  if (keys.includes(key)) await writeIndex(env, keys.filter(k => k !== key));
+}
 function etaUrl(it) {
   if (it.co === 'KMB') return API.KMB + '/route-eta/' + encodeURIComponent(it.route) + '/' + encodeURIComponent(it.service_type);
   if (it.co === 'CTB') return API.CTB + '/eta/CTB/' + encodeURIComponent(it.stopId) + '/' + encodeURIComponent(it.route);
@@ -51,14 +69,26 @@ async function checkSubscription(sub, env) {
     const sentKey = keyFor(sub) + ':sent:' + tripKey;
     if (await env.SUBSCRIPTIONS.get(sentKey)) continue;
     const response = await notify(sub, it.route + ' 往 ' + (it.dest || '') + '，約 ' + Math.max(0, eta.min) + ' 分鐘到 ' + (it.stopName || ''), env, 'buspulse-' + encodeURIComponent(tripKey));
-    if (response.status === 404 || response.status === 410) { await env.SUBSCRIPTIONS.delete(keyFor(sub)); return; }
+    if (response.status === 404 || response.status === 410) {
+      const key = keyFor(sub);
+      await env.SUBSCRIPTIONS.delete(key);
+      await removeFromIndex(env, key);
+      return;
+    }
     if (!response.ok) throw new Error('push ' + response.status);
     await env.SUBSCRIPTIONS.put(sentKey, '1', { expirationTtl: 21600 });
   }
 }
 async function runCron(env) {
-  const list = await env.SUBSCRIPTIONS.list({ prefix: 'sub:', limit: MAX_SUBSCRIPTIONS });
-  const results = await Promise.allSettled(list.keys.map(async k => { const sub = await env.SUBSCRIPTIONS.get(k.name, 'json'); if (sub) await checkSubscription(sub, env); }));
+  // Never use KV.list() in the minute-level Cron. The index costs one KV get
+  // and allows an empty service to return immediately without consuming the
+  // 1,000/day KV list-operation free limit.
+  const keys = await readIndex(env);
+  if (!keys.length) return { checked: 0, failed: 0 };
+  const results = await Promise.allSettled(keys.map(async key => {
+    const sub = await env.SUBSCRIPTIONS.get(key, 'json');
+    if (sub) await checkSubscription(sub, env);
+  }));
   return { checked: results.length, failed: results.filter(r => r.status === 'rejected').length };
 }
 export default {
@@ -71,16 +101,20 @@ export default {
       const body = await request.json();
       if (!validSubscription(body.subscription) || !Array.isArray(body.routes) || !body.routes.some(validItem)) return json({ error: 'invalid subscription or routes' }, 400, origin, env);
       const subscription = { endpoint: body.subscription.endpoint, expirationTime: body.subscription.expirationTime ?? null, keys: body.subscription.keys, routes: body.routes.filter(validItem).slice(0, 20), updatedAt: new Date().toISOString() };
-      await env.SUBSCRIPTIONS.put(keyFor(subscription), JSON.stringify(subscription));
+      const key = keyFor(subscription);
+      await env.SUBSCRIPTIONS.put(key, JSON.stringify(subscription));
+      await addToIndex(env, key);
       return json({ ok: true }, 201, origin, env);
     }
     if (url.pathname === '/subscribe' && request.method === 'DELETE') {
       const body = await request.json();
       if (!validSubscription(body)) return json({ error: 'invalid subscription' }, 400, origin, env);
-      await env.SUBSCRIPTIONS.delete(keyFor(body));
+      const key = keyFor(body);
+      await env.SUBSCRIPTIONS.delete(key);
+      await removeFromIndex(env, key);
       return json({ ok: true }, 200, origin, env);
     }
-    if (url.pathname === '/health') return json({ ok: true, cron: 'every minute' }, 200, origin, env);
+    if (url.pathname === '/health') return json({ ok: true, cron: 'disabled until explicitly enabled', kvStrategy: 'active-index-no-list' }, 200, origin, env);
     return json({ error: 'not found' }, 404, origin, env);
   },
   async scheduled(_event, env, ctx) { ctx.waitUntil(runCron(env)); }

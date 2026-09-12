@@ -1,33 +1,40 @@
-# BusPulse background push prototype
+# BusPulse background push
 
-This directory implements the architecture used by the closest GitHub transit-alert example: a Cloudflare Worker polls the official ETA APIs on a Cron Trigger, stores Web Push subscriptions in KV, and sends a system notification when a trip enters the alert window. The GitHub Pages app remains the user interface.
+This directory contains the Cloudflare Worker for BusPulse HK background push notifications. The GitHub Pages app remains the user interface, while the Worker checks official ETA APIs and sends Web Push notifications.
 
-## What is included
+## Safety design
 
-- `src/index.js`: Worker HTTP endpoints and one-minute `scheduled()` handler.
-- `wrangler.toml`: Cron and KV binding configuration.
-- `package.json`: Cloudflare-compatible Web Push implementation.
+The Worker no longer uses `KV.list()` in the minute-level path. It stores subscription keys in one `meta:active-subscriptions` index and reads that index with a normal KV `get()`. When the index is empty, the scheduled handler returns immediately. This avoids the previous design that consumed one KV list operation every minute even when nobody was subscribed.
+
+Only one production Worker must have a Cron schedule at any time. The default `wrangler.toml` intentionally contains no Cron trigger. A Cron trigger must not be enabled until the new build has been deployed and verified; the second Worker must remain without a schedule.
+
+The individual `/subscribe` DELETE endpoint removes only the requesting browser's subscription and its index entry. It does not stop the Worker, change the Cron schedule, delete the KV namespace, or affect other users.
+
+## Files
+
+- `src/index.js`: Worker HTTP endpoints, active subscription index, ETA checks, and Web Push handler.
+- `wrangler.toml`: Worker name, KV binding, origin, and safe no-Cron default.
+- `package.json`: Cloudflare-compatible Web Push dependency.
 - `test/worker.test.js`: deterministic ETA-window tests.
 
 ## Required deployment setup
 
-1. Create a Cloudflare Worker and a KV namespace.
-2. Replace the KV IDs in `wrangler.toml`.
-3. Generate VAPID keys with `npx web-push generate-vapid-keys` or another RFC 8292-compatible generator.
-4. Set `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY`, and `VAPID_PRIVATE_KEY` as Worker secrets.
-5. Set `ALLOWED_ORIGIN` to the exact deployed site origin.
-6. Deploy with Wrangler.
-7. Connect the front end to `/vapid-public-key` and `/subscribe`; the request body must contain the browser PushSubscription and the saved route objects.
-
-## Important status
-
-This is an experiment scaffold, not a deployed notification service. It does not send anything until Cloudflare credentials, a KV namespace, VAPID secrets, and a front-end subscription flow are configured. Do not put VAPID private keys in GitHub or in the browser.
+1. Use one production Worker name only.
+2. Bind the existing KV namespace to `SUBSCRIPTIONS`.
+3. Set `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY`, and `VAPID_PRIVATE_KEY` as Worker secrets. Never commit private keys to GitHub or send them in chat.
+4. Set `ALLOWED_ORIGIN` to the exact deployed site origin.
+5. Deploy this build without a Cron trigger first.
+6. Verify `/health` reports `kvStrategy: active-index-no-list`.
+7. Verify POST and DELETE `/subscribe` update the index correctly.
+8. Keep all other Worker schedules empty.
+9. Only then enable one Cron trigger on one production Worker and monitor usage after the first reset.
 
 ## Local test
 
 ```bash
 npm install
 npm test
+npx wrangler deploy --dry-run --outdir /tmp/buspulse-worker-dist
 ```
 
-The Worker polls once per minute. It de-duplicates each route/trip in KV and removes expired push subscriptions when the push service returns HTTP 404 or 410.
+The Worker de-duplicates each route/trip in KV and removes expired Push subscriptions when the push service returns HTTP 404 or 410. It does not automatically enable another Cloudflare account, Worker, or Cron when a limit is reached.
