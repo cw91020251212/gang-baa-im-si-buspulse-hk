@@ -472,9 +472,10 @@ const KEY = 'busboard.items.v1';
 const DEFAULTS_KEY = 'busboard.user-defaults.v1';
 const PREF_KEY = 'busboard.preferences.v1';
 const ALARM_KEY = 'busboard.alarms.v1';
-const PUSH_URL_KEY = 'busboard.push-worker-url.v1';
-const DEFAULT_PUSH_WORKER_URL = 'https://gang-baa-im-si-buspulse-hk.cw9102025.workers.dev';
-const PUSH_DISABLED_KEY = 'busboard.push-disabled.v1';
+  const PUSH_URL_KEY = 'busboard.push-worker-url.v1';
+  const DEFAULT_PUSH_WORKER_URL = 'https://gang-baa-im-si-buspulse-hk.cw9102025.workers.dev';
+  const PUSH_DISABLED_KEY = 'busboard.push-disabled.v1';
+  const PUSH_VAPID_KEY = 'busboard.vapid-public-key.v1';
 function pushWorkerUrl() { try { return localStorage.getItem(PUSH_URL_KEY) || DEFAULT_PUSH_WORKER_URL; } catch { return DEFAULT_PUSH_WORKER_URL; } }
 function savePushWorkerUrl(value) { try { localStorage.setItem(PUSH_URL_KEY, value.trim().replace(/\/$/, '')); } catch {} }
 function backgroundPushDisabled() { try { return localStorage.getItem(PUSH_DISABLED_KEY) === '1'; } catch { return false; } }
@@ -542,9 +543,16 @@ async function syncPushSubscription() {
     }
     const keyRes=await fetch(base+'/vapid-public-key'); if(!keyRes.ok) throw new Error('讀取推送設定失敗');
     const {publicKey}=await keyRes.json();
+    let savedVapidKey=''; try { savedVapidKey=localStorage.getItem(PUSH_VAPID_KEY) || ''; } catch {}
+    if (sub && savedVapidKey && savedVapidKey !== publicKey) {
+      await deletePushSubscription(base, sub);
+      await sub.unsubscribe();
+      sub=null;
+    }
     if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:base64UrlToBytes(publicKey)});
     const res=await fetch(base+'/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({subscription:sub.toJSON(),routes})});
     if(!res.ok) throw new Error('同步路線失敗（'+res.status+'）');
+    try { localStorage.setItem(PUSH_VAPID_KEY, publicKey); } catch {}
     pushStatus('✓ 已開啟真正背景提醒；切去其他 App 都會收到通知',true);
   } catch(e) { pushStatus(e.message || '背景推送未能開啟'); }
 }
