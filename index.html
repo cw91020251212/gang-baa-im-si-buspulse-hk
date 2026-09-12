@@ -544,7 +544,9 @@ async function syncPushSubscription() {
     const keyRes=await fetch(base+'/vapid-public-key'); if(!keyRes.ok) throw new Error('讀取推送設定失敗');
     const {publicKey}=await keyRes.json();
     let savedVapidKey=''; try { savedVapidKey=localStorage.getItem(PUSH_VAPID_KEY) || ''; } catch {}
-    if (sub && savedVapidKey && savedVapidKey !== publicKey) {
+    // A key rotation must also replace subscriptions created before this
+    // marker existed; an empty saved key is therefore intentionally a mismatch.
+    if (sub && savedVapidKey !== publicKey) {
       await deletePushSubscription(base, sub);
       await sub.unsubscribe();
       sub=null;
