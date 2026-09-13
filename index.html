@@ -1131,7 +1131,7 @@ async function requestNotifications() {
 }
 /* -------------------------------------------------------------------
    本地鬧鐘診斷
-   報告瀏覽器實際批准咗咩，令「冇響鬧」可以查清原因，而唔係靠猜。
+   顯示本地鬧鐘所需的通知與計時狀態，方便排查提醒問題。
    ------------------------------------------------------------------- */
 function renderDiagnostics() {
   const el = document.querySelector('#diagBox');
@@ -1145,7 +1145,7 @@ function renderDiagnostics() {
   const planCount = Object.values(alarmPlans).reduce((n, l) => n + (Array.isArray(l) ? l.length : 0), 0);
   const rows = [
     ['系統通知權限', perm === 'granted' ? '✓ 已允許' : perm === 'denied' ? '✗ 已封鎖' : '⚠ 未決定（請撳上面允許）'],
-    ['Service Worker', ('serviceWorker' in navigator) ? '✓' : '✗'],
+    ['本地通知支援', ('serviceWorker' in navigator) ? '✓ 已可用' : '✗ 不支援'],
     ['已開啟鬧鐘', armed + ' 條'],
     ['已排定補發計劃', planCount + ' 個'],
     ['上次成功更新', lastOK ? Math.round((Date.now() - lastOK) / 1000) + ' 秒前' : '未更新']
