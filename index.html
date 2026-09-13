@@ -872,7 +872,7 @@ function shell() {
   updateFares().catch(() => {});
 }
 
-function toggleAlarm(id, button) {
+async function toggleAlarm(id, button) {
   alarms[id] = !alarms[id];
   if (alarms[id]) alarmSessions[id] = newAlarmSession();
   else delete alarmSessions[id];
@@ -892,9 +892,9 @@ function toggleAlarm(id, button) {
     unlockAudio();
     button.title = '關閉到站提醒';
     // 以按鈕點擊作為使用者手勢，直接申請系統通知權限。
-    requestNotifications();
+    await requestNotifications();
   } else button.title = '開關到站提醒';
-  if (pushWorkerUrl()) syncPushSubscription();
+  if (pushWorkerUrl()) await syncPushSubscription();
 }
 function disableAlarmAfterArrival(id) {
   if (!alarms[id]) return;
@@ -1674,7 +1674,7 @@ function viewPrefs() {
     '<div class="pref-row"><div>真正背景推送<small>伺服器每分鐘查巴士 ETA；關閉會取消 Push 登記、停止伺服器查詢及本機鬧鐘</small></div><button class="wide" id="pushBtn" style="width:auto;margin:0">真正關閉</button></div>' +
     '<div class="hint">背景推送只會檢查已開啟、尚未到站嘅路線；每條路線成功提醒一次後會自動移除。</div>' +
     '<input class="tin" id="pushUrl" placeholder="背景推送伺服器網址（部署後填入）" value="" />' +
-    '<div class="hint" id="pushStatus">已連接背景推送伺服器；撳「開啟」登記呢部手機。</div>' +
+    '<div class="hint" id="pushStatus">已連接背景推送伺服器；撳「重新同步」登記呢部手機。</div><button class="wide" id="syncPushBtn">重新同步背景鬧鐘</button>' +
     '<div class="pref-row"><div>Cloudflare 用量<small>每日 quota 會喺香港時間 08:00 重設</small></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><a class="wide" href="https://dash.cloudflare.com/5989bdd689f97c9274b758913d4e6651/workers/overview" target="_blank" rel="noopener" style="width:auto;margin:0;text-decoration:none;text-align:center">Worker 用量</a><a class="wide" href="https://dash.cloudflare.com/5989bdd689f97c9274b758913d4e6651/workers/kv/namespaces" target="_blank" rel="noopener" style="width:auto;margin:0;text-decoration:none;text-align:center">KV 用量</a></div></div>' +
     '</div></details>' +
     '<details class="settings-group"><summary>提示聲測試</summary><div class="group-body">' +
@@ -1704,6 +1704,12 @@ function viewPrefs() {
   $('#themeSel').addEventListener('change', e => { prefs.theme=e.target.value; savePrefs(); applyPrefs(); });
   $('#notifyBtn').addEventListener('click', toggleNotificationSetting);
   $('#pushUrl').addEventListener('change', e => { savePushWorkerUrl(e.target.value); pushStatus(pushWorkerUrl() ? '已儲存伺服器網址；請按「開啟」啟用。' : '未連接背景推送伺服器。'); });
+  $('#syncPushBtn').addEventListener('click', async e => {
+    e.currentTarget.disabled = true; e.currentTarget.textContent = '同步中…';
+    await requestNotifications();
+    await syncPushSubscription();
+    e.currentTarget.disabled = false; e.currentTarget.textContent = '重新同步背景鬧鐘';
+  });
   renderDiagnostics();
   $('#testNotifyBtn').addEventListener('click', () => scheduleTestNotification(Number($('#testDelaySel').value)));
   $('#prefsBack').addEventListener('click', viewHome);
