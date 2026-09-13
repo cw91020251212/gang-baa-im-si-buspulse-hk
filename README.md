@@ -29,6 +29,8 @@ Alerts have two layers. The static GitHub Pages app uses self-correcting refresh
 
 On Android, open the site in Chrome, allow notifications, use **「加入主畫面」**, open the installed app once, add a route, enable its bell, then open settings and enter the deployed Worker URL under **真正背景推送**. Android system notification permission and battery optimisation settings still control delivery. GitHub Pages alone cannot run a server-side poller, and this repository intentionally does not contain VAPID private keys.
 
+Each route alarm is intentionally **one trip only**. When the arrival reminder is delivered, the route alarm returns to its original off state and the route is removed from the background Push subscription. To wait for another bus on the same route, press the original bell icon again. If the alert was delivered while the app was fully in the background, the app applies the off state when it next resumes and synchronizes the subscription.
+
 The mini-window is a best-effort browser feature. `documentPictureInPicture` support varies by browser and platform; the UI reports when it is unavailable and does not break the normal page. The mini-window is refreshed whenever the main page receives fresh ETA data.
 
 ## Run locally
