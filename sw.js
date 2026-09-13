@@ -1,6 +1,6 @@
 /* BusPulse HK — service worker
    只 cache app shell；到站數據永遠走網絡，絕不 cache。 */
-const SHELL = 'buspulse-hk-shell-v23';
+const SHELL = 'buspulse-hk-shell-v20';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -42,20 +42,6 @@ self.addEventListener('fetch', e => {
 // 由頁面呼叫，令手機用系統通知顯示到站提醒，而不是只靠頁面內的 new Notification。
 self.addEventListener('message', e => {
   const data = e.data || {};
-  if (data.type === 'BACKGROUND_STATUS') {
-    e.waitUntil(self.registration.showNotification(data.title || '港巴即時', {
-      body: data.body || '背景提醒已開啟，系統正在運作。',
-      icon: './icon-192.png',
-      badge: './icon-192.png',
-      tag: data.tag || 'buspulse-background-status',
-      renotify: false,
-      silent: true,
-      vibrate: [],
-      requireInteraction: false,
-      data: { url: './', informational: true }
-    }));
-    return;
-  }
   if (data.type !== 'BUS_ARRIVAL') return;
   const title = data.title || '巴士就嚟到站';
   const options = {
@@ -73,24 +59,6 @@ self.addEventListener('message', e => {
     ? self.registration.setAppBadge(Math.max(1, Number(data.badgeNumber) || 1)).catch(() => {})
     : Promise.resolve();
   e.waitUntil(Promise.all([self.registration.showNotification(title, options), badge]));
-});
-
-// Web Push is the browser-supported way to wake a PWA after its page has
-// been suspended. GitHub Pages has no push server in this project yet, but
-// handling push events here makes the notification channel ready for one.
-self.addEventListener('push', e => {
-  let data = {};
-  try { data = e.data ? e.data.json() : {}; } catch { data = { body: e.data?.text?.() || '' }; }
-  const title = data.title || '港巴即時提醒';
-  const options = {
-    body: data.body || '巴士到站提醒',
-    icon: './icon-192.png', badge: './icon-192.png',
-    tag: data.tag || 'buspulse-push', renotify: true,
-    vibrate: data.silent ? [] : [260, 100, 260],
-    silent: !!data.silent, requireInteraction: true,
-    data: { url: './' }
-  };
-  e.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', e => {

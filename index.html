@@ -499,6 +499,31 @@ const alarmSeen = new Map();
 const alarmFallbackTimers = new Map();
 const ALARM_PLAN_KEY = 'busboard.alarm-plan.v1';
 const ALARM_STEP_MS = 20000;
+const localAlarmScheduled = new Set();
+function localAlarmKey(id, at) { return id + '|' + String(at); }
+async function scheduleNativeLocalAlarm(it, plan) {
+  // Notification Triggers is an experimental browser feature. When present,
+  // the browser stores the due notification locally; no page timer or network
+  // request is needed at the due time. Unsupported browsers use the normal
+  // ETA fallback timer instead.
+  if (!globalThis.TimestampTrigger || !('Notification' in window) || Notification.permission !== 'granted') return false;
+  const id = uid(it), key = localAlarmKey(id, plan.at);
+  if (localAlarmScheduled.has(key)) return true;
+  const reg = await notificationRegistration();
+  if (!reg?.showNotification) return false;
+  try {
+    await reg.showNotification('巴士就嚟到站', {
+      body: it.route + ' 往 ' + (it.dest || '') + '，約 ' + Math.max(0, Math.round((Number(plan.at) - Date.now()) / 60000)) + ' 分鐘到 ' + (it.stopName || ''),
+      icon: './icon-192.png', badge: './icon-192.png',
+      tag: 'buspulse-local-' + encodeURIComponent(id) + '-' + String(plan.at),
+      renotify: true, requireInteraction: true,
+      timestampTrigger: new TimestampTrigger(new Date(Number(plan.at))),
+      data: { url: './', localAlarm: true, id, at: Number(plan.at) }
+    });
+    localAlarmScheduled.add(key);
+    return true;
+  } catch { return false; }
+}
 function loadAlarmPlans() { try { const raw = JSON.parse(localStorage.getItem(ALARM_PLAN_KEY) || '{}'); return raw && typeof raw === 'object' ? raw : {}; } catch { return {}; } }
 let alarmPlans = loadAlarmPlans();
 function saveAlarmPlans() { try { localStorage.setItem(ALARM_PLAN_KEY, JSON.stringify(alarmPlans)); } catch {} }
@@ -513,6 +538,7 @@ function rememberAlarmPlan(it, e, at) {
   if (!list.some(x => String(x.key) === key)) {
     list.push({ key, at, iso:e.iso, min:Number(e.min), rmk:e.rmk || '', route:it.route, stopName:it.stopName });
     alarmPlans[id] = list.slice(-12); saveAlarmPlans();
+    scheduleNativeLocalAlarm(it, { key, at, iso:e.iso, min:e.min, rmk:e.rmk || '' }).catch(() => {});
   }
 }
 function forgetAlarmPlan(id, key) {
@@ -1028,6 +1054,7 @@ function scheduleAlarmFallbacks(it, res, options = {}) {
     if (!Number.isFinite(at)) return;
     const key = String(at);
     rememberAlarmPlan(it, e, at);
+    scheduleNativeLocalAlarm(it, { key, at, iso:e.iso, min:e.min, rmk:e.rmk || '' }).catch(() => {});
     if (timers.has(key)) return;
     // A small margin helps when the browser wakes a throttled background
     // timer late. checkAlarms still de-duplicates the same trip.
