@@ -401,9 +401,11 @@ async function checkSubscription(sub, env) {
   const routes = Array.isArray(sub.routes) ? sub.routes.filter(validItem).slice(0, 20) : [];
   for (const it of routes) {
     const result = parseETAs(it, await getJSON(etaUrl(it)));
-    const eta = dueETA(result);
+    const requestedLead = Number(it.lead);
+    const lead = Number.isFinite(requestedLead) ? Math.min(10, Math.max(0, requestedLead)) : LEAD_MINUTES;
+    const eta = dueETA(result, Date.now(), lead);
     if (!eta) continue;
-    const tripKey = it.co + ":" + it.route + ":" + it.seq + ":" + eta.at;
+    const tripKey = [it.co, it.route, it.bound || "", it.dir || "", it.service_type || "", it.route_id || "", it.route_seq || "", it.stopId || "", it.seq, eta.at].join(":");
     const sentKey = keyFor(sub) + ":sent:" + tripKey;
     if (await env.SUBSCRIPTIONS.get(sentKey)) continue;
     const response = await notify(sub, it.route + " \u5F80 " + (it.dest || "") + "\uFF0C\u7D04 " + Math.max(0, eta.min) + " \u5206\u9418\u5230 " + (it.stopName || ""), env, "buspulse-" + encodeURIComponent(tripKey));
@@ -451,7 +453,7 @@ var index_default = {
       await removeFromIndex(env, key);
       return json({ ok: true }, 200, origin, env);
     }
-    if (url.pathname === "/health") return json({ ok: true, cron: "disabled until explicitly enabled", kvStrategy: "active-index-no-list" }, 200, origin, env);
+    if (url.pathname === "/health") return json({ ok: true, cron: "every minute", kvStrategy: "active-index-no-list" }, 200, origin, env);
     return json({ error: "not found" }, 404, origin, env);
   },
   async scheduled(_event, env, ctx) {

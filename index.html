@@ -519,7 +519,7 @@ function pushRoutePayload() {
   return items.filter(it => alarms[uid(it)]).slice(0, 20).map(it => ({
     co:it.co, route:it.route, seq:it.seq, dir:it.dir, service_type:it.service_type,
     stopId:it.stopId, route_id:it.route_id, route_seq:it.route_seq,
-    dest:it.dest || '', stopName:it.stopName || ''
+    dest:it.dest || '', stopName:it.stopName || '', lead:Number(prefs.lead) || 2
   }));
 }
 function pushStatus(text, good=false) { const el=document.querySelector('#pushStatus'); if(el){ el.textContent=text; el.style.color=good?'#70f09b':''; } }
@@ -1610,7 +1610,7 @@ function viewPrefs() {
   $('#leadSel').value = String(prefs.lead); $('#pushUrl').value=pushWorkerUrl(); if(pushWorkerUrl()) pushStatus('已設定推送伺服器；請按「開啟」同步路線。'); $('#soundSel').value = prefs.sound; $('#soundLenSel').value = prefs.soundLen; $('#webSoundSel').value = String(prefs.webSound !== false); $('#fontSel').value = prefs.font; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
   updateNotificationButton();
   updateBackgroundPushButton();
-  $('#leadSel').addEventListener('change', e => { prefs.lead=+e.target.value; savePrefs(); });
+  $('#leadSel').addEventListener('change', e => { prefs.lead=+e.target.value; savePrefs(); if (pushWorkerUrl()) syncPushSubscription(); });
   $('#soundSel').addEventListener('change', e => { prefs.sound=e.target.value; savePrefs(); });
   $('#soundLenSel').addEventListener('change', e => { prefs.soundLen=e.target.value; savePrefs(); });
   $('#webSoundSel').addEventListener('change', e => { prefs.webSound=e.target.value === 'true'; if (!prefs.webSound) prefs.systemSilent=false; savePrefs(); });

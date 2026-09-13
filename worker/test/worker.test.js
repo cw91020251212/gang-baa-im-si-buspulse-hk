@@ -23,3 +23,8 @@ test('dueETA ignores buses outside the alert window', () => {
   assert.equal(dueETA([{ iso: '2026-09-08T10:03:00Z' }], now, 2), null);
   assert.equal(dueETA([{ iso: '2026-09-08T09:57:00Z' }], now, 2), null);
 });
+
+test('dueETA respects a user-selected wider lead window', () => {
+  const now = Date.parse('2026-09-08T10:00:00Z');
+  assert.equal(dueETA([{ iso: '2026-09-08T10:05:00Z' }], now, 5).iso, '2026-09-08T10:05:00Z');
+});
