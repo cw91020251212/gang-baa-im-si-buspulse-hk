@@ -37,8 +37,6 @@ body{
 .brandmark{width:31px;height:31px;border-radius:10px;display:grid;place-items:center;flex:none;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;font-size:10px;font-weight:900;letter-spacing:-.4px;box-shadow:0 5px 16px var(--glow)}
 .brandcopy{flex:1;min-width:0}.brandcopy h1{line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brandcopy small{display:block;color:var(--faint);font-size:9px;font-weight:700;letter-spacing:.45px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .clock{font-variant-numeric:tabular-nums; font-size:13px; color:var(--dim); font-weight:600}
-.push-state{border:1px solid rgba(54,224,160,.35);background:rgba(54,224,160,.1);color:#8af0c5;border-radius:8px;padding:5px 7px;font:700 10px/1.1 inherit;cursor:pointer;white-space:nowrap}
-.push-state.off{border-color:rgba(170,183,204,.3);background:rgba(170,183,204,.08);color:var(--dim)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--now);flex:none}
 .dot.stale{background:var(--soon)}
 .dot.err{background:var(--kmb)}
@@ -50,7 +48,6 @@ body{
 .iconbtn:active{background:#2a3240}
 @media(max-width:500px){
   .top{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:6px;padding-left:10px;padding-right:10px}
-  .push-state{grid-column:2 / -1;grid-row:2;justify-self:start;margin-top:1px;margin-bottom:1px}
 }
 /* ---------- board ---------- */
 .board{padding:12px 12px 0; display:flex; flex-direction:column; gap:10px}
@@ -237,7 +234,6 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
   <div class="brandcopy"><h1>港巴即時</h1><small>BusPulse HK · 香港實時到站</small></div>
   <span class="dot" id="dot"></span>
   <span class="clock" id="clock">--:--:--</span>
-  <button class="push-state" id="pushStateBtn" title="背景提醒尚未同步">背景提醒：未同步</button>
   <button class="iconbtn" id="prefsBtn" title="顯示設定" aria-label="顯示設定">⚙</button>
   <button class="iconbtn" id="refreshBtn" title="即刻更新" aria-label="即刻更新">&#8635;</button>
 </div>
@@ -475,14 +471,6 @@ const DEFAULTS_KEY = 'busboard.user-defaults.v1';
 const PREF_KEY = 'busboard.preferences.v1';
 const ALARM_KEY = 'busboard.alarms.v1';
 const ALARM_SESSION_KEY = 'busboard.alarm-sessions.v1';
-  const PUSH_URL_KEY = 'busboard.push-worker-url.v1';
-  const DEFAULT_PUSH_WORKER_URL = 'https://gang-baa-im-si-buspulse-hk.cw9102025.workers.dev';
-  const PUSH_DISABLED_KEY = 'busboard.push-disabled.v1';
-  const PUSH_VAPID_KEY = 'busboard.vapid-public-key.v1';
-function pushWorkerUrl() { try { return localStorage.getItem(PUSH_URL_KEY) || DEFAULT_PUSH_WORKER_URL; } catch { return DEFAULT_PUSH_WORKER_URL; } }
-function savePushWorkerUrl(value) { try { localStorage.setItem(PUSH_URL_KEY, value.trim().replace(/\/$/, '')); } catch {} }
-function backgroundPushDisabled() { try { return localStorage.getItem(PUSH_DISABLED_KEY) === '1'; } catch { return false; } }
-function saveBackgroundPushDisabled(value) { try { localStorage.setItem(PUSH_DISABLED_KEY, value ? '1' : '0'); } catch {} }
 const GETOFF_KEY = 'busboard.getoff.v1';
 let getoff = loadGetoff();
 let getoffWatch = null;
@@ -549,106 +537,6 @@ function forgetAlarmPlan(id, key) {
 }
 function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true }; } }
 function loadAlarms() { try { return JSON.parse(localStorage.getItem(ALARM_KEY) || '{}') || {}; } catch { return {}; } }
-function pushRoutePayload() {
-  return items.filter(it => alarms[uid(it)]).slice(0, 20).map(it => ({
-    co:it.co, route:it.route, seq:it.seq, dir:it.dir, service_type:it.service_type || (it.co === 'KMB' ? '1' : undefined),
-    stopId:it.stopId, route_id:it.route_id, route_seq:it.route_seq,
-    dest:it.dest || '', stopName:it.stopName || '', lead:Number(prefs.lead) || 2, session:ensureAlarmSession(uid(it))
-  }));
-}
-function pushStatus(text, good=false) { const el=document.querySelector('#pushStatus'); if(el){ el.textContent=text; el.style.color=good?'#70f09b':''; } }
-function base64UrlToBytes(value) { const pad='='.repeat((4-value.length%4)%4), raw=atob((value+pad).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(raw, c=>c.charCodeAt(0)); }
-async function deletePushSubscription(base, sub) {
-  if (!base || !sub) return;
-  const res=await fetch(base+'/subscribe',{method:'DELETE',headers:{'content-type':'application/json'},body:JSON.stringify(sub.toJSON())});
-  if (!res.ok) throw new Error('刪除背景訂閱失敗（'+res.status+'）');
-}
-async function syncPushSubscription() {
-  const base=pushWorkerUrl(), routes=pushRoutePayload();
-  if (!base || !('serviceWorker' in navigator)) return;
-  try {
-    const reg=await navigator.serviceWorker.ready;
-    if (!reg.pushManager) throw new Error('此裝置未提供 Push；Android 請先用 Chrome 加入主畫面');
-    let sub=await reg.pushManager.getSubscription();
-    if (backgroundPushDisabled() || !routes.length) {
-      if (sub) await deletePushSubscription(base, sub);
-      if (!routes.length) pushStatus('✓ 已停止背景查詢：目前冇任何路線開啟鬧鐘',true);
-      return;
-    }
-    const keyRes=await fetch(base+'/vapid-public-key'); if(!keyRes.ok) throw new Error('讀取推送設定失敗');
-    const {publicKey}=await keyRes.json();
-    let savedVapidKey=''; try { savedVapidKey=localStorage.getItem(PUSH_VAPID_KEY) || ''; } catch {}
-    // A key rotation must also replace subscriptions created before this
-    // marker existed; an empty saved key is therefore intentionally a mismatch.
-    if (sub && savedVapidKey !== publicKey) {
-      await deletePushSubscription(base, sub);
-      await sub.unsubscribe();
-      sub=null;
-    }
-    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:base64UrlToBytes(publicKey)});
-    const res=await fetch(base+'/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({subscription:sub.toJSON(),routes})});
-    if(!res.ok) throw new Error('同步路線失敗（'+res.status+'）');
-    const syncResult = await res.json().catch(() => ({}));
-    (syncResult.completedRoutes || []).forEach(route => disableAlarmAfterArrival([route.co, route.route, route.dir || route.route_seq, route.stopId || route.seq].join('|')));
-    try { localStorage.setItem(PUSH_VAPID_KEY, publicKey); } catch {}
-    try {
-      if (reg.active) reg.active.postMessage({
-        type:'BACKGROUND_STATUS',
-        title:'港巴即時',
-        body:'背景提醒已開啟，系統正在運作。',
-        tag:'buspulse-background-status'
-      });
-    } catch {}
-    pushStatus('✓ 已開啟真正背景提醒；切去其他 App 都會收到通知',true);
-  } catch(e) { pushStatus(e.message || '背景推送未能開啟'); }
-}
-async function disableBackgroundPush() {
-  saveBackgroundPushDisabled(true);
-  Object.keys(alarms).forEach(id => { alarms[id] = false; });
-  Object.keys(alarmPlans).forEach(id => delete alarmPlans[id]);
-  alarmFallbackTimers.forEach(timers => timers.forEach(t => clearTimeout(t.handle)));
-  alarmFallbackTimers.clear(); alarmSeen.clear(); saveAlarms(); saveAlarmPlans();
-  const base=pushWorkerUrl();
-  try {
-    const reg=await navigator.serviceWorker?.ready;
-    const sub=await reg?.pushManager?.getSubscription();
-    if (sub) {
-      await deletePushSubscription(base, sub);
-      await sub.unsubscribe();
-    }
-  } catch {}
-  pushStatus('✓ 已真正關閉：伺服器不再查呢部手機，路線鬧鐘亦已全部停止。',true);
-  updateBackgroundPushButton(); renderDiagnostics(); shell();
-}
-async function updateBackgroundPushButton() {
-  const button=$('#pushBtn'); if (!button) return;
-  const off=backgroundPushDisabled(); button.textContent=off ? '重新開啟' : '真正關閉';
-  button.classList.toggle('danger', !off); button.title=off ? '重新開啟背景推送' : '取消 Push 登記並停止所有背景提醒';
-  button.onclick=off ? enableBackgroundPush : disableBackgroundPush;
-  const top=$('#pushStateBtn');
-  if (top) {
-    let synced = false;
-    if (!off && pushWorkerUrl() && 'serviceWorker' in navigator) {
-      try { synced = !!(await (await navigator.serviceWorker.ready).pushManager?.getSubscription()) && pushRoutePayload().length > 0; } catch {}
-    }
-    top.textContent=off ? '背景提醒：已關閉' : synced ? '背景提醒：運行中' : pushRoutePayload().length ? '背景提醒：未同步' : '背景提醒：未開啟鬧鐘';
-    top.classList.toggle('off', off);
-    top.title=off ? '背景提醒已關閉；撳此重新開啟' : synced ? '背景提醒運行中；撳此真正關閉' : '請先開啟路線鈴鐺，再到設定重新同步';
-    top.onclick=off ? enableBackgroundPush : disableBackgroundPush;
-  }
-}
-async function enableBackgroundPush() {
-  const base=pushWorkerUrl();
-  if(!base) { pushStatus('請先填入背景推送伺服器網址'); return; }
-  if(!('Notification' in window)) { pushStatus('此瀏覽器不支援系統通知'); return; }
-  const perm=Notification.permission==='granted' ? 'granted' : await Notification.requestPermission();
-  if(perm!=='granted') { pushStatus('你拒絕咗系統通知，請到 Android 設定重新允許'); return; }
-  saveBackgroundPushDisabled(false);
-  // Push is only a delivery channel; it must never change the user-owned alarm switches.
-  await syncPushSubscription();
-  updateBackgroundPushButton();
-}
-
 function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} }
 function saveAlarms() { try { localStorage.setItem(ALARM_KEY, JSON.stringify(alarms)); } catch {} }
 function backupFile() {
@@ -758,7 +646,6 @@ function cleanupOrphanAlarms() {
 function clearAllArrivalAlarms() {
   if (!confirm('確定要關閉所有路線嘅到站鬧鐘嗎？之後可以逐條重新開啟。')) return;
   alarms = {}; alarmSeen.clear(); saveAlarms(); closeArrivalNotifications(); shell();
-  if (pushWorkerUrl()) syncPushSubscription();
   const n=document.querySelector('#alarmClearNote'); if(n) n.textContent='所有到站鬧鐘已關閉。';
 }
 cleanupOrphanAlarms();
@@ -897,9 +784,8 @@ async function toggleAlarm(id, button) {
     button.title = '關閉到站提醒';
     // 以按鈕點擊作為使用者手勢，直接申請系統通知權限。
     const permission = await requestNotifications();
-    if (permission !== 'granted') pushStatus(permission === 'denied' ? '⚠ 通知已被封鎖：請到 Android 瀏覽器設定允許通知，鬧鐘先會真正生效。' : '⚠ 尚未允許通知：請按「允許系統通知」，再重新撳路線鈴鐺。');
+    if (permission !== 'granted') alert(permission === 'denied' ? '通知已被封鎖，鬧鐘提醒可能無法顯示。' : '尚未允許系統通知，鬧鐘提醒可能無法顯示。');
   } else button.title = '開關到站提醒';
-  if (pushWorkerUrl()) await syncPushSubscription();
   renderDiagnostics();
 }
 function disableAlarmAfterArrival(id) {
@@ -916,9 +802,6 @@ function disableAlarmAfterArrival(id) {
     button.textContent = '🔔';
     button.title = '開關到站提醒';
   }
-  pushStatus('✓ 呢條路線已提醒一次，鬧鐘已自動關閉；再撳鈴鐺可等下一班', true);
-  // 前景提醒亦要即時從 Worker 移除，避免同一程稍後再收到一次背景 Push。
-  if (pushWorkerUrl()) syncPushSubscription();
 }
 let audioCtx = null;
 const activeAlarmAlerts = new Map();
@@ -973,7 +856,7 @@ async function notifyArrival(it, min, tripKey) {
   const card = board.querySelector('[data-id="' + cssEscape(id) + '"]');
   const note = board.querySelector('[data-alarm-note="' + cssEscape(id) + '"]');
   if (note) {
-    note.textContent = isCatchup ? '⚠ 背景期間已錯過提醒：' + it.route + ' 約 ' + lateMinutes + ' 分鐘前到站時間（重新開啟後補發）' : '🔔 ' + it.route + ' 約 ' + Math.max(0, min) + ' 分鐘到站';
+    note.textContent = isCatchup ? '⚠ 頁面暫停期間已錯過提醒：' + it.route + ' 約 ' + lateMinutes + ' 分鐘前到站時間（恢復頁面後補發）' : '🔔 ' + it.route + ' 約 ' + Math.max(0, min) + ' 分鐘到站';
     note.classList.add('show');
     if (isCatchup) note.classList.add('catchup');
   }
@@ -1049,7 +932,7 @@ function scheduleAlarmFallbacks(it, res, options = {}) {
   const timers = alarmFallbackTimers.get(id) || new Map();
   // Do not cancel an already scheduled trip on every 25-second refresh.
   // Live ETA timestamps can move slightly; cancelling here can keep chasing
-  // the moving timestamp forever and miss the actual background alert.
+  // the moving timestamp forever and miss the actual alarm alert.
   for (const [key, timer] of timers) {
     if (timer.at < now - 2 * 60 * 60 * 1000 || timer.at > now + 3 * 60 * 60 * 1000) {
       clearTimeout(timer.handle); timers.delete(key);
@@ -1247,7 +1130,7 @@ async function requestNotifications() {
   } catch { return Notification.permission || 'error'; }
 }
 /* -------------------------------------------------------------------
-   背景提醒診斷
+   本地鬧鐘診斷
    報告瀏覽器實際批准咗咩，令「冇響鬧」可以查清原因，而唔係靠猜。
    ------------------------------------------------------------------- */
 function renderDiagnostics() {
@@ -1272,7 +1155,7 @@ function renderDiagnostics() {
     html += '<div class="diag-warn">⚠ iPhone／iPad 必須先用 Safari「分享 → 加入主畫面」，再由主畫面圖示開啟，通知才會運作。</div>';
   }
   if (perm === 'denied') {
-    html += '<div class="diag-warn">⚠ 通知已被封鎖，所有背景提醒都唔會出現，請到瀏覽器設定重新開啟。</div>';
+    html += '<div class="diag-warn">⚠ 通知已被封鎖，系統通知都唔會出現，請到瀏覽器設定重新開啟。</div>';
   }
   const plans = [];
   Object.entries(alarmPlans).forEach(([id, list]) => {
@@ -1309,69 +1192,6 @@ async function toggleNotificationSetting() {
   prefs.notificationsEnabled = prefs.notificationsEnabled === false;
   savePrefs(); updateNotificationButton(); renderDiagnostics();
 }
-async function sendTestNotification() {
-  if (!('Notification' in window)) { alert('此瀏覽器不支援系統通知'); return false; }
-  await requestNotifications();
-  if (Notification.permission !== 'granted') { alert('未允許系統通知，請先在瀏覽器設定開啟'); return false; }
-  try {
-    const reg = await navigator.serviceWorker?.ready;
-    const body = '呢個係測試提示，代表背景到站通知通道可以運作。';
-    if (reg?.active) {
-      navigator.setAppBadge?.(1).catch?.(() => {});
-      reg.active.postMessage({ type:'BUS_ARRIVAL', title:'【測試】港巴即時提示', body, badgeNumber:1, silent:!!prefs.systemSilent, tag:'buspulse-test', requireInteraction:true });
-    } else {
-      navigator.setAppBadge?.(1).catch?.(() => {});
-      await reg?.showNotification('【測試】港巴即時提示', { body, icon:'./icon-192.png', silent:!!prefs.systemSilent, vibrate:prefs.systemSilent?[]:[260,100,260], tag:'buspulse-test', requireInteraction:true });
-    }
-    return true;
-  } catch { alert('測試通知未能發出，請重新載入網站後再試'); return false; }
-}
-let testNotifyTimer = null;
-let testNotifyEndsAt = 0;
-function cancelTestNotification() {
-  if (testNotifyTimer) { clearTimeout(testNotifyTimer); testNotifyTimer = null; }
-  testNotifyEndsAt = 0;
-  const status = $('#testNotifyStatus');
-  const button = $('#testNotifyBtn');
-  const badge = $('#testCountdown');
-  if (status) status.textContent = '未安排測試；撳掣後請立即將網站放到背景。';
-  if (button) { button.disabled = false; button.textContent = '安排背景測試'; }
-  if (badge) { badge.textContent = '待機'; badge.classList.add('ready'); }
-}
-async function scheduleTestNotification(delayMs) {
-  if (!('Notification' in window)) { alert('此瀏覽器不支援系統通知'); return; }
-  await requestNotifications();
-  if (Notification.permission !== 'granted') { alert('未允許系統通知，請先在瀏覽器設定開啟'); return; }
-  // 由安排按鈕的使用者手勢解鎖音效，時間到時先播放所選聲效，再發系統通知。
-  unlockAudio();
-  cancelTestNotification();
-  testNotifyEndsAt = Date.now() + delayMs;
-  const button = $('#testNotifyBtn');
-  const status = $('#testNotifyStatus');
-  const badge = $('#testCountdown');
-  if (button) { button.disabled = true; button.textContent = '已安排，請放到背景'; }
-  if (badge) badge.classList.remove('ready');
-  const updateCountdown = () => {
-    const left = Math.max(0, testNotifyEndsAt - Date.now());
-    if (badge) badge.textContent = Math.ceil(left / 1000) + 's';
-    if (status) status.textContent = '背景測試倒數：' + Math.ceil(left / 1000) + ' 秒；而家可以切去其他 App 或鎖屏。';
-    if (left > 0) setTimeout(updateCountdown, 1000);
-  };
-  updateCountdown();
-  testNotifyTimer = setTimeout(async () => {
-    testNotifyTimer = null;
-    ringBell();
-    const reg = await navigator.serviceWorker?.ready;
-    const body = '延遲背景測試完成；如果你而家先收到，代表背景通知通道有反應。';
-    if (reg?.active) reg.active.postMessage({ type:'BUS_ARRIVAL', title:'【測試】港巴即時背景提示', body, badgeNumber:1, silent:!!prefs.systemSilent, tag:'buspulse-delayed-test', requireInteraction:true });
-    else await reg?.showNotification('【測試】港巴即時背景提示', { body, icon:'./icon-192.png', silent:!!prefs.systemSilent, vibrate:prefs.systemSilent?[]:[260,100,260], tag:'buspulse-delayed-test', requireInteraction:true });
-    testNotifyEndsAt = 0;
-    if (status) status.textContent = '背景測試已發出；如果冇收到，請檢查通知權限及省電設定。';
-    if (button) { button.disabled = false; button.textContent = '安排背景測試'; }
-    if (badge) { badge.textContent = '完成'; badge.classList.add('ready'); }
-  }, delayMs);
-}
-
 async function roadPath(stops) {
   const valid = stops.filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
   if (valid.length < 2) return valid.map(x => [x.lat, x.lng]);
@@ -1676,31 +1496,20 @@ function viewPrefs() {
     '<div class="lbl">到站提醒</div>' +
     '<div class="pref-row"><div>提早幾多分鐘響鬧<small>揀咗路線卡上方嘅 🔔 後生效；每條路線只提醒一程，響完會自動關閉</small></div><select class="pref-select" id="leadSel"><option value="1">1 分鐘</option><option value="2">2 分鐘</option><option value="3">3 分鐘</option><option value="5">5 分鐘</option></select></div>' +
     '<button class="wide" id="notifyBtn">允許系統通知</button>' +
-    '<details class="settings-group"><summary>背景推送</summary><div class="group-body">' +
-    '<div class="pref-row"><div>真正背景推送<small>伺服器每分鐘查巴士 ETA；關閉會取消 Push 登記、停止伺服器查詢及本機鬧鐘</small></div><button class="wide" id="pushBtn" style="width:auto;margin:0">真正關閉</button></div>' +
-    '<div class="hint">背景推送只會檢查已開啟、尚未到站嘅路線；每條路線成功提醒一次後會自動移除。</div>' +
-    '<input class="tin" id="pushUrl" placeholder="背景推送伺服器網址（部署後填入）" value="" />' +
-    '<div class="hint" id="pushStatus">背景推送預設會自動保持開啟；只需要喺想完全停止時撳「真正關閉」。</div>' +
-    '<div class="pref-row"><div>Cloudflare 用量<small>每日 quota 會喺香港時間 08:00 重設</small></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><a class="wide" href="https://dash.cloudflare.com/5989bdd689f97c9274b758913d4e6651/workers/overview" target="_blank" rel="noopener" style="width:auto;margin:0;text-decoration:none;text-align:center">Worker 用量</a><a class="wide" href="https://dash.cloudflare.com/5989bdd689f97c9274b758913d4e6651/workers/kv/namespaces" target="_blank" rel="noopener" style="width:auto;margin:0;text-decoration:none;text-align:center">KV 用量</a></div></div>' +
-    '</div></details>' +
     '<details class="settings-group"><summary>提示聲測試</summary><div class="group-body">' +
     '<div class="pref-row"><div>提示聲款式<small>測試前景網站提示聲效果</small></div><select class="pref-select" id="soundSel"><option value="double">兩下叮噹</option><option value="triple">三下提示</option><option value="alarm">鬧鐘長響</option></select></div>' +
     '<div class="pref-row"><div>提示聲長度<small>只影響網站前景播放嘅聲效</small></div><select class="pref-select" id="soundLenSel"><option value="short">較短</option><option value="normal">標準</option><option value="long">較長</option></select></div>' +
     '<div class="pref-row"><div>聲音來源<small>測試網站聲效或手機系統通知聲</small></div><select class="pref-select" id="webSoundSel"><option value="true">網站聲效＋系統聲</option><option value="false">只用系統通知聲</option></select></div>' +
-    '<button class="wide" id="previewSoundBtn">🔔 試聽目前提示聲</button>' +
-    '<div class="pref-row"><div>延遲背景測試<small>安排後立即切到背景或鎖屏，時間到發出通知</small></div><select class="pref-select" id="testDelaySel"><option value="15000">15 秒後</option><option value="60000">1 分鐘後</option></select></div>' +
-    '<div class="test-notify-row"><button class="wide" id="testNotifyBtn">安排背景測試</button><span class="test-countdown ready" id="testCountdown">待機</span></div>' +
-    '<div class="hint" id="testNotifyStatus">未安排測試；撳掣後請立即將網站放到背景。</div></div></details>' +
+    '<button class="wide" id="previewSoundBtn">🔔 試聽目前提示聲</button></div></details>' +
     '<details class="settings-group"><summary>外觀</summary><div class="group-body">' +
     '<div class="pref-row"><div>字體大小<small>只影響主畫面閱讀大小</small></div><select class="pref-select" id="fontSel"><option value="normal">標準</option><option value="large">較大</option></select></div>' +
     '<div class="pref-row"><div>時間顯示<small>ETA 卡片時間及頂部時鐘</small></div><select class="pref-select" id="timeSel"><option value="false">24 小時制</option><option value="true">12 小時制</option></select></div>' +
     '<div class="pref-row"><div>顏色模式<small>可以選擇黑暗或光明版</small></div><select class="pref-select" id="themeSel"><option value="dark">黑暗模式</option><option value="light">光明模式</option></select></div></div></details>' +
-    '<details class="settings-group"><summary>背景提醒診斷</summary><div class="group-body"><div class="hint">背景提醒受手機系統限制。最穩定嘅做法：將本網站加入主畫面，以 App 形式開啟。</div><div class="diag-box" id="diagBox"></div></div></details>' +
+    '<details class="settings-group"><summary>本地鬧鐘診斷</summary><div class="group-body"><div class="hint">本地鬧鐘依賴瀏覽器通知權限；請保持網站或已安裝的 App 可正常運作。</div><div class="diag-box" id="diagBox"></div></div></details>' +
     '<button class="wide" id="prefsBack">← 返回路線設定</button>';
-  $('#leadSel').value = String(prefs.lead); $('#pushUrl').value=pushWorkerUrl(); if(pushWorkerUrl()) pushStatus('已連接；背景推送會按目前開啟嘅路線自動同步。'); $('#soundSel').value = prefs.sound; $('#soundLenSel').value = prefs.soundLen; $('#webSoundSel').value = String(prefs.webSound !== false); $('#fontSel').value = prefs.font; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
+  $('#leadSel').value = String(prefs.lead); $('#soundSel').value = prefs.sound; $('#soundLenSel').value = prefs.soundLen; $('#webSoundSel').value = String(prefs.webSound !== false); $('#fontSel').value = prefs.font; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
   updateNotificationButton();
-  updateBackgroundPushButton();
-  $('#leadSel').addEventListener('change', e => { prefs.lead=+e.target.value; savePrefs(); if (pushWorkerUrl()) syncPushSubscription(); });
+  $('#leadSel').addEventListener('change', e => { prefs.lead=+e.target.value; savePrefs(); });
   $('#soundSel').addEventListener('change', e => { prefs.sound=e.target.value; savePrefs(); });
   $('#soundLenSel').addEventListener('change', e => { prefs.soundLen=e.target.value; savePrefs(); });
   $('#webSoundSel').addEventListener('change', e => { prefs.webSound=e.target.value === 'true'; if (!prefs.webSound) prefs.systemSilent=false; savePrefs(); });
@@ -1709,9 +1518,7 @@ function viewPrefs() {
   $('#timeSel').addEventListener('change', e => { prefs.time12=e.target.value === 'true'; savePrefs(); });
   $('#themeSel').addEventListener('change', e => { prefs.theme=e.target.value; savePrefs(); applyPrefs(); });
   $('#notifyBtn').addEventListener('click', toggleNotificationSetting);
-  $('#pushUrl').addEventListener('change', async e => { savePushWorkerUrl(e.target.value); pushStatus(pushWorkerUrl() ? '已儲存；程式會自動同步背景鬧鐘。' : '未連接背景推送伺服器。'); if (pushWorkerUrl()) await syncPushSubscription(); });
   renderDiagnostics();
-  $('#testNotifyBtn').addEventListener('click', () => scheduleTestNotification(Number($('#testDelaySel').value)));
   $('#prefsBack').addEventListener('click', viewHome);
 }
 
@@ -1748,7 +1555,6 @@ function viewHome() {
   sBody.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
     const removed = items[+b.dataset.del], id = removed && uid(removed);
     items.splice(+b.dataset.del, 1); if (id) { delete alarms[id]; alarmSeen.delete(id); delete getoff[id]; saveAlarms(); saveGetoff(); }
-    if (pushWorkerUrl()) syncPushSubscription();
     save(); closeArrivalNotifications(); shell(); refresh(); viewHome();
   }));
   sBody.querySelectorAll('[data-up]').forEach(b => b.addEventListener('click', () => {
@@ -1990,7 +1796,7 @@ function addItem(v, s) {
         seq:s.seq, stopId:s.id, stopName:s.name, dest:v.dest };
   if (items.some(x => uid(x) === uid(it))) { viewHome(); return; }
   // 新增路線預設關閉到站鬧鐘。只有使用者主動撳該路線的 🔔，
-  // 先可以加入本機提醒及真正背景 Push 登記；單純允許系統通知唔等於
+  // 先可以加入本機提醒；單純允許系統通知唔等於
   // 同意所有新路線自動響鬧鐘。
   items.push(it);
   alarms[uid(it)] = false;
@@ -2017,10 +1823,7 @@ if ('serviceWorker' in navigator) {
    BOOT
    =================================================================== */
 shell();
-updateBackgroundPushButton();
 startLoop();
-// 開站時重同步，清理舊版本可能遺留、但目前已沒有啟用鬧鐘的 Worker 訂閱。
-if (pushWorkerUrl()) syncPushSubscription();
 </script>
 </body>
 </html>

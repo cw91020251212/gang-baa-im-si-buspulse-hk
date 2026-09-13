@@ -17,3 +17,10 @@
 ## 2026-09-14 徽章回歸修正
 
 發現真正背景 Web Push 路徑只呼叫 `showNotification()`，沒有在 Service Worker 的 `push` event 呼叫 `setAppBadge()`；因此背景通知可能出現，但主畫面 App 數字 `1` 消失。現已補回 Service Worker 徽章設定，並令 Cloudflare Worker Push payload 明確帶 `badgeNumber: 1`。通知仍保持 `silent: false`、系統聲音及頂部通知。按通知後原有 `clearAppBadge()` 會清除數字。
+
+
+## 2026-09-14 最終更正：Web Push 方案撤回
+
+本報告前文關於「背景推送是本程式依賴的核心背景功能」及其相關修正，只記錄當時的錯誤工程方向，不能視為現行產品規格或可靠性證明。後續重新檢討後確認：本地 ETA 鬧鐘已能完成目前產品需求，Web Push 沒有不可替代的產品價值，反而增加訂閱、授權、VAPID、Worker、伺服器同步及維護成本。
+
+因此，Web Push、Cloudflare Worker、Push 訂閱、背景推送設定、背景推送測試及相關介面已全部移除。現行架構只保留本地倒數、本地鬧鐘計時及本地通知顯示。完整失誤、未驗證承諾、時間損失及日後 AI 參考規則，見 [WEB_PUSH_POSTMORTEM.md](WEB_PUSH_POSTMORTEM.md)。
