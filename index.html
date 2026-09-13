@@ -45,7 +45,7 @@ body{
   width:34px;height:34px;border-radius:10px; font-size:15px; cursor:pointer;
   display:grid;place-items:center; flex:none;
 }
-.iconbtn:active{background:#2a3240}
+.iconbtn:active{background:#2a3240}.iconbtn.loading{animation:sp .7s linear infinite;opacity:.7}.iconbtn.no-data{animation:sp .45s ease-in-out 2}
 @media(max-width:500px){
   .top{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:6px;padding-left:10px;padding-right:10px}
 }
@@ -654,7 +654,7 @@ cleanupOrphanAlarms();
    BOARD RENDER
    =================================================================== */
 const $ = s => document.querySelector(s);
-const board = $('#board'), dot = $('#dot'), clock = $('#clock');
+const board = $('#board'), dot = $('#dot'), clock = $('#clock'), refreshBtn = $('#refreshBtn');
 const esc = s => String(s == null ? '' : s)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const cssEscape = s => (globalThis.CSS && typeof CSS.escape === 'function') ? CSS.escape(String(s)) : String(s).replace(/[^a-zA-Z0-9_-]/g, ch => '\\' + ch.charCodeAt(0).toString(16) + ' ');
@@ -1396,8 +1396,21 @@ function paint(it, res) {
   }
 }
 
-async function refresh() {
-  if (inFlight || !items.length) return;
+async function refresh(options = {}) {
+  const manual = options.manual === true;
+  if (inFlight || !items.length) {
+    if (manual && !items.length && refreshBtn) {
+      refreshBtn.classList.add('no-data');
+      refreshBtn.title = '請先設定路線';
+      setTimeout(() => { refreshBtn.classList.remove('no-data'); refreshBtn.title = '即刻更新'; }, 900);
+    }
+    return;
+  }
+  if (manual && refreshBtn) {
+    refreshBtn.disabled = true;
+    refreshBtn.classList.add('loading');
+    refreshBtn.title = '更新中…';
+  }
   inFlight = true;
   try {
     dot.className = 'dot';
@@ -1426,6 +1439,12 @@ async function refresh() {
     console.warn('BusPulse refresh failed', e);
   } finally {
     inFlight = false;
+    if (manual && refreshBtn) {
+      refreshBtn.disabled = false;
+      refreshBtn.classList.remove('loading');
+      refreshBtn.title = dot.classList.contains('err') ? '更新失敗，請稍後再試' : '更新完成';
+      setTimeout(() => { if (refreshBtn) refreshBtn.title = '即刻更新'; }, 1600);
+    }
   }
 }
 
@@ -1475,7 +1494,7 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pageshow', () => { wakeAlarmPlans(); refresh(); });
 window.addEventListener('online', () => { wakeAlarmPlans(); refresh(); });
-$('#refreshBtn').addEventListener('click', () => { refresh(); });
+refreshBtn.addEventListener('click', () => { refresh({ manual:true }); });
 /* ===================================================================
    SETTINGS SHEET
    =================================================================== */
