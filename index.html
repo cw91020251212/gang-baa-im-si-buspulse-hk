@@ -1033,7 +1033,15 @@ function scheduleAlarmFallbacks(it, res, options = {}) {
     // timer late. checkAlarms still de-duplicates the same trip.
     const earlyMargin = 15000;
     const delay = at - leadMs - earlyMargin - now;
-    if (delay <= 0 || delay > (options.stale ? 20 : 120) * 60 * 1000) return;
+    // If the first refresh after reopening already sees this trip inside the
+    // alert window (or a few minutes late), do not merely save a past plan:
+    // execute the catch-up path immediately. Previously this returned here,
+    // while wakeAlarmPlans had already run before refresh populated the plan.
+    if (delay <= 0) {
+      runAlarmPlan(it, { key, at, iso:e.iso, min:e.min, rmk:e.rmk || '' });
+      return;
+    }
+    if (delay > (options.stale ? 20 : 120) * 60 * 1000) return;
     const handle = setTimeout(() => {
       timers.delete(key);
       runAlarmPlan(it, { key, at, iso:e.iso, min:e.min, rmk:e.rmk || '' });
