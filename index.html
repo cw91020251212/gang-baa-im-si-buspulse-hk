@@ -555,6 +555,14 @@ async function syncPushSubscription() {
     const res=await fetch(base+'/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({subscription:sub.toJSON(),routes})});
     if(!res.ok) throw new Error('同步路線失敗（'+res.status+'）');
     try { localStorage.setItem(PUSH_VAPID_KEY, publicKey); } catch {}
+    try {
+      if (reg.active) reg.active.postMessage({
+        type:'BACKGROUND_STATUS',
+        title:'港巴即時',
+        body:'背景提醒已開啟，系統正在運作。',
+        tag:'buspulse-background-status'
+      });
+    } catch {}
     pushStatus('✓ 已開啟真正背景提醒；切去其他 App 都會收到通知',true);
   } catch(e) { pushStatus(e.message || '背景推送未能開啟'); }
 }

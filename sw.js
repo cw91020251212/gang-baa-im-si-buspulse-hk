@@ -1,6 +1,6 @@
 /* BusPulse HK — service worker
    只 cache app shell；到站數據永遠走網絡，絕不 cache。 */
-const SHELL = 'buspulse-hk-shell-v21';
+const SHELL = 'buspulse-hk-shell-v22';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -42,6 +42,20 @@ self.addEventListener('fetch', e => {
 // 由頁面呼叫，令手機用系統通知顯示到站提醒，而不是只靠頁面內的 new Notification。
 self.addEventListener('message', e => {
   const data = e.data || {};
+  if (data.type === 'BACKGROUND_STATUS') {
+    e.waitUntil(self.registration.showNotification(data.title || '港巴即時', {
+      body: data.body || '背景提醒已開啟，系統正在運作。',
+      icon: './icon-192.png',
+      badge: './icon-192.png',
+      tag: data.tag || 'buspulse-background-status',
+      renotify: false,
+      silent: true,
+      vibrate: [],
+      requireInteraction: false,
+      data: { url: './', informational: true }
+    }));
+    return;
+  }
   if (data.type !== 'BUS_ARRIVAL') return;
   const title = data.title || '巴士就嚟到站';
   const options = {
