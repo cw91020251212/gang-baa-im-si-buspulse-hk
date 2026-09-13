@@ -65,3 +65,18 @@
 2. 恢復原本的 session、alarm plan 及背景同步流程；開啟鬧鐘會建立新的 session，關閉鬧鐘會清除本機提醒計劃。
 
 驗證：JavaScript syntax check 通過、`git diff --check` 通過，已推送到 `origin/main`。下一步只需等待 GitHub Pages 部署後，用手機重新載入網站測試原本 `🔔` 按鈕。
+
+
+## 2026-09-13 最終根因修復
+
+使用者再次確認原本金色開啟／白色斜線關閉外觀本身冇問題，只係按鈕完全冇反應。檢查後發現：`toggleAlarm()` 會呼叫 `newAlarmSession()`、`saveAlarmSessions()` 及 `ensureAlarmSession()`，但當時 `index.html` 缺少這三個函式及 `alarmSessions` 初始化。按鈕 click handler 因此在狀態切換前拋出 `ReferenceError`，導致金色／白色狀態完全不變。
+
+已在提交 `f964110 Fix alarm toggle session initialization` 補回：
+
+- `loadAlarmSessions()`
+- `alarmSessions` 初始化
+- `saveAlarmSessions()`
+- `newAlarmSession()`
+- `ensureAlarmSession()`
+
+今次沒有修改鈴鐺圖案、CSS、按鈕文字或原本開／關顯示。JavaScript syntax check 及 `git diff --check` 通過，已推送到 `origin/main`。
