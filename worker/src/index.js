@@ -50,9 +50,9 @@ function parseETAs(it, payload) {
   const rows = Array.isArray(data) ? (data[0]?.eta || []) : (data?.eta || []);
   return rows.filter(e => e.timestamp).map(e => ({ iso: e.timestamp, rmk: e.remarks_tc || '' }));
 }
-export function dueETA(etas, now = Date.now(), lead = LEAD_MINUTES) {
+export function dueETA(etas, now = Date.now(), lead = LEAD_MINUTES, lateFloor = -2) {
   return etas.map(e => ({ ...e, at: Date.parse(e.iso), min: Math.round((Date.parse(e.iso) - now) / 60000) }))
-    .filter(e => Number.isFinite(e.at) && e.min >= -2 && e.min <= lead)
+    .filter(e => Number.isFinite(e.at) && e.min >= lateFloor && e.min <= lead)
     .sort((a, b) => a.at - b.at)[0] || null;
 }
 async function notify(sub, body, env, tag) {
@@ -68,7 +68,9 @@ async function checkSubscription(sub, env) {
     const result = parseETAs(it, await getJSON(etaUrl(it)));
     const requestedLead = Number(it.lead);
     const lead = Number.isFinite(requestedLead) ? Math.min(10, Math.max(0, requestedLead)) : LEAD_MINUTES;
-    const eta = dueETA(result, Date.now(), lead);
+    // Cron and mobile push delivery can be delayed. Keep a one-time trip
+    // eligible for catch-up instead of dropping it after only two minutes.
+    const eta = dueETA(result, Date.now(), lead, -30);
     // This route still has no due trip, so keep checking it on later runs.
     if (!eta) { remaining.push(it); continue; }
     // Include the selected direction/stop/route variant. Otherwise two

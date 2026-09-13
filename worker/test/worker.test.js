@@ -18,6 +18,12 @@ test('dueETA still accepts a slightly late wake-up', () => {
   assert.equal(eta.iso, '2026-09-08T10:01:00Z');
 });
 
+test('dueETA can catch up a four-minute Cron delay when requested', () => {
+  const now = Date.parse('2026-09-08T10:05:00Z');
+  const eta = dueETA([{ iso: '2026-09-08T10:01:00Z' }], now, 2, -30);
+  assert.equal(eta.iso, '2026-09-08T10:01:00Z');
+});
+
 test('dueETA ignores buses outside the alert window', () => {
   const now = Date.parse('2026-09-08T10:00:00Z');
   assert.equal(dueETA([{ iso: '2026-09-08T10:03:00Z' }], now, 2), null);
