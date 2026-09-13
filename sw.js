@@ -1,6 +1,6 @@
 /* BusPulse HK — service worker
    只 cache app shell；到站數據永遠走網絡，絕不 cache。 */
-const SHELL = 'buspulse-hk-shell-v25';
+const SHELL = 'buspulse-hk-shell-v26';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -90,7 +90,10 @@ self.addEventListener('push', e => {
     silent: !!data.silent, requireInteraction: true,
     data: { url: './' }
   };
-  e.waitUntil(self.registration.showNotification(title, options));
+  const badge = self.registration.setAppBadge
+    ? self.registration.setAppBadge(Math.max(1, Number(data.badgeNumber) || 1)).catch(() => {})
+    : Promise.resolve();
+  e.waitUntil(Promise.all([self.registration.showNotification(title, options), badge]));
 });
 
 self.addEventListener('notificationclick', e => {

@@ -57,7 +57,7 @@ export function dueETA(etas, now = Date.now(), lead = LEAD_MINUTES, lateFloor = 
 }
 async function notify(sub, body, env, tag) {
   const vapid = { subject: env.VAPID_SUBJECT, publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY };
-  const payload = await buildPushPayload({ data: { title: '巴士就嚟到站', body, tag, silent: false } }, sub, vapid);
+  const payload = await buildPushPayload({ data: { title: '巴士就嚟到站', body, tag, badgeNumber: 1, silent: false } }, sub, vapid);
   return fetch(sub.endpoint, payload);
 }
 async function checkSubscription(sub, env) {
