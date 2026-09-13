@@ -560,6 +560,8 @@ async function syncPushSubscription() {
     if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:base64UrlToBytes(publicKey)});
     const res=await fetch(base+'/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({subscription:sub.toJSON(),routes})});
     if(!res.ok) throw new Error('同步路線失敗（'+res.status+'）');
+    const syncResult = await res.json().catch(() => ({}));
+    (syncResult.completedRoutes || []).forEach(route => disableAlarmAfterArrival([route.co, route.route, route.dir || route.route_seq, route.stopId || route.seq].join('|')));
     try { localStorage.setItem(PUSH_VAPID_KEY, publicKey); } catch {}
     try {
       if (reg.active) reg.active.postMessage({
@@ -865,6 +867,22 @@ function toggleAlarm(id, button) {
   } else button.title = '開關到站提醒';
   if (pushWorkerUrl()) syncPushSubscription();
 }
+function disableAlarmAfterArrival(id) {
+  if (!alarms[id]) return;
+  alarms[id] = false;
+  delete alarmSessions[id];
+  alarmSeen.delete(id);
+  clearAlarmFallbackTimers(id);
+  delete alarmPlans[id];
+  saveAlarmSessions(); saveAlarmPlans(); saveAlarms();
+  const button = board.querySelector('[data-alarm-id="' + cssEscape(id) + '"]');
+  if (button) {
+    button.classList.remove('on');
+    button.textContent = '🔔';
+    button.title = '開關到站提醒';
+  }
+  pushStatus('✓ 呢條路線已提醒一次，鬧鐘已自動關閉；再撳鈴鐺可等下一班', true);
+}
 let audioCtx = null;
 const activeAlarmAlerts = new Map();
 const activeSoundNodes = new Set();
@@ -910,6 +928,7 @@ async function notifyArrival(it, min, tripKey) {
   // Defensive guard: a queued timer or an in-flight API response must not
   // create a new alert after the user has switched this route off.
   if (!alarms[id]) return;
+  disableAlarmAfterArrival(id);
   const body = it.route + ' 往 ' + (it.dest || '') + '，約 ' + (Math.max(0,min)) + ' 分鐘到 ' + (it.stopName || '');
   const webPlayed = await ringBell();
   const card = board.querySelector('[data-id="' + cssEscape(id) + '"]');

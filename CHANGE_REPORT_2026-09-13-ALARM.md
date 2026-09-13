@@ -80,3 +80,10 @@
 - `ensureAlarmSession()`
 
 今次沒有修改鈴鐺圖案、CSS、按鈕文字或原本開／關顯示。JavaScript syntax check 及 `git diff --check` 通過，已推送到 `origin/main`。
+
+
+## 2026-09-13 一程一次自動關鐘
+
+按使用者要求，鬧鐘現改為「一程一次」：前景頁面成功觸發到站提醒後，會立即把該路線的鬧鐘狀態改回關閉，保留原本金色／白色斜線顯示，並清理本機 session、fallback timer 及 reminder plan。要等下一班，只需再撳原本鈴鐺一次。
+
+背景推送完成後，Worker 的 `/subscribe` 回應會帶回已完成路線；App 下一次恢復或同步時會根據這個回應把對應鬧鐘改回關閉。Worker 本身仍會在成功 Push 後移除已完成路線，沒有其他路線時刪除該裝置的 Push subscription，避免持續每分鐘查詢。

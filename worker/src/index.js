@@ -124,18 +124,20 @@ export default {
       const subscription = { endpoint: body.subscription.endpoint, expirationTime: body.subscription.expirationTime ?? null, keys: body.subscription.keys, routes: body.routes.filter(validItem).slice(0, 20), updatedAt: new Date().toISOString() };
       const key = keyFor(subscription);
       const activeRoutes = [];
+      const completedRoutes = [];
       for (const route of subscription.routes) {
-        if (!(route.session && await env.SUBSCRIPTIONS.get(completionKey(key, route)))) activeRoutes.push(route);
+        if (route.session && await env.SUBSCRIPTIONS.get(completionKey(key, route))) completedRoutes.push(route);
+        else activeRoutes.push(route);
       }
       subscription.routes = activeRoutes;
       if (!subscription.routes.length) {
         await env.SUBSCRIPTIONS.delete(key);
         await removeFromIndex(env, key);
-        return json({ ok: true, completed: true }, 200, origin, env);
+        return json({ ok: true, completed: true, completedRoutes }, 200, origin, env);
       }
       await env.SUBSCRIPTIONS.put(key, JSON.stringify(subscription));
       await addToIndex(env, key);
-      return json({ ok: true }, 201, origin, env);
+      return json({ ok: true, completedRoutes }, 201, origin, env);
     }
     if (url.pathname === '/subscribe' && request.method === 'DELETE') {
       const body = await request.json();
