@@ -500,6 +500,11 @@ const ALARM_STEP_MS = 20000;
 function loadAlarmPlans() { try { const raw = JSON.parse(localStorage.getItem(ALARM_PLAN_KEY) || '{}'); return raw && typeof raw === 'object' ? raw : {}; } catch { return {}; } }
 let alarmPlans = loadAlarmPlans();
 function saveAlarmPlans() { try { localStorage.setItem(ALARM_PLAN_KEY, JSON.stringify(alarmPlans)); } catch {} }
+function loadAlarmSessions() { try { const raw = JSON.parse(localStorage.getItem(ALARM_SESSION_KEY) || '{}'); return raw && typeof raw === 'object' ? raw : {}; } catch { return {}; } }
+let alarmSessions = loadAlarmSessions();
+function saveAlarmSessions() { try { localStorage.setItem(ALARM_SESSION_KEY, JSON.stringify(alarmSessions)); } catch {} }
+function newAlarmSession() { return (globalThis.crypto && typeof crypto.randomUUID === 'function') ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(36).slice(2); }
+function ensureAlarmSession(id) { if (!alarmSessions[id]) { alarmSessions[id] = newAlarmSession(); saveAlarmSessions(); } return alarmSessions[id]; }
 function rememberAlarmPlan(it, e, at) {
   const id = uid(it), key = String(at);
   const list = Array.isArray(alarmPlans[id]) ? alarmPlans[id] : [];
