@@ -806,7 +806,7 @@ function shell() {
         '<span class="co ' + it.co + '">' + CO_NAME[it.co] + '</span>' +
         '<span class="dest">往 ' + esc(it.dest || '') + '</span>' +
       '<button class="getoff-btn ' + (getoff[uid(it)]?.active ? 'on' : '') + '" data-getoff-id="' + id + '" title="設定落車提醒">' + (getoff[uid(it)]?.active ? '落車中' : '落車') + '</button>' +
-      '<button class="alarm-btn ' + (alarms[uid(it)] ? 'on' : '') + '" data-alarm-id="' + id + '" title="' + (alarms[uid(it)] ? '已開啟；再撳一次關閉，關閉後再撳可重新開始下一程' : '手動開啟到站提醒') + '" aria-label="' + (alarms[uid(it)] ? '已開啟到站提醒' : '開啟到站提醒') + '" aria-pressed="' + (alarms[uid(it)] ? 'true' : 'false') + '">' + (alarms[uid(it)] ? '🔔 已開' : '🔕 開啟') + '</button>' +
+      '<button class="alarm-btn ' + (alarms[uid(it)] ? 'on' : '') + '" data-alarm-id="' + id + '" title="開關到站提醒" aria-label="開關到站提醒">🔔</button>' +
       '<button class="map-head-btn" data-map-id="' + id + '" title="查看路線地圖" aria-label="查看路線地圖">⌖</button>' +
       '</div>' +
       '<div class="stop"><button class="stop-edit" data-edit-stop="' + id + '" title="更改上車站">&#128205; <b>' + esc(it.stopName || '') + '</b></button><a class="fare" data-fare="' + id + '" title="官方全程車資">全程車資：讀取中</a></div>' +
@@ -837,32 +837,27 @@ function shell() {
 }
 
 function toggleAlarm(id, button) {
-  if (activeAlarmAlerts.has(id)) { stopAlarmAlert(id); return; }
   alarms[id] = !alarms[id];
   if (alarms[id]) alarmSessions[id] = newAlarmSession();
   else delete alarmSessions[id];
   saveAlarmSessions();
   alarmSeen.delete(id);
   clearAlarmFallbackTimers(id);
-  // 每次手動重新開啟都建立一個乾淨嘅本機提醒行程，避免沿用上一程已完成的 ETA 計劃。
-  delete alarmPlans[id];
   if (!alarms[id]) {
     // Turning the alarm off must also cancel any already planned local reminder and close a notification that may still be on screen.
     closeArrivalNotifications();
     if (activeAlarmAlerts.has(id)) stopAlarmAlert(id);
+    saveAlarmPlans();
   }
-  saveAlarmPlans();
   saveAlarms();
   button.classList.toggle('on', !!alarms[id]);
-  button.textContent = alarms[id] ? '🔔 已開' : '🔕 開啟';
-  button.setAttribute('aria-pressed', alarms[id] ? 'true' : 'false');
-  button.setAttribute('aria-label', alarms[id] ? '已開啟到站提醒' : '開啟到站提醒');
+  button.textContent = '🔔';
   if (alarms[id]) {
     unlockAudio();
-    button.title = '已開啟；再撳一次關閉，關閉後再撳可重新開始下一程';
+    button.title = '關閉到站提醒';
     // 以按鈕點擊作為使用者手勢，直接申請系統通知權限。
     requestNotifications();
-  } else button.title = '手動開啟到站提醒';
+  } else button.title = '開關到站提醒';
   if (pushWorkerUrl()) syncPushSubscription();
 }
 let audioCtx = null;
@@ -1659,7 +1654,7 @@ function viewHome() {
   h += '<button class="wide p" id="addBtn">＋ 加新路線</button>';
   h += '<div class="lbl">其他</div>';
   h += '<div class="backup-box"><b>資料備份</b><br><span id="backupNote">' + backupReminder() + '</span><div class="backup-actions"><button class="wide" id="exportBtn">⬇ 下載備份</button><button class="wide" id="shareBtn">↗ 分享備份</button></div><button class="wide" id="importBtn">⬆ 還原備份</button><input type="file" id="backupFile" accept="application/json,.json" style="display:none"></div>';
-  h += '<div class="backup-box"><b>到站提醒管理</b><br><span id="alarmClearNote">主畫面每條路線右上角可手動撳「🔕 開啟」或「🔔 已開」。如果某次背景通知完成，想再等下一班車：先撳到關閉，再撳一次重新開啟。</span><button class="wide danger" id="clearAlarmsBtn">關閉所有到站鬧鐘</button></div>';
+  h += '<div class="backup-box"><b>到站提醒管理</b><br><span id="alarmClearNote">刪除路線後，該路線嘅鬧鐘會自動清理。</span><button class="wide danger" id="clearAlarmsBtn">關閉所有到站鬧鐘</button></div>';
   h += '<button class="wide" id="installBtn" style="display:none">&#128241; 安裝到主畫面</button>';
   h += '<button class="wide" id="saveDefaultBtn">將目前路線儲存為預設</button>';
   h += '<button class="wide" id="loadDefaultBtn" ' + (userDefaults.length ? '' : 'disabled') + '>使用預設路線' + (userDefaults.length ? '（' + userDefaults.length + ' 條）' : '（尚未設定）') + '</button>';
