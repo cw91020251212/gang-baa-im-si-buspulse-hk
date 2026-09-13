@@ -832,7 +832,14 @@ function toggleAlarm(id, button) {
   alarms[id] = !alarms[id];
   alarmSeen.delete(id);
   clearAlarmFallbackTimers(id);
-  if (!alarms[id]) { delete alarmPlans[id]; saveAlarmPlans(); }
+  if (!alarms[id]) {
+    // Turning the alarm off must also cancel any already planned local
+    // reminder and close a notification that may still be on screen.
+    delete alarmPlans[id];
+    closeArrivalNotifications();
+    if (activeAlarmAlerts.has(id)) stopAlarmAlert(id);
+    saveAlarmPlans();
+  }
   saveAlarms();
   button.classList.toggle('on', !!alarms[id]);
   button.textContent = '🔔';
@@ -886,6 +893,9 @@ async function notificationRegistration(timeoutMs = 1800) {
 }
 async function notifyArrival(it, min, tripKey) {
   const id = uid(it);
+  // Defensive guard: a queued timer or an in-flight API response must not
+  // create a new alert after the user has switched this route off.
+  if (!alarms[id]) return;
   const body = it.route + ' 往 ' + (it.dest || '') + '，約 ' + (Math.max(0,min)) + ' 分鐘到 ' + (it.stopName || '');
   const webPlayed = await ringBell();
   const card = board.querySelector('[data-id="' + cssEscape(id) + '"]');
@@ -1889,14 +1899,12 @@ function addItem(v, s) {
     : { co:'CTB', route:v.route, bound:v.bound, dir:v.dir,
         seq:s.seq, stopId:s.id, stopName:s.name, dest:v.dest };
   if (items.some(x => uid(x) === uid(it))) { viewHome(); return; }
-  // 新增路線預設開啟到站提醒；系統通知仍須由瀏覽器要求使用者批准，
-  // 但批准後會自動完成 Push 登記，唔需要朋友另外搵設定頁或撳 🔔。
+  // 新增路線預設關閉到站鬧鐘。只有使用者主動撳該路線的 🔔，
+  // 先可以加入本機提醒及真正背景 Push 登記；單純允許系統通知唔等於
+  // 同意所有新路線自動響鬧鐘。
   items.push(it);
-  alarms[uid(it)] = !backgroundPushDisabled();
+  alarms[uid(it)] = false;
   save(); saveAlarms(); shell(); refresh(); viewHome();
-  if (!backgroundPushDisabled()) requestNotifications().then(permission => {
-    if (permission === 'granted') syncPushSubscription();
-  }).catch(() => {});
 }
 
 /* ===================================================================
