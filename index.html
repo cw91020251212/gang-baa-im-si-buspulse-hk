@@ -177,6 +177,7 @@ input.tin{
 input.tin:focus{outline:none;border-color:#4b566b}
 input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
 .hint{font-size:11px; color:var(--faint); margin-top:6px; line-height:1.6}
+.settings-intro{font-size:12px;color:var(--dim);line-height:1.55;margin:-2px 0 12px}.settings-group{margin-top:10px;border:1px solid var(--line);border-radius:13px;background:rgba(26,36,55,.5);overflow:hidden}.settings-group summary{list-style:none;cursor:pointer;padding:13px 14px;color:var(--tx);font-size:13px;font-weight:800;display:flex;align-items:center;gap:9px}.settings-group summary::-webkit-details-marker{display:none}.settings-group summary::after{content:'＋';margin-left:auto;color:var(--faint);font-size:17px;font-weight:500}.settings-group[open] summary{border-bottom:1px solid var(--line);color:var(--now)}.settings-group[open] summary::after{content:'−'}.settings-group .group-body{padding:0 11px 11px}.settings-group .group-body>.hint:first-child{margin-top:10px}.settings-group .pref-row:last-child{margin-bottom:0}body.light .settings-group{background:rgba(255,255,255,.55)}
 .list{display:flex; flex-direction:column; gap:6px; margin-top:4px}
 .li{
   background:var(--card); border:1px solid var(--line); border-radius:11px;
@@ -1616,31 +1617,30 @@ $('#prefsBtn').addEventListener('click', () => { viewPrefs(); openSheet(); });
 function viewPrefs() {
   sTitle.textContent = '顯示與提醒設定';
   sBody.innerHTML =
-  '<div class="lbl">到站／落車提醒</div>' +
-    '<div class="pref-row"><div>提早幾多分鐘響鬧<small>揀咗路線卡上方嘅 🔔 後生效；每條路線只提醒一程，響完會自動關閉，要等下一班再撳一次</small></div><select class="pref-select" id="leadSel"><option value="1">1 分鐘</option><option value="2">2 分鐘</option><option value="3">3 分鐘</option><option value="5">5 分鐘</option></select></div>' +
+    '<div class="settings-intro">只保留最常用設定喺呢度；其他功能撳下面分組先展開，畫面會清爽好多。</div>' +
+    '<div class="lbl">到站提醒</div>' +
+    '<div class="pref-row"><div>提早幾多分鐘響鬧<small>揀咗路線卡上方嘅 🔔 後生效；每條路線只提醒一程，響完會自動關閉</small></div><select class="pref-select" id="leadSel"><option value="1">1 分鐘</option><option value="2">2 分鐘</option><option value="3">3 分鐘</option><option value="5">5 分鐘</option></select></div>' +
     '<button class="wide" id="notifyBtn">允許系統通知</button>' +
-    '<div class="pref-row"><div>真正背景推送<small>伺服器每分鐘查巴士 ETA；「真正關閉」會取消 Push 登記、停止伺服器查詢及本機鬧鐘</small></div><button class="wide" id="pushBtn" style="width:auto;margin:0">真正關閉</button></div>' +
-    '<div class="hint">⚠ 背景推送會每分鐘檢查已開啟、尚未到站嘅路線；每條路線成功提醒一次後會自動移除。若完全唔再需要背景提醒，請撳「真正關閉」；只關閉手機通知聲或 Badge 並唔等於停止背景服務。</div>' +
+    '<details class="settings-group"><summary>背景推送</summary><div class="group-body">' +
+    '<div class="pref-row"><div>真正背景推送<small>伺服器每分鐘查巴士 ETA；關閉會取消 Push 登記、停止伺服器查詢及本機鬧鐘</small></div><button class="wide" id="pushBtn" style="width:auto;margin:0">真正關閉</button></div>' +
+    '<div class="hint">背景推送只會檢查已開啟、尚未到站嘅路線；每條路線成功提醒一次後會自動移除。</div>' +
     '<input class="tin" id="pushUrl" placeholder="背景推送伺服器網址（部署後填入）" value="" />' +
     '<div class="hint" id="pushStatus">已連接背景推送伺服器；撳「開啟」登記呢部手機。</div>' +
-    '<div class="pref-row"><div>Cloudflare 用量<small>按掣後到官方頁面揀 Custom；KV 免費額度每日 00:00 UTC（香港 08:00）重設。</small></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><a class="wide" href="https://dash.cloudflare.com/5989bdd689f97c9274b758913d4e6651/workers/overview" target="_blank" rel="noopener" style="width:auto;margin:0;text-decoration:none;text-align:center">Worker 用量</a><a class="wide" href="https://dash.cloudflare.com/5989bdd689f97c9274b758913d4e6651/workers/kv/namespaces" target="_blank" rel="noopener" style="width:auto;margin:0;text-decoration:none;text-align:center">KV 用量</a></div></div>' +
-    '<div class="hint">每日 quota 查看路徑：Worker 用量／KV 用量 → Analytics 或 Metrics → 時間範圍選 Custom → UTC 00:00 至翌日 UTC 00:00。BusPulse HK 不會讀取、保存或要求你輸入 Cloudflare 密碼／API token。</div>' +
-    '<details class="test-tools"><summary>測試工具</summary>' +
+    '<div class="pref-row"><div>Cloudflare 用量<small>每日 quota 會喺香港時間 08:00 重設</small></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><a class="wide" href="https://dash.cloudflare.com/5989bdd689f97c9274b758913d4e6651/workers/overview" target="_blank" rel="noopener" style="width:auto;margin:0;text-decoration:none;text-align:center">Worker 用量</a><a class="wide" href="https://dash.cloudflare.com/5989bdd689f97c9274b758913d4e6651/workers/kv/namespaces" target="_blank" rel="noopener" style="width:auto;margin:0;text-decoration:none;text-align:center">KV 用量</a></div></div>' +
+    '</div></details>' +
+    '<details class="settings-group"><summary>提示聲測試</summary><div class="group-body">' +
     '<div class="pref-row"><div>提示聲款式<small>測試前景網站提示聲效果</small></div><select class="pref-select" id="soundSel"><option value="double">兩下叮噹</option><option value="triple">三下提示</option><option value="alarm">鬧鐘長響</option></select></div>' +
     '<div class="pref-row"><div>提示聲長度<small>只影響網站前景播放嘅聲效</small></div><select class="pref-select" id="soundLenSel"><option value="short">較短</option><option value="normal">標準</option><option value="long">較長</option></select></div>' +
     '<div class="pref-row"><div>聲音來源<small>測試網站聲效或手機系統通知聲</small></div><select class="pref-select" id="webSoundSel"><option value="true">網站聲效＋系統聲</option><option value="false">只用系統通知聲</option></select></div>' +
     '<button class="wide" id="previewSoundBtn">🔔 試聽目前提示聲</button>' +
     '<div class="pref-row"><div>延遲背景測試<small>安排後立即切到背景或鎖屏，時間到發出通知</small></div><select class="pref-select" id="testDelaySel"><option value="15000">15 秒後</option><option value="60000">1 分鐘後</option></select></div>' +
     '<div class="test-notify-row"><button class="wide" id="testNotifyBtn">安排背景測試</button><span class="test-countdown ready" id="testCountdown">待機</span></div>' +
-    '<div class="hint" id="testNotifyStatus">未安排測試；撳掣後請立即將網站放到背景。</div>' +
-    '</details>' +
-    '<div class="lbl">外觀</div>' +
-    '<div class="diag-title">背景提醒診斷</div>' +
-    '<div class="diag-box" id="diagBox"></div>' +
-    '<div class="hint">背景提醒受手機系統限制。最穩定嘅做法：將本網站「加入主畫面」以 App 形式開啟，並喺系統設定將本 App 嘅電池優化設為「不受限制」。</div>' +
+    '<div class="hint" id="testNotifyStatus">未安排測試；撳掣後請立即將網站放到背景。</div></div></details>' +
+    '<details class="settings-group"><summary>外觀</summary><div class="group-body">' +
     '<div class="pref-row"><div>字體大小<small>只影響主畫面閱讀大小</small></div><select class="pref-select" id="fontSel"><option value="normal">標準</option><option value="large">較大</option></select></div>' +
     '<div class="pref-row"><div>時間顯示<small>ETA 卡片時間及頂部時鐘</small></div><select class="pref-select" id="timeSel"><option value="false">24 小時制</option><option value="true">12 小時制</option></select></div>' +
-    '<div class="pref-row"><div>顏色模式<small>可以選擇黑暗或光明版</small></div><select class="pref-select" id="themeSel"><option value="dark">黑暗模式</option><option value="light">光明模式</option></select></div>' +
+    '<div class="pref-row"><div>顏色模式<small>可以選擇黑暗或光明版</small></div><select class="pref-select" id="themeSel"><option value="dark">黑暗模式</option><option value="light">光明模式</option></select></div></div></details>' +
+    '<details class="settings-group"><summary>背景提醒診斷</summary><div class="group-body"><div class="hint">背景提醒受手機系統限制。最穩定嘅做法：將本網站加入主畫面，以 App 形式開啟。</div><div class="diag-box" id="diagBox"></div></div></details>' +
     '<button class="wide" id="prefsBack">← 返回路線設定</button>';
   $('#leadSel').value = String(prefs.lead); $('#pushUrl').value=pushWorkerUrl(); if(pushWorkerUrl()) pushStatus('已設定推送伺服器；請按「開啟」同步路線。'); $('#soundSel').value = prefs.sound; $('#soundLenSel').value = prefs.soundLen; $('#webSoundSel').value = String(prefs.webSound !== false); $('#fontSel').value = prefs.font; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
   updateNotificationButton();
