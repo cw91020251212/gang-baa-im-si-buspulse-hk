@@ -472,6 +472,7 @@ const KEY = 'busboard.items.v1';
 const DEFAULTS_KEY = 'busboard.user-defaults.v1';
 const PREF_KEY = 'busboard.preferences.v1';
 const ALARM_KEY = 'busboard.alarms.v1';
+const ALARM_SESSION_KEY = 'busboard.alarm-sessions.v1';
   const PUSH_URL_KEY = 'busboard.push-worker-url.v1';
   const DEFAULT_PUSH_WORKER_URL = 'https://gang-baa-im-si-buspulse-hk.cw9102025.workers.dev';
   const PUSH_DISABLED_KEY = 'busboard.push-disabled.v1';
@@ -519,7 +520,7 @@ function pushRoutePayload() {
   return items.filter(it => alarms[uid(it)]).slice(0, 20).map(it => ({
     co:it.co, route:it.route, seq:it.seq, dir:it.dir, service_type:it.service_type,
     stopId:it.stopId, route_id:it.route_id, route_seq:it.route_seq,
-    dest:it.dest || '', stopName:it.stopName || '', lead:Number(prefs.lead) || 2
+    dest:it.dest || '', stopName:it.stopName || '', lead:Number(prefs.lead) || 2, session:ensureAlarmSession(uid(it))
   }));
 }
 function pushStatus(text, good=false) { const el=document.querySelector('#pushStatus'); if(el){ el.textContent=text; el.style.color=good?'#70f09b':''; } }
@@ -711,8 +712,8 @@ function closeArrivalNotifications() {
 }
 function cleanupOrphanAlarms() {
   const valid = new Set(items.map(uid)); let changed = false;
-  Object.keys(alarms).forEach(id => { if (!valid.has(id)) { delete alarms[id]; alarmSeen.delete(id); changed = true; } });
-  if (changed) saveAlarms();
+  Object.keys(alarms).forEach(id => { if (!valid.has(id)) { delete alarms[id]; delete alarmSessions[id]; alarmSeen.delete(id); changed = true; } });
+  if (changed) { saveAlarms(); saveAlarmSessions(); }
   closeArrivalNotifications();
 }
 function clearAllArrivalAlarms() {
@@ -838,6 +839,9 @@ function shell() {
 function toggleAlarm(id, button) {
   if (activeAlarmAlerts.has(id)) { stopAlarmAlert(id); return; }
   alarms[id] = !alarms[id];
+  if (alarms[id]) alarmSessions[id] = newAlarmSession();
+  else delete alarmSessions[id];
+  saveAlarmSessions();
   alarmSeen.delete(id);
   clearAlarmFallbackTimers(id);
   if (!alarms[id]) {

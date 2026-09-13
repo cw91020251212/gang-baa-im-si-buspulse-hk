@@ -17,6 +17,7 @@ function json(data, status = 200, origin = '*', env = {}) {
   return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...cors(origin, env) } });
 }
 function keyFor(subscription) { return 'sub:' + btoa(subscription.endpoint).replaceAll('/', '_').replaceAll('+', '-').replaceAll('=', ''); }
+function completionKey(key, route) { return key + ':complete:' + btoa(JSON.stringify([route.co, route.route, route.dir || route.route_seq, route.stopId || route.seq, route.session || ''])).replaceAll('/', '_').replaceAll('+', '-').replaceAll('=', ''); }
 function validSubscription(s) { return s && typeof s.endpoint === 'string' && s.endpoint.startsWith('https://') && s.keys && typeof s.keys.p256dh === 'string' && typeof s.keys.auth === 'string'; }
 function validItem(it) { return it && ['KMB', 'CTB', 'GMB'].includes(it.co) && typeof it.route === 'string' && typeof it.seq !== 'undefined'; }
 async function getJSON(url) { const r = await fetch(url, { headers: { accept: 'application/json' } }); if (!r.ok) throw new Error('API ' + r.status); return r.json(); }
@@ -61,27 +62,42 @@ async function notify(sub, body, env, tag) {
 }
 async function checkSubscription(sub, env) {
   const routes = Array.isArray(sub.routes) ? sub.routes.filter(validItem).slice(0, 20) : [];
+  const remaining = [];
+  const key = keyFor(sub);
   for (const it of routes) {
     const result = parseETAs(it, await getJSON(etaUrl(it)));
     const requestedLead = Number(it.lead);
     const lead = Number.isFinite(requestedLead) ? Math.min(10, Math.max(0, requestedLead)) : LEAD_MINUTES;
     const eta = dueETA(result, Date.now(), lead);
-    if (!eta) continue;
+    // This route still has no due trip, so keep checking it on later runs.
+    if (!eta) { remaining.push(it); continue; }
     // Include the selected direction/stop/route variant. Otherwise two
     // directions of the same route can share a sent marker when their ETA
     // timestamps happen to match, suppressing one legitimate alert.
     const tripKey = [it.co, it.route, it.bound || '', it.dir || '', it.service_type || '', it.route_id || '', it.route_seq || '', it.stopId || '', it.seq, eta.at].join(':');
-    const sentKey = keyFor(sub) + ':sent:' + tripKey;
-    if (await env.SUBSCRIPTIONS.get(sentKey)) continue;
+    const sentKey = key + ':sent:' + tripKey;
+    // A previously completed session must not be re-added by a page reload.
+    if (await env.SUBSCRIPTIONS.get(completionKey(key, it))) continue;
+    // A previously sent trip means this one-time route is already complete.
+    if (await env.SUBSCRIPTIONS.get(sentKey)) { await env.SUBSCRIPTIONS.put(completionKey(key, it), '1', { expirationTtl: 2592000 }); continue; }
     const response = await notify(sub, it.route + ' 往 ' + (it.dest || '') + '，約 ' + Math.max(0, eta.min) + ' 分鐘到 ' + (it.stopName || ''), env, 'buspulse-' + encodeURIComponent(tripKey));
     if (response.status === 404 || response.status === 410) {
-      const key = keyFor(sub);
       await env.SUBSCRIPTIONS.delete(key);
       await removeFromIndex(env, key);
       return;
     }
     if (!response.ok) throw new Error('push ' + response.status);
     await env.SUBSCRIPTIONS.put(sentKey, '1', { expirationTtl: 21600 });
+    await env.SUBSCRIPTIONS.put(completionKey(key, it), '1', { expirationTtl: 2592000 });
+    // One successful arrival push completes this route's current journey.
+  }
+  if (remaining.length) {
+    await env.SUBSCRIPTIONS.put(key, JSON.stringify({ ...sub, routes: remaining, updatedAt: new Date().toISOString() }));
+  } else {
+    // No active route remains: release this device's subscription and stop
+    // consuming ETA/KV quota. This never deletes the shared Worker itself.
+    await env.SUBSCRIPTIONS.delete(key);
+    await removeFromIndex(env, key);
   }
 }
 async function runCron(env) {
@@ -107,6 +123,16 @@ export default {
       if (!validSubscription(body.subscription) || !Array.isArray(body.routes) || !body.routes.some(validItem)) return json({ error: 'invalid subscription or routes' }, 400, origin, env);
       const subscription = { endpoint: body.subscription.endpoint, expirationTime: body.subscription.expirationTime ?? null, keys: body.subscription.keys, routes: body.routes.filter(validItem).slice(0, 20), updatedAt: new Date().toISOString() };
       const key = keyFor(subscription);
+      const activeRoutes = [];
+      for (const route of subscription.routes) {
+        if (!(route.session && await env.SUBSCRIPTIONS.get(completionKey(key, route)))) activeRoutes.push(route);
+      }
+      subscription.routes = activeRoutes;
+      if (!subscription.routes.length) {
+        await env.SUBSCRIPTIONS.delete(key);
+        await removeFromIndex(env, key);
+        return json({ ok: true, completed: true }, 200, origin, env);
+      }
       await env.SUBSCRIPTIONS.put(key, JSON.stringify(subscription));
       await addToIndex(env, key);
       return json({ ok: true }, 201, origin, env);
