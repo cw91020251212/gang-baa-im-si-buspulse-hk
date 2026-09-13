@@ -525,7 +525,7 @@ function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:
 function loadAlarms() { try { return JSON.parse(localStorage.getItem(ALARM_KEY) || '{}') || {}; } catch { return {}; } }
 function pushRoutePayload() {
   return items.filter(it => alarms[uid(it)]).slice(0, 20).map(it => ({
-    co:it.co, route:it.route, seq:it.seq, dir:it.dir, service_type:it.service_type,
+    co:it.co, route:it.route, seq:it.seq, dir:it.dir, service_type:it.service_type || (it.co === 'KMB' ? '1' : undefined),
     stopId:it.stopId, route_id:it.route_id, route_seq:it.route_seq,
     dest:it.dest || '', stopName:it.stopName || '', lead:Number(prefs.lead) || 2, session:ensureAlarmSession(uid(it))
   }));

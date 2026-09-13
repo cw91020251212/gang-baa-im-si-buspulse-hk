@@ -39,7 +39,7 @@ async function removeFromIndex(env, key) {
   if (keys.includes(key)) await writeIndex(env, keys.filter(k => k !== key));
 }
 function etaUrl(it) {
-  if (it.co === 'KMB') return API.KMB + '/route-eta/' + encodeURIComponent(it.route) + '/' + encodeURIComponent(it.service_type);
+  if (it.co === 'KMB') return API.KMB + '/route-eta/' + encodeURIComponent(it.route) + '/' + encodeURIComponent(it.service_type || '1');
   if (it.co === 'CTB') return API.CTB + '/eta/CTB/' + encodeURIComponent(it.stopId) + '/' + encodeURIComponent(it.route);
   return API.GMB + '/route-stop/' + encodeURIComponent(it.route_id) + '/' + encodeURIComponent(it.route_seq) + '/' + encodeURIComponent(it.seq);
 }
@@ -57,7 +57,7 @@ export function dueETA(etas, now = Date.now(), lead = LEAD_MINUTES, lateFloor = 
 }
 async function notify(sub, body, env, tag) {
   const vapid = { subject: env.VAPID_SUBJECT, publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY };
-  const payload = await buildPushPayload({ data: JSON.stringify({ title: '巴士就嚟到站', body, tag, silent: false }) }, sub, vapid);
+  const payload = await buildPushPayload({ data: { title: '巴士就嚟到站', body, tag, silent: false } }, sub, vapid);
   return fetch(sub.endpoint, payload);
 }
 async function checkSubscription(sub, env) {
