@@ -596,7 +596,7 @@ async function enableBackgroundPush() {
   const perm=Notification.permission==='granted' ? 'granted' : await Notification.requestPermission();
   if(perm!=='granted') { pushStatus('你拒絕咗系統通知，請到 Android 設定重新允許'); return; }
   saveBackgroundPushDisabled(false);
-  items.forEach(it => { alarms[uid(it)] = true; }); saveAlarms();
+  // Push is only a delivery channel; it must never change the user-owned alarm switches.
   await syncPushSubscription();
   updateBackgroundPushButton();
 }
