@@ -1680,7 +1680,7 @@ function viewPrefs() {
     '<div class="pref-row"><div>真正背景推送<small>伺服器每分鐘查巴士 ETA；關閉會取消 Push 登記、停止伺服器查詢及本機鬧鐘</small></div><button class="wide" id="pushBtn" style="width:auto;margin:0">真正關閉</button></div>' +
     '<div class="hint">背景推送只會檢查已開啟、尚未到站嘅路線；每條路線成功提醒一次後會自動移除。</div>' +
     '<input class="tin" id="pushUrl" placeholder="背景推送伺服器網址（部署後填入）" value="" />' +
-    '<div class="hint" id="pushStatus">已連接背景推送伺服器；撳「重新同步」登記呢部手機。</div><button class="wide" id="syncPushBtn">重新同步背景鬧鐘</button>' +
+    '<div class="hint" id="pushStatus">背景推送預設會自動保持開啟；只需要喺想完全停止時撳「真正關閉」。</div>' +
     '<div class="pref-row"><div>Cloudflare 用量<small>每日 quota 會喺香港時間 08:00 重設</small></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><a class="wide" href="https://dash.cloudflare.com/5989bdd689f97c9274b758913d4e6651/workers/overview" target="_blank" rel="noopener" style="width:auto;margin:0;text-decoration:none;text-align:center">Worker 用量</a><a class="wide" href="https://dash.cloudflare.com/5989bdd689f97c9274b758913d4e6651/workers/kv/namespaces" target="_blank" rel="noopener" style="width:auto;margin:0;text-decoration:none;text-align:center">KV 用量</a></div></div>' +
     '</div></details>' +
     '<details class="settings-group"><summary>提示聲測試</summary><div class="group-body">' +
@@ -1697,7 +1697,7 @@ function viewPrefs() {
     '<div class="pref-row"><div>顏色模式<small>可以選擇黑暗或光明版</small></div><select class="pref-select" id="themeSel"><option value="dark">黑暗模式</option><option value="light">光明模式</option></select></div></div></details>' +
     '<details class="settings-group"><summary>背景提醒診斷</summary><div class="group-body"><div class="hint">背景提醒受手機系統限制。最穩定嘅做法：將本網站加入主畫面，以 App 形式開啟。</div><div class="diag-box" id="diagBox"></div></div></details>' +
     '<button class="wide" id="prefsBack">← 返回路線設定</button>';
-  $('#leadSel').value = String(prefs.lead); $('#pushUrl').value=pushWorkerUrl(); if(pushWorkerUrl()) pushStatus('已設定推送伺服器；請按「開啟」同步路線。'); $('#soundSel').value = prefs.sound; $('#soundLenSel').value = prefs.soundLen; $('#webSoundSel').value = String(prefs.webSound !== false); $('#fontSel').value = prefs.font; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
+  $('#leadSel').value = String(prefs.lead); $('#pushUrl').value=pushWorkerUrl(); if(pushWorkerUrl()) pushStatus('已連接；背景推送會按目前開啟嘅路線自動同步。'); $('#soundSel').value = prefs.sound; $('#soundLenSel').value = prefs.soundLen; $('#webSoundSel').value = String(prefs.webSound !== false); $('#fontSel').value = prefs.font; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
   updateNotificationButton();
   updateBackgroundPushButton();
   $('#leadSel').addEventListener('change', e => { prefs.lead=+e.target.value; savePrefs(); if (pushWorkerUrl()) syncPushSubscription(); });
@@ -1709,13 +1709,7 @@ function viewPrefs() {
   $('#timeSel').addEventListener('change', e => { prefs.time12=e.target.value === 'true'; savePrefs(); });
   $('#themeSel').addEventListener('change', e => { prefs.theme=e.target.value; savePrefs(); applyPrefs(); });
   $('#notifyBtn').addEventListener('click', toggleNotificationSetting);
-  $('#pushUrl').addEventListener('change', e => { savePushWorkerUrl(e.target.value); pushStatus(pushWorkerUrl() ? '已儲存伺服器網址；請按「開啟」啟用。' : '未連接背景推送伺服器。'); });
-  $('#syncPushBtn').addEventListener('click', async e => {
-    e.currentTarget.disabled = true; e.currentTarget.textContent = '同步中…';
-    await requestNotifications();
-    await syncPushSubscription();
-    e.currentTarget.disabled = false; e.currentTarget.textContent = '重新同步背景鬧鐘';
-  });
+  $('#pushUrl').addEventListener('change', async e => { savePushWorkerUrl(e.target.value); pushStatus(pushWorkerUrl() ? '已儲存；程式會自動同步背景鬧鐘。' : '未連接背景推送伺服器。'); if (pushWorkerUrl()) await syncPushSubscription(); });
   renderDiagnostics();
   $('#testNotifyBtn').addEventListener('click', () => scheduleTestNotification(Number($('#testDelaySel').value)));
   $('#prefsBack').addEventListener('click', viewHome);
