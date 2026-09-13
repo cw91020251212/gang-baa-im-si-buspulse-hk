@@ -237,7 +237,7 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
   <div class="brandcopy"><h1>港巴即時</h1><small>BusPulse HK · 香港實時到站</small></div>
   <span class="dot" id="dot"></span>
   <span class="clock" id="clock">--:--:--</span>
-  <button class="push-state" id="pushStateBtn" title="背景提醒運行中；撳此開關">背景提醒：運行中</button>
+  <button class="push-state" id="pushStateBtn" title="背景提醒尚未同步">背景提醒：未同步</button>
   <button class="iconbtn" id="prefsBtn" title="顯示設定" aria-label="顯示設定">⚙</button>
   <button class="iconbtn" id="refreshBtn" title="即刻更新" aria-label="即刻更新">&#8635;</button>
 </div>
@@ -620,16 +620,20 @@ async function disableBackgroundPush() {
   pushStatus('✓ 已真正關閉：伺服器不再查呢部手機，路線鬧鐘亦已全部停止。',true);
   updateBackgroundPushButton(); renderDiagnostics(); shell();
 }
-function updateBackgroundPushButton() {
+async function updateBackgroundPushButton() {
   const button=$('#pushBtn'); if (!button) return;
   const off=backgroundPushDisabled(); button.textContent=off ? '重新開啟' : '真正關閉';
   button.classList.toggle('danger', !off); button.title=off ? '重新開啟背景推送' : '取消 Push 登記並停止所有背景提醒';
   button.onclick=off ? enableBackgroundPush : disableBackgroundPush;
   const top=$('#pushStateBtn');
   if (top) {
-    top.textContent=off ? '背景提醒：已關閉' : '背景提醒：運行中';
+    let synced = false;
+    if (!off && pushWorkerUrl() && 'serviceWorker' in navigator) {
+      try { synced = !!(await (await navigator.serviceWorker.ready).pushManager?.getSubscription()) && pushRoutePayload().length > 0; } catch {}
+    }
+    top.textContent=off ? '背景提醒：已關閉' : synced ? '背景提醒：運行中' : pushRoutePayload().length ? '背景提醒：未同步' : '背景提醒：未開啟鬧鐘';
     top.classList.toggle('off', off);
-    top.title=off ? '背景提醒已關閉；撳此重新開啟' : '背景提醒運行中；撳此真正關閉';
+    top.title=off ? '背景提醒已關閉；撳此重新開啟' : synced ? '背景提醒運行中；撳此真正關閉' : '請先開啟路線鈴鐺，再到設定重新同步';
     top.onclick=off ? enableBackgroundPush : disableBackgroundPush;
   }
 }
@@ -892,9 +896,11 @@ async function toggleAlarm(id, button) {
     unlockAudio();
     button.title = '關閉到站提醒';
     // 以按鈕點擊作為使用者手勢，直接申請系統通知權限。
-    await requestNotifications();
+    const permission = await requestNotifications();
+    if (permission !== 'granted') pushStatus(permission === 'denied' ? '⚠ 通知已被封鎖：請到 Android 瀏覽器設定允許通知，鬧鐘先會真正生效。' : '⚠ 尚未允許通知：請按「允許系統通知」，再重新撳路線鈴鐺。');
   } else button.title = '開關到站提醒';
   if (pushWorkerUrl()) await syncPushSubscription();
+  renderDiagnostics();
 }
 function disableAlarmAfterArrival(id) {
   if (!alarms[id]) return;
