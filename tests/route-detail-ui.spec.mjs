@@ -24,6 +24,19 @@ async function prepare(page) {
       { stop:'stop-3', name_tc:'第三站', lat:'22.32', long:'114.22' }
     ] })
   }));
+  await page.route('**/v1/transport/kmb/route-eta/**', route => {
+    const now = Date.now();
+    return route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ data: [
+        { seq:1, dir:'O', eta:new Date(now + 5*60*1000).toISOString(), eta_seq:1 },
+        { seq:1, dir:'O', eta:new Date(now + 15*60*1000).toISOString(), eta_seq:2 },
+        { seq:2, dir:'O', eta:new Date(now + 8*60*1000).toISOString(), eta_seq:1 },
+        { seq:2, dir:'O', eta:new Date(now + 18*60*1000).toISOString(), eta_seq:2 },
+        { seq:3, dir:'O', eta:new Date(now + 12*60*1000).toISOString(), eta_seq:1 }
+      ] })
+    });
+  });
   await page.goto('./?smoke=route-detail-ui', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('[data-detail-id]')).toBeVisible();
 }
@@ -38,7 +51,8 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await page.locator('[data-detail-stop="2"]').click();
   await expect(page.locator('.detail-current-name')).toContainText('第二站');
   await expect(page.locator('.stop-row.is-selected')).toContainText('第二站');
-  await expect(page.locator('.detail-status')).toContainText('下一段');
+  await expect(page.locator('.detail-status')).toContainText('即時資料');
+  await expect(page.locator('.detail-eta strong').first()).toContainText('8');
 });
 
 test('Escape and browser Back close the overlay and restore the entry focus', async ({ page }) => {
