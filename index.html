@@ -1814,6 +1814,7 @@ function viewHome() {
 
   sBody.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
     const removed = items[+b.dataset.del], id = removed && uid(removed);
+    if (id && routeDetailState.open && routeDetailState.routeId === id) closeRouteDetail();
     items.splice(+b.dataset.del, 1); if (id) { delete alarms[id]; delete alarmPlans[id]; alarmSeen.delete(id); clearAlarmFallbackTimers(id); delete getoff[id]; saveAlarms(); saveAlarmPlans(); saveGetoff(); }
     save(); closeArrivalNotifications(); shell(); refresh(); viewHome();
   }));
