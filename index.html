@@ -865,7 +865,7 @@ function detailEtaCoverageText() {
     const state = detailEtaStateFor(stop);
     return state.status === 'ready' && state.etas?.some(eta => !eta.sched);
   }).length;
-  return ready ? '有即時預報：' + ready + ' 個站' : '即時預報：讀取中';
+  return ready ? '有巴士 ETA 預報：' + ready + ' 個站' : '巴士 ETA 預報：讀取中';
 }
 function detailFareValue(it, fares) {
   const routeSeq = it.co === 'GMB' ? (+it.route_seq || 1) : (it.dir === 'I' ? 2 : 1);
