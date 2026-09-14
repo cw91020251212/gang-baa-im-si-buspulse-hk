@@ -762,7 +762,7 @@ const routeDetailState = {
   open:false, routeId:null, variantKey:null, stops:[], stopsStatus:'idle',
   stopsError:null, selectedSeq:null, selectedStopId:null, etaByStop:new Map(),
   vehicleInference:{ status:'hidden', fromStopId:null, toStopId:null, reason:null, observedAt:null },
-  generation:0, abortController:null, etaRequest:null, detailLastOK:null, sweepStatus:'idle'
+  generation:0, abortController:null, etaRequest:null, fareLabel:null, detailLastOK:null, sweepStatus:'idle'
 };
 function beginRouteDetailGeneration() {
   routeDetailState.generation += 1;
@@ -842,6 +842,17 @@ function detailStatusAction(stop) {
   const state = detailEtaStateFor(stop);
   return state.status === 'stale' || state.status === 'error' ? '<button class="detail-retry" type="button" data-detail-retry="' + esc(stop.id) + '">重新載入本站 ETA</button>' : '';
 }
+function detailFareValue(it, fares) {
+  const routeSeq = it.co === 'GMB' ? (+it.route_seq || 1) : (it.dir === 'I' ? 2 : 1);
+  const route = String(it.route || '').toUpperCase().replace(/\s+/g, '');
+  const companies = it.co === 'KMB' ? ['KMB','LWB','KMB+CTB','LWB+CTB'] : it.co === 'CTB' ? ['CTB','KMB+CTB','LWB+CTB'] : [it.co];
+  const fare = companies.map(co => Number(fares?.[co + '|' + route + '|' + routeSeq])).find(value => Number.isFinite(value));
+  return Number.isFinite(fare) ? '$' + fare.toFixed(1) : '官方資料未提供';
+}
+async function loadDetailFare(it, generation) {
+  try { const fares = await fareData(); if (isCurrentRouteDetailGeneration(generation)) { routeDetailState.fareLabel = detailFareValue(it, fares); renderRouteDetail(); } }
+  catch { if (isCurrentRouteDetailGeneration(generation)) { routeDetailState.fareLabel = '官方資料未提供'; renderRouteDetail(); } }
+}
 function reverseDetailItem(it) {
   if (!it || !['KMB','CTB'].includes(it.co)) return null;
   const next = { ...it, origin:it.dest, dest:it.origin, dir:it.dir === 'I' ? 'O' : 'I' };
@@ -854,12 +865,12 @@ async function switchRouteDetailDirection() {
   if (!next) return;
   const request = beginRouteDetailGeneration();
   routeDetailState.item = next; routeDetailState.routeId = uid(next); routeDetailState.variantKey = routeVariantKey(next);
-  routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = null; routeDetailState.selectedStopId = null; routeDetailState.etaByStop.clear(); routeDetailState.etaRequest = null; routeDetailState.sweepStatus = 'loading';
+  routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = null; routeDetailState.selectedStopId = null; routeDetailState.etaByStop.clear(); routeDetailState.etaRequest = null; routeDetailState.fareLabel = null; routeDetailState.sweepStatus = 'loading';
   renderRouteDetail();
   try {
     const stops = await getRouteStopsCached(next, { signal:request.signal });
     if (!isCurrentRouteDetailGeneration(request.generation)) return;
-    routeDetailState.stops = stops; routeDetailState.stopsStatus = 'ready'; routeDetailState.etaRequest = request; renderRouteDetail();
+    routeDetailState.stops = stops; routeDetailState.stopsStatus = 'ready'; routeDetailState.etaRequest = request; renderRouteDetail(); loadDetailFare(next, request.generation);
     loadRouteDetailEtas(next, request, routeDetailState.selectedStopId).then(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'ready'; }).catch(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'error'; });
   } catch (e) { if (isCurrentRouteDetailGeneration(request.generation)) { routeDetailState.stopsStatus = 'error'; renderRouteDetail(); } }
 }
@@ -927,7 +938,7 @@ function renderRouteDetail() {
   routeDetailState.vehicleInference = inferred[0] ? { status:'estimated', ...inferred[0] } : { status:'hidden', reason:'暫無足夠資料推算巴士位置' };
   const markerAfter = new Map(inferred.map(segment => [segment.fromSeq, '<div class="detail-inference" role="status" aria-label="推算中：按相鄰站 ETA 推算，並非巴士 GPS。"><b>推算中</b>　巴士可能正在兩站之間<small>按相鄰站 ETA 推算，並非巴士 GPS。</small></div>']));
   routeDetailBody.innerHTML =
-    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '">' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>' + esc(it.origin || it.stopName || '起點') + '</span><span class="arrow">→</span><span>' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><span>共 ' + routeDetailState.stops.length + ' 個站</span><span>逐站即時 ETA</span><span>資料只讀展示</span></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
+    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '">' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>' + esc(it.origin || it.stopName || '起點') + '</span><span class="arrow">→</span><span>' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><span>共 ' + routeDetailState.stops.length + ' 個站</span><span>首班：官方未提供</span><span>尾班：官方未提供</span><span>全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
     '<div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div></div>' +
     detailEtaPanel(current) +
     '<div class="detail-status" role="status">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div>' +
@@ -949,7 +960,7 @@ function renderRouteDetail() {
 }
 async function openRouteDetail(it, trigger) {
   routeDetailReturnFocus = trigger || document.activeElement;
-  routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.sweepStatus = 'loading';
+  routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.fareLabel = null; routeDetailState.sweepStatus = 'loading';
   const request = beginRouteDetailGeneration();
   routeDetail.classList.add('on'); routeDetail.setAttribute('aria-hidden', 'false'); document.body.classList.add('detail-open');
   routeDetailBody.innerHTML = '<div class="detail-loading">載入路線站點…</div>';
@@ -957,7 +968,7 @@ async function openRouteDetail(it, trigger) {
   try {
     const stops = await getRouteStopsCached(it, { signal:request.signal });
     if (!isCurrentRouteDetailGeneration(request.generation)) return;
-    routeDetailState.stops = stops; routeDetailState.stopsStatus = 'ready'; routeDetailState.etaRequest = request; renderRouteDetail(); loadRouteDetailEtas(it, request, routeDetailState.selectedStopId).then(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'ready'; }).catch(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'error'; });
+    routeDetailState.stops = stops; routeDetailState.stopsStatus = 'ready'; routeDetailState.etaRequest = request; renderRouteDetail(); loadDetailFare(it, request.generation); loadRouteDetailEtas(it, request, routeDetailState.selectedStopId).then(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'ready'; }).catch(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'error'; });
   } catch (e) {
     if (!isCurrentRouteDetailGeneration(request.generation)) return;
     routeDetailState.stopsStatus = 'error'; renderRouteDetail();

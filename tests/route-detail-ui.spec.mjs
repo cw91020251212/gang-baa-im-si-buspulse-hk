@@ -78,3 +78,15 @@ test('reverse direction swaps supported route variants without inventing a GMB v
   expect(result.kmb).toMatchObject({ dir:'I', bound:'inbound', origin:'大埔中心', dest:'觀塘碼頭' });
   expect(result.gmb).toBeNull();
 });
+
+test('detail fare lookup follows direction and never invents first or last service times', async ({ page }) => {
+  await page.goto('./?smoke=route-detail-metadata', { waitUntil: 'domcontentloaded' });
+  const result = await page.evaluate(() => ({
+    outbound: detailFareValue({ co:'KMB', route:'74X', dir:'O' }, { 'KMB|74X|1':11.5 }),
+    inbound: detailFareValue({ co:'KMB', route:'74X', dir:'I' }, { 'KMB|74X|2':11.5 }),
+    missing: detailFareValue({ co:'KMB', route:'UNKNOWN', dir:'O' }, {})
+  }));
+  expect(result.outbound).toBe('$11.5');
+  expect(result.inbound).toBe('$11.5');
+  expect(result.missing).toBe('官方資料未提供');
+});
