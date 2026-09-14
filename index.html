@@ -125,6 +125,8 @@ body.light{--bg:#eef3fa;--bg-deep:#e1e9f4;--card:rgba(255,255,255,.92);--card2:#
 .map-wrap.open{display:block}.map-tools{display:flex;gap:7px;padding:8px;background:rgba(16,24,39,.95)}.locate-btn{border:1px solid rgba(99,216,137,.35);background:rgba(99,216,137,.12);color:#a7f1bf;border-radius:9px;padding:8px 10px;font:700 11px inherit;cursor:pointer}.locate-btn:active{transform:scale(.98)}.route-map{height:250px;width:100%;z-index:1}.map-live-note{padding:7px 10px;background:rgba(0,229,138,.08);color:#a7f1bf;font-size:10.5px;line-height:1.45;border-top:1px solid rgba(99,216,137,.2)}.map-note{padding:7px 10px;background:rgba(16,24,39,.94);color:var(--faint);font-size:10px;line-height:1.4}
 .map-loading{height:250px;display:grid;place-items:center;color:#53657e;font-size:12px}
 .leaflet-container{font-family:inherit}.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#17233a;color:#f4f7fb}.leaflet-popup-content{font-size:12px;line-height:1.5}.leaflet-control-zoom a{color:#23344e}.popup-select{margin-top:5px;border:0;border-radius:7px;padding:6px 9px;background:var(--now);color:#071a14;font:700 11px inherit;cursor:pointer}
+.detail-entry{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;border:1px solid rgba(108,140,255,.35);background:rgba(108,140,255,.1);color:#bdcaff;border-radius:9px;padding:9px 11px;margin:0 13px 12px 15px;width:calc(100% - 28px);font:700 11.5px inherit;cursor:pointer}.detail-entry:active{transform:scale(.99)}
+.route-detail{position:fixed;inset:0;z-index:120;background:var(--bg);color:var(--tx);display:none;overflow:auto;overscroll-behavior:contain;padding-bottom:calc(24px + var(--safe-b))}.route-detail.on{display:block}.route-detail-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:calc(8px + var(--safe-t)) 13px 9px;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}.route-detail-head h2{font-size:16px;line-height:1.15;flex:1;min-width:0}.route-detail-head small{display:block;color:var(--faint);font-size:10px;margin-top:3px;font-weight:600}.detail-back{width:40px;height:40px;border:1px solid var(--line);background:var(--card);color:var(--tx);border-radius:11px;font:800 20px inherit;cursor:pointer}.route-detail-inner{max-width:680px;margin:0 auto;padding:12px 13px}.detail-summary{padding:14px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(135deg,var(--card),var(--card2));margin-bottom:10px}.detail-route-line{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:850}.detail-route-line .arrow{color:var(--dim)}.detail-meta{display:flex;flex-wrap:wrap;gap:6px 13px;margin-top:8px;color:var(--dim);font-size:11.5px}.detail-current{padding:11px 13px;border:1px solid rgba(54,224,160,.36);border-radius:13px;background:rgba(54,224,160,.08);margin:10px 0}.detail-current-label{font-size:10px;color:var(--now);font-weight:800;letter-spacing:.04em}.detail-current-name{font-size:16px;font-weight:800;margin-top:4px}.detail-eta-panel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:10px 0}.detail-eta{min-width:0;min-height:84px;padding:9px 6px;border:1px solid var(--line);border-radius:12px;background:var(--card);text-align:center}.detail-eta strong{display:block;font-size:19px;line-height:1.1;font-variant-numeric:tabular-nums}.detail-eta span{display:block;color:var(--faint);font-size:10px;margin-top:5px}.detail-eta:first-child{border-color:rgba(54,224,160,.45);background:rgba(54,224,160,.08)}.detail-status{padding:8px 10px;border-radius:9px;background:var(--card);color:var(--dim);font-size:11px;line-height:1.45}.detail-section-title{display:flex;justify-content:space-between;align-items:baseline;margin:17px 2px 8px;font-weight:850}.detail-section-title small{color:var(--faint);font-size:10px;font-weight:600}.stop-timeline{position:relative;padding:3px 0 10px}.stop-timeline:before{content:"";position:absolute;left:18px;top:18px;bottom:18px;width:2px;background:var(--line)}.stop-row{position:relative;display:flex;align-items:stretch;gap:11px;width:100%;min-height:66px;padding:7px 7px 7px 0;border:1px solid transparent;border-radius:13px;background:transparent;color:var(--tx);text-align:left;font:inherit;cursor:pointer}.stop-row:active{transform:scale(.995)}.stop-row.is-selected{border-color:rgba(54,224,160,.42);background:rgba(54,224,160,.08)}.stop-dot{position:relative;z-index:1;flex:0 0 38px;display:grid;place-items:center}.stop-dot:after{content:"";width:15px;height:15px;border:2px solid var(--faint);border-radius:50%;background:var(--bg)}.stop-row.is-selected .stop-dot:after{width:19px;height:19px;border-color:var(--now);background:var(--now);box-shadow:0 0 0 5px rgba(54,224,160,.14)}.stop-copy{min-width:0;flex:1;padding-top:1px}.stop-copy strong{display:block;font-size:14px;line-height:1.25}.stop-copy small{display:block;color:var(--faint);font-size:10.5px;margin-top:4px;line-height:1.3}.stop-state{align-self:center;color:var(--faint);font-size:10px;white-space:nowrap}.stop-row.is-selected .stop-state{color:var(--now);font-weight:800}.detail-loading{padding:35px 12px;text-align:center;color:var(--faint)}body.detail-open{overflow:hidden}@media(min-width:620px){.route-detail-inner{padding-left:18px;padding-right:18px}}@media(prefers-reduced-motion:reduce){.detail-entry,.stop-row{transition:none}}
 .rmk{
   padding:0 13px 11px 15px; font-size:10.5px; color:var(--faint);
   display:flex; flex-wrap:wrap; gap:4px 8px;
@@ -249,6 +251,16 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
   資料來源：data.gov.hk 實時到站 API<br>
   到站時間僅供參考，實際班次可能有變
 </div>
+
+<section class="route-detail" id="routeDetail" aria-hidden="true" aria-labelledby="routeDetailTitle">
+  <div class="route-detail-head">
+    <button class="detail-back" id="routeDetailBack" type="button" aria-label="返回路線列表">‹</button>
+    <h2 id="routeDetailTitle">路線詳情<small id="routeDetailSubTitle">讀取中</small></h2>
+  </div>
+  <div class="route-detail-inner">
+    <div id="routeDetailBody" class="detail-loading">載入路線站點…</div>
+  </div>
+</section>
 
 <button class="fab" id="fab">＋ 設定路線</button>
 
@@ -711,6 +723,8 @@ cleanupOrphanAlarms();
    =================================================================== */
 const $ = s => document.querySelector(s);
 const board = $('#board'), dot = $('#dot'), clock = $('#clock'), refreshBtn = $('#refreshBtn');
+const routeDetail = $('#routeDetail'), routeDetailBody = $('#routeDetailBody'), routeDetailTitle = $('#routeDetailTitle'), routeDetailSubTitle = $('#routeDetailSubTitle');
+let routeDetailReturnFocus = null;
 const esc = s => String(s == null ? '' : s)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const cssEscape = s => (globalThis.CSS && typeof CSS.escape === 'function') ? CSS.escape(String(s)) : String(s).replace(/[^a-zA-Z0-9_-]/g, ch => '\\' + ch.charCodeAt(0).toString(16) + ' ');
@@ -793,6 +807,55 @@ async function updateFares() {
   });
 }
 
+function renderRouteDetail() {
+  const it = routeDetailState.item;
+  if (!it || !routeDetailBody) return;
+  const selected = routeDetailState.selectedSeq;
+  const selectedStop = routeDetailState.stops.find(s => s.seq === selected) || routeDetailState.stops[0];
+  if (selectedStop) { routeDetailState.selectedSeq = selectedStop.seq; routeDetailState.selectedStopId = selectedStop.id; }
+  routeDetailTitle.firstChild.textContent = esc(it.co + ' ' + it.route);
+  routeDetailSubTitle.textContent = (it.origin || it.stopName || '') + ' → ' + (it.dest || '') + ' · 唯讀路線詳情';
+  if (routeDetailState.stopsStatus === 'loading') { routeDetailBody.innerHTML = '<div class="detail-loading">載入路線站點…</div>'; return; }
+  if (routeDetailState.stopsStatus === 'error') { routeDetailBody.innerHTML = '<div class="detail-loading">站點讀取失敗，請返回後再試。</div>'; return; }
+  const current = selectedStop || { name:'未選擇車站', id:'', seq:'' };
+  routeDetailBody.innerHTML =
+    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '">' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>' + esc(it.origin || it.stopName || '起點') + '</span><span class="arrow">→</span><span>' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><span>共 ' + routeDetailState.stops.length + ' 個站</span><span>資料只讀展示</span><span>ETA 下一段接入</span></div></div>' +
+    '<div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div></div>' +
+    '<div class="detail-eta-panel" aria-label="目前車站即時到站時間"><div class="detail-eta"><strong>—</strong><span>即將到達</span></div><div class="detail-eta"><strong>—</strong><span>下一班</span></div><div class="detail-eta"><strong>—</strong><span>第三班</span></div></div>' +
+    '<div class="detail-status" role="status">逐站即時 ETA 會在下一段加入；現在可以先撳任何車站查看路線位置。</div>' +
+    '<div class="detail-section-title"><span>沿途車站列表</span><small>共 ' + routeDetailState.stops.length + ' 個站</small></div>' +
+    '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => '<button class="stop-row ' + (st.seq === selected ? 'is-selected' : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (st.seq === selected ? '，已選' : '，按兩下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-copy"><strong>' + esc(st.seq) + '　' + esc(st.name) + '</strong><small>' + esc(st.id) + '</small></span><span class="stop-state">' + (st.seq === selected ? '已選' : '查看') + '</span></button>').join('') + '</div>';
+  routeDetailBody.querySelectorAll('[data-detail-stop]').forEach(button => button.addEventListener('click', () => {
+    const stop = routeDetailState.stops.find(s => String(s.seq) === button.dataset.detailStop);
+    if (!stop) return;
+    routeDetailState.selectedSeq = stop.seq; routeDetailState.selectedStopId = stop.id; renderRouteDetail();
+    routeDetailBody.querySelector('[data-detail-stop="' + cssEscape(String(stop.seq)) + '"]')?.focus({ preventScroll:true });
+  }));
+}
+async function openRouteDetail(it, trigger) {
+  routeDetailReturnFocus = trigger || document.activeElement;
+  routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null;
+  const request = beginRouteDetailGeneration();
+  routeDetail.classList.add('on'); routeDetail.setAttribute('aria-hidden', 'false'); document.body.classList.add('detail-open');
+  routeDetailBody.innerHTML = '<div class="detail-loading">載入路線站點…</div>';
+  history.pushState({ buspulseRouteDetail:true }, '', '#route-detail'); routeDetail.querySelector('.detail-back').focus();
+  try {
+    const stops = await getRouteStopsCached(it, { signal:request.signal });
+    if (!isCurrentRouteDetailGeneration(request.generation)) return;
+    routeDetailState.stops = stops; routeDetailState.stopsStatus = 'ready'; renderRouteDetail();
+  } catch (e) {
+    if (!isCurrentRouteDetailGeneration(request.generation)) return;
+    routeDetailState.stopsStatus = 'error'; renderRouteDetail();
+  }
+}
+function closeRouteDetail(options = {}) {
+  if (!routeDetailState.open) return;
+  const useHistory = options.history !== false;
+  closeRouteDetailState(); routeDetailState.item = null; routeDetail.classList.remove('on'); routeDetail.setAttribute('aria-hidden', 'true'); document.body.classList.remove('detail-open');
+  routeDetailReturnFocus?.focus?.();
+  if (useHistory && history.state?.buspulseRouteDetail) history.back();
+}
+
 function shell() {
   mapCache.clear();
   if (!items.length) {
@@ -813,6 +876,7 @@ function shell() {
       '<button class="map-head-btn" data-map-id="' + id + '" title="查看路線地圖" aria-label="查看路線地圖">⌖</button>' +
       '</div>' +
       '<div class="stop"><button class="stop-edit" data-edit-stop="' + id + '" title="更改上車站">&#128205; <b>' + esc(it.stopName || '') + '</b></button><a class="fare" data-fare="' + id + '" title="官方全程車資">全程車資：讀取中</a></div>' +
+      '<button class="detail-entry" data-detail-id="' + id + '" type="button">查看完整路線及沿途車站　›</button>' +
       '<div class="etas" data-slot="' + id + '">' +
         '<div class="eta"><div class="m pulse">··</div><div class="u">載入中</div></div>' +
       '</div>' +
@@ -836,6 +900,10 @@ function shell() {
   board.querySelectorAll('[data-map-id]').forEach(button => {
     const item = items.find(x => uid(x) === button.dataset.mapId);
     if (item) button.addEventListener('click', () => toggleMap(item, button));
+  });
+  board.querySelectorAll('[data-detail-id]').forEach(button => {
+    const item = items.find(x => uid(x) === button.dataset.detailId);
+    if (item) button.addEventListener('click', () => openRouteDetail(item, button));
   });
   updateFares().catch(() => {});
 }
@@ -1587,6 +1655,9 @@ mask.addEventListener('click', closeSheet);
 $('#closeBtn').addEventListener('click', closeSheet);
 $('#fab').addEventListener('click', () => { viewHome(); openSheet(); });
 $('#prefsBtn').addEventListener('click', () => { viewPrefs(); openSheet(); });
+$('#routeDetailBack').addEventListener('click', () => closeRouteDetail());
+window.addEventListener('popstate', () => { if (routeDetailState.open) closeRouteDetail({ history:false }); });
+document.addEventListener('keydown', e => { if (routeDetailState.open && e.key === 'Escape') { e.preventDefault(); closeRouteDetail(); } });
 busSaver.addEventListener('click', closeBusSaver);
 busSaver.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') { e.preventDefault(); closeBusSaver(); } });
 document.addEventListener('pointerdown', e => { if (!e.target.closest('#busSaver')) registerBusActivity(); }, { passive:true });
