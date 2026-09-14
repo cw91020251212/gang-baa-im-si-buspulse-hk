@@ -864,6 +864,13 @@ function detailEtaIsNear(eta) {
   const iso = eta?.iso && Date.parse(eta.iso);
   return !eta?.sched && Number.isFinite(iso) && (iso - Date.now()) <= 5 * 60000 && iso >= Date.now() - 2 * 60000;
 }
+function detailEtaIsApproaching(eta) {
+  const iso = eta?.iso && Date.parse(eta.iso);
+  return !eta?.sched && Number.isFinite(iso) && (iso - Date.now()) <= 15 * 60000 && iso >= Date.now() - 2 * 60000;
+}
+function detailFirstLiveEta(stop) {
+  return (detailEtaStateFor(stop).etas || []).find(eta => !eta.sched && eta.iso && Number.isFinite(Date.parse(eta.iso)));
+}
 function detailEtaCoverageText() {
   let ready = 0, near = 0;
   routeDetailState.stops.forEach(stop => {
@@ -974,9 +981,9 @@ function renderRouteDetail() {
   const enRouteSeqs = new Set(inferred.map(segment => segment.fromSeq));
   for (let i = 0; i < routeDetailState.stops.length - 1; i++) {
     const a = detailEtaStateFor(routeDetailState.stops[i]), b = detailEtaStateFor(routeDetailState.stops[i + 1]);
-    const ea = (a.etas || []).find(eta => !eta.sched && eta.iso && Date.parse(eta.iso) >= Date.now() - 2 * 60000);
-    const eb = (b.etas || []).find(eta => !eta.sched && eta.iso && Date.parse(eta.iso) > Date.parse(ea?.iso || ''));
-    if (ea && eb && Date.parse(eb.iso) - Date.parse(ea.iso) <= 20 * 60000) enRouteSeqs.add(routeDetailState.stops[i].seq);
+    const ea = detailFirstLiveEta(routeDetailState.stops[i]);
+    const eb = detailFirstLiveEta(routeDetailState.stops[i + 1]);
+    if (ea && eb && detailEtaIsApproaching(ea) && Date.parse(eb.iso) > Date.parse(ea.iso) && Date.parse(eb.iso) - Date.parse(ea.iso) <= 20 * 60000) enRouteSeqs.add(routeDetailState.stops[i].seq);
   }
   routeDetailBody.innerHTML =
     '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '">' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><span>共 ' + routeDetailState.stops.length + ' 個站</span><span title="同一部車可同時出現在沿線多個站的 ETA；這不是車輛數">' + detailEtaCoverageText() + '</span><span>首班：官方未提供</span><span>尾班：官方未提供</span><span>全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
