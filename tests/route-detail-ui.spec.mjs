@@ -59,6 +59,7 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('[data-detail-refresh]')).toHaveText('立即更新全部車站 ETA');
   await expect(page.locator('.detail-inference')).toContainText('推算中');
   await expect(page.locator('.detail-inference')).toContainText('並非巴士 GPS');
+  await expect(page.locator('.detail-bus-status')).toContainText('巴士');
 });
 
 test('Escape and browser Back close the overlay and restore the entry focus', async ({ page }) => {
@@ -78,7 +79,7 @@ test('route detail trigger is compact and does not add a text row to the card', 
   await prepare(page);
   const entry = page.locator('[data-detail-id]').first();
   await expect(entry).toHaveAttribute('aria-label', '查看完整路線及沿途車站');
-  await expect(entry.locator('xpath=..')).toHaveClass(/chead/);
+  await expect(entry.locator('xpath=..')).toHaveClass(/stop/);
   await expect(page.locator('text=查看完整路線及沿途車站　›')).toHaveCount(0);
 });
 
