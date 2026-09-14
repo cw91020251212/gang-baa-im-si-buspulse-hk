@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="BusPulse HK app icon">
+  <defs>
+    <linearGradient id="bg" x1="36" y1="22" x2="468" y2="500" gradientUnits="userSpaceOnUse"><stop stop-color="#172b52"/><stop offset="1" stop-color="#101426"/></linearGradient>
+    <linearGradient id="bus" x1="104" y1="172" x2="406" y2="382" gradientUnits="userSpaceOnUse"><stop stop-color="#ffca62"/><stop offset=".33" stop-color="#ef6a52"/><stop offset=".72" stop-color="#d63859"/><stop offset="1" stop-color="#723b8e"/></linearGradient>
+    <linearGradient id="glass" x1="142" y1="205" x2="366" y2="285" gradientUnits="userSpaceOnUse"><stop stop-color="#c9f4f4"/><stop offset=".45" stop-color="#4b93b8"/><stop offset="1" stop-color="#20365e"/></linearGradient>
+    <linearGradient id="teal" x1="105" y1="338" x2="405" y2="338" gradientUnits="userSpaceOnUse"><stop stop-color="#54e0c2"/><stop offset="1" stop-color="#48a9e5"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="18" stdDeviation="14" flood-color="#030713" flood-opacity=".55"/></filter>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="92" cy="90" r="58" fill="#3d65a3" opacity=".18"/><circle cx="432" cy="418" r="82" fill="#a64b8d" opacity=".14"/>
+  <path d="M91 141h32M75 166h48M421 111h22M413 137h38" stroke="#73e4d1" stroke-width="12" stroke-linecap="round" opacity=".9"/>
+  <g filter="url(#shadow)">
+    <path d="M102 196c0-33 27-60 60-60h195c40 0 65 27 65 67v128c0 22-18 40-40 40H130c-16 0-28-13-28-29V196Z" fill="url(#bus)" stroke="#ffe29a" stroke-width="8"/>
+    <path d="M133 177h219c19 0 34 11 40 28H133c-7 0-12-6-12-14v-2c0-7 5-12 12-12Z" fill="#ffd884" opacity=".9"/>
+    <rect x="132" y="205" width="224" height="78" rx="9" fill="url(#glass)" stroke="#ffe4a1" stroke-width="6"/>
+    <path d="M187 207v74M244 207v74M301 207v74" stroke="#ffe4a1" stroke-width="6" opacity=".95"/>
+    <path d="M143 214l54 0-64 49v-31c0-9 4-15 10-18ZM255 214h36l-60 61h-34l58-61ZM313 214h28l-56 61h-30l58-61Z" fill="#e7ffff" opacity=".22"/>
+    <rect x="154" y="302" width="194" height="25" rx="8" fill="#20294b" opacity=".95"/>
+    <text x="251" y="320" fill="#ffe38e" font-family="Arial,sans-serif" font-size="15" font-weight="800" text-anchor="middle" letter-spacing="3">BUSPULSE</text>
+    <path d="M105 338h299v25H105z" fill="url(#teal)"/><path d="M105 363h299v12H105z" fill="#f4c84f"/>
+    <circle cx="151" cy="379" r="30" fill="#11182d" stroke="#d9e5e7" stroke-width="8"/><circle cx="151" cy="379" r="10" fill="#e9bb52"/>
+    <circle cx="350" cy="379" r="30" fill="#11182d" stroke="#d9e5e7" stroke-width="8"/><circle cx="350" cy="379" r="10" fill="#e9bb52"/>
+    <circle cx="113" cy="313" r="9" fill="#fff5b0"/><circle cx="391" cy="313" r="8" fill="#ff7868"/>
+    <rect x="368" y="207" width="22" height="75" rx="4" fill="#26365d" stroke="#ffe4a1" stroke-width="5"/><path d="M380 216v55" stroke="#86d9dc" stroke-width="3"/>
+  </g>
+  <path d="M111 424c82 29 211 30 290 0" stroke="#69d9d0" stroke-width="8" stroke-linecap="round" opacity=".5"/>
+</svg>
