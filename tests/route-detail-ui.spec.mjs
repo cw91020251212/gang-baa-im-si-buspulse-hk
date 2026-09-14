@@ -68,3 +68,13 @@ test('Escape and browser Back close the overlay and restore the entry focus', as
   await page.goBack();
   await expect(page.locator('#routeDetail')).not.toHaveClass(/on/);
 });
+
+test('reverse direction swaps supported route variants without inventing a GMB variant', async ({ page }) => {
+  await page.goto('./?smoke=route-detail-reverse', { waitUntil: 'domcontentloaded' });
+  const result = await page.evaluate(kmbItem => ({
+    kmb: reverseDetailItem(kmbItem),
+    gmb: reverseDetailItem({ co:'GMB', route:'1', route_id:'G1', route_seq:1, origin:'甲', dest:'乙' })
+  }), item);
+  expect(result.kmb).toMatchObject({ dir:'I', bound:'inbound', origin:'大埔中心', dest:'觀塘碼頭' });
+  expect(result.gmb).toBeNull();
+});
