@@ -2,10 +2,11 @@ import { test, expect } from '@playwright/test';
 
 async function runQueue(page, company) {
   return page.evaluate(async co => {
-    let active = 0, maxActive = 0, calls = 0;
+    let active = 0, maxActive = 0, calls = 0, firstUrl = '';
     const originalFetch = window.fetch;
     window.fetch = async url => {
       calls += 1; active += 1; maxActive = Math.max(maxActive, active);
+      if (!firstUrl) firstUrl = String(url);
       await new Promise(resolve => setTimeout(resolve, 12));
       active -= 1;
       const now = Date.now();
@@ -14,7 +15,7 @@ async function runQueue(page, company) {
     };
     routeDetailState.open = true;
     routeDetailState.stops = Array.from({length:7}, (_, i) => ({ seq:i+1, id:co+'-'+(i+1), name:'站'+(i+1) }));
-    routeDetailState.etaByStop.clear();
+    routeDetailState.etaByStop.clear(); routeDetailState.selectedStopId = co+'-7';
     const it = co === 'CTB'
       ? { co, route:'1', dir:'O', stopId:'selected', stopName:'站1' }
       : { co, route:'G1', route_id:'G1', route_seq:1, dir:'O', stopId:'selected', stopName:'站1' };
@@ -24,7 +25,7 @@ async function runQueue(page, company) {
     await loadRouteDetailEtas(it, request);
     window.fetch = originalFetch;
     return {
-      calls, maxActive,
+      calls, maxActive, firstUrl,
       allReady:[...routeDetailState.etaByStop.values()].every(x => x.status === 'ready'),
       alarmUnchanged:beforeAlarm === localStorage.getItem('busboard.alarm-plan.v1'),
       getoffUnchanged:beforeGetoff === localStorage.getItem('busboard.getoff.v1')
@@ -37,6 +38,7 @@ test('CTB detail ETA uses bounded workers and no alarm or GPS side effects', asy
   const result = await runQueue(page, 'CTB');
   expect(result.calls).toBe(7);
   expect(result.maxActive).toBeLessThanOrEqual(3);
+  expect(result.firstUrl).toContain('CTB-7');
   expect(result.allReady).toBe(true);
   expect(result.alarmUnchanged).toBe(true);
   expect(result.getoffUnchanged).toBe(true);
@@ -47,6 +49,7 @@ test('GMB detail ETA uses bounded workers and no alarm or GPS side effects', asy
   const result = await runQueue(page, 'GMB');
   expect(result.calls).toBe(7);
   expect(result.maxActive).toBeLessThanOrEqual(3);
+  expect(result.firstUrl).toContain('/G1/1/7');
   expect(result.allReady).toBe(true);
   expect(result.alarmUnchanged).toBe(true);
   expect(result.getoffUnchanged).toBe(true);
