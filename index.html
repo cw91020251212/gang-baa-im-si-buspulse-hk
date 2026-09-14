@@ -860,6 +860,13 @@ function detailStatusAction(stop) {
   const retry = state.status === 'stale' || state.status === 'error' ? '<button class="detail-retry" type="button" data-detail-retry="' + esc(stop.id) + '">重新載入本站 ETA</button>' : '';
   return retry + '<button class="detail-refresh" type="button" data-detail-refresh>立即更新全部車站 ETA</button>';
 }
+function detailEtaCoverageText() {
+  const ready = routeDetailState.stops.filter(stop => {
+    const state = detailEtaStateFor(stop);
+    return state.status === 'ready' && state.etas?.some(eta => !eta.sched);
+  }).length;
+  return ready ? '有即時預報：' + ready + ' 個站' : '即時預報：讀取中';
+}
 function detailFareValue(it, fares) {
   const routeSeq = it.co === 'GMB' ? (+it.route_seq || 1) : (it.dir === 'I' ? 2 : 1);
   const route = String(it.route || '').toUpperCase().replace(/\s+/g, '');
@@ -957,7 +964,7 @@ function renderRouteDetail() {
   routeDetailState.vehicleInference = inferred[0] ? { status:'estimated', ...inferred[0] } : { status:'hidden', reason:'暫無足夠資料推算巴士位置' };
   const markerAfter = new Map(inferred.map(segment => [segment.fromSeq, '<div class="detail-inference" role="status" aria-label="推算中：按相鄰站 ETA 推算，並非巴士 GPS。"><b>推算中</b>　巴士可能正在兩站之間<small>按相鄰站 ETA 推算，並非巴士 GPS。</small></div>']));
   routeDetailBody.innerHTML =
-    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '">' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>' + esc(it.origin || it.stopName || '起點') + '</span><span class="arrow">→</span><span>' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><span>共 ' + routeDetailState.stops.length + ' 個站</span><span>首班：官方未提供</span><span>尾班：官方未提供</span><span>全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span><span title="官方公開 ETA 沒有車輛數或車牌欄位">行駛中車輛：官方資料未提供</span></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
+    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '">' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><span>共 ' + routeDetailState.stops.length + ' 個站</span><span title="同一部車可同時出現在沿線多個站的 ETA；這不是車輛數">' + detailEtaCoverageText() + '</span><span>首班：官方未提供</span><span>尾班：官方未提供</span><span>全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
     '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
     detailEtaPanel(current) +
     '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +
