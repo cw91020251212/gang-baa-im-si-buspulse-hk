@@ -29,9 +29,9 @@ async function prepare(page) {
     return route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify({ data: [
-        { seq:1, dir:'O', eta:new Date(now + 2*60*1000).toISOString(), eta_seq:1 },
+        { seq:1, dir:'O', eta:new Date(now + 1*60*1000).toISOString(), eta_seq:1 },
         { seq:1, dir:'O', eta:new Date(now + 15*60*1000).toISOString(), eta_seq:2 },
-        { seq:2, dir:'O', eta:new Date(now + 8*60*1000).toISOString(), eta_seq:1 },
+        { seq:2, dir:'O', eta:new Date(now + 3*60*1000).toISOString(), eta_seq:1 },
         { seq:2, dir:'O', eta:new Date(now + 18*60*1000).toISOString(), eta_seq:2 },
         { seq:3, dir:'O', eta:new Date(now + 12*60*1000).toISOString(), eta_seq:1 }
       ] })
@@ -52,7 +52,7 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('.detail-current-name')).toContainText('第二站');
   await expect(page.locator('.stop-row.is-selected')).toContainText('第二站');
   await expect(page.locator('.detail-status')).toContainText('即時資料');
-  await expect(page.locator('.detail-eta strong').first()).toContainText('8');
+  await expect(page.locator('.detail-eta strong').first()).toContainText('3');
   await expect(page.locator('.detail-live-dock')).toBeVisible();
   await expect(page.locator('.detail-live-dock .detail-eta')).toHaveCount(3);
   await expect(page.locator('.detail-status')).toHaveAttribute('aria-live', 'polite');
@@ -60,6 +60,8 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('.detail-inference')).toContainText('推算中');
   await expect(page.locator('.detail-inference')).toContainText('並非巴士 GPS');
   await expect(page.locator('.detail-bus-status')).toContainText('巴士');
+  await expect(page.locator('[aria-label="巴士即將到站"]').first()).toBeVisible();
+  await expect(page.locator('[aria-label="巴士在途中"]').first()).toBeVisible();
 });
 
 test('Escape and browser Back close the overlay and restore the entry focus', async ({ page }) => {
