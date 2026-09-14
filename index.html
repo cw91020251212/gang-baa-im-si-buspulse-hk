@@ -424,6 +424,42 @@ function routeStops(v) {
   return stopsGMB(v);
 }
 
+/* Route-detail data core: one static stop list per route variant, not per
+   selected boarding stop. This remains read-only and has no alarm/GPS side
+   effects; the UI slice will consume it later. */
+function routeVariantKey(v) {
+  if (!v || !v.co) throw new Error('route variant requires company');
+  if (v.co === 'GMB') return ['GMB', v.route_id, v.route_seq].map(String).join('|');
+  if (v.co === 'KMB') return ['KMB', v.route, v.dir || v.bound, v.service_type || '1'].map(String).join('|');
+  return ['CTB', v.route, v.dir || v.bound].map(String).join('|');
+}
+const routeStopsInFlight = new Map();
+function validRouteStops(stops) {
+  if (!Array.isArray(stops) || !stops.length) throw new Error('empty route stops');
+  const seqs = new Set(), ids = new Set();
+  const out = stops.map(s => ({ ...s, seq:+s.seq, id:String(s.id) }))
+    .sort((a, b) => a.seq - b.seq);
+  out.forEach(s => {
+    if (!Number.isFinite(s.seq) || !s.id || seqs.has(s.seq) || ids.has(s.id)) throw new Error('invalid route stops');
+    seqs.add(s.seq); ids.add(s.id);
+  });
+  return out;
+}
+function getRouteStopsCached(v, options = {}) {
+  const key = routeVariantKey(v);
+  if (routeStopsCache.has(key)) return Promise.resolve(routeStopsCache.get(key));
+  if (routeStopsInFlight.has(key)) return routeStopsInFlight.get(key);
+  const loader = options.loader || routeStops;
+  const promise = Promise.resolve().then(() => loader(v, options)).then(validRouteStops).then(stops => {
+    routeStopsCache.set(key, stops);
+    return stops;
+  }).finally(() => routeStopsInFlight.delete(key));
+  routeStopsInFlight.set(key, promise);
+  return promise;
+}
+function makeStopRequest(it, stop) {
+  return { ...it, seq:stop.seq, stopId:stop.id, stopName:stop.name };
+}
 /* =========================  ETA  ========================= */
 /* Returns { etas:[{iso, min, rmk, sched}], err } — sorted, future only */
 
@@ -700,6 +736,27 @@ const mapCache = new Map();
 const routeStopsCache = new Map();
 const liveMapStates = new Map();
 const fareMemo = new Map();
+const routeDetailState = {
+  open:false, routeId:null, variantKey:null, stops:[], stopsStatus:'idle',
+  stopsError:null, selectedSeq:null, selectedStopId:null, etaByStop:new Map(),
+  vehicleInference:{ status:'hidden', fromStopId:null, toStopId:null, reason:null, observedAt:null },
+  generation:0, abortController:null, detailLastOK:null, sweepStatus:'idle'
+};
+function beginRouteDetailGeneration() {
+  routeDetailState.generation += 1;
+  routeDetailState.abortController?.abort();
+  routeDetailState.abortController = new AbortController();
+  return { generation:routeDetailState.generation, signal:routeDetailState.abortController.signal };
+}
+function isCurrentRouteDetailGeneration(generation) {
+  return routeDetailState.open && routeDetailState.generation === generation;
+}
+function closeRouteDetailState() {
+  routeDetailState.open = false;
+  routeDetailState.generation += 1;
+  routeDetailState.abortController?.abort();
+  routeDetailState.abortController = null;
+}
 async function fareData() {
   if (!fareMemo.has('all')) fareMemo.set('all', getJSON('./fare-index.json', 12000).catch(() => ({})));
   return fareMemo.get('all');
@@ -1045,8 +1102,7 @@ async function openGetoffSetup(it) {
   sTitle.textContent = '設定落車提醒';
   sBody.innerHTML = '<div class="msg"><span class="spin"></span>載入 ' + esc(it.route) + ' 站頭 …</div>';
   try {
-    const stops = await routeStops(it);
-    routeStopsCache.set(uid(it), stops);
+    const stops = await getRouteStopsCached(it);
     sBody.innerHTML = '<div class="lbl">' + esc(it.route) + ' · ' + esc(it.dest || '') + '</div>' +
       '<div class="hint">揀你想落車嘅站。開始後，手機會用 GPS 判斷你接近目標站；GPS 只會喺你主動開始後使用。</div>' +
       '<button class="wide" id="getoffMapBtn">🗺 地圖揀站</button>' +
@@ -1107,7 +1163,7 @@ function stopGetoff(it) { delete getoff[uid(it)]; saveGetoff(); if (getoffWatch 
 function notifyGetoffError() { const n=document.querySelector('#getoffNote'); if(n) n.textContent='GPS 暫時未能定位，請確認已允許定位及開啟手機 GPS。'; }
 function updateGetoff(it, coords) {
   const state=getoff[uid(it)]; if (!state?.active) return;
-  const d=routeStopsCache.get(uid(it));
+  const d=routeStopsCache.get(routeVariantKey(it));
   if (!d?.length) return;
   const here={lat:coords.latitude,lng:coords.longitude};
   let nearest=d[0], best=Infinity;
@@ -1268,7 +1324,7 @@ async function toggleMap(it, button) {
   const mapEl = wrap.querySelector('.route-map');
   mapEl.innerHTML = '<div class="map-loading"><span class="spin"></span>載入站頭位置…</div>';
   try {
-    const stops = (await routeStops(it)).filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
+    const stops = (await getRouteStopsCached(it)).filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
     if (!stops.length) throw new Error('no-coordinates');
     mapEl.innerHTML = '';
     const map = L.map(mapEl, { zoomControl: false, attributionControl: true });
@@ -1378,7 +1434,7 @@ function toggleLiveRouteGPS(it, map, stops, button) {
 function locateOnExistingMap(it) {
   const map = mapCache.get(uid(it));
   if (!map) return;
-  routeStops(it).then(stops => locateOnMap(map, stops.filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng)), board.querySelector('[data-locate-id="' + cssEscape(uid(it)) + '"]')));
+  getRouteStopsCached(it).then(stops => locateOnMap(map, stops.filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng)), board.querySelector('[data-locate-id="' + cssEscape(uid(it)) + '"]')));
 }
 
 function paint(it, res) {
@@ -1800,7 +1856,7 @@ async function viewStops(v) {
   sBody.innerHTML = '<div class="msg"><span class="spin"></span>載入站頭 …</div>';
   sBody.scrollTop = 0;
   let stops;
-  try { stops = await routeStops(v); }
+  try { stops = await getRouteStopsCached(v); }
   catch {
     sBody.innerHTML = '<div class="msg">站頭讀取失敗</div>' +
       '<button class="wide" id="bk">← 返回</button>';
@@ -1808,7 +1864,6 @@ async function viewStops(v) {
     return;
   }
   setupMapInstance = null;
-  routeStopsCache.set(uid({co:v.co, route:v.route, dir:v.dir, stopId:'__setup__'}), stops);
   sBody.innerHTML =
     '<div class="lbl">' + esc(v.dirLabel) + '</div>' +
     '<div class="map-actions" style="padding:0 0 10px"><button class="map-toggle" id="setupMapBtn"><span>🗺 先睇全條路線地圖</span><span class="map-arrow">⌄</span></button></div>' +
