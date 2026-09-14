@@ -762,7 +762,7 @@ const routeDetailState = {
   open:false, routeId:null, variantKey:null, stops:[], stopsStatus:'idle',
   stopsError:null, selectedSeq:null, selectedStopId:null, etaByStop:new Map(),
   vehicleInference:{ status:'hidden', fromStopId:null, toStopId:null, reason:null, observedAt:null },
-  generation:0, abortController:null, etaRequest:null, fareLabel:null, detailLastOK:null, sweepStatus:'idle'
+  generation:0, abortController:null, etaRequest:null, fareLabel:null, detailTicker:null, detailLastOK:null, sweepStatus:'idle'
 };
 function beginRouteDetailGeneration() {
   routeDetailState.generation += 1;
@@ -779,6 +779,14 @@ function closeRouteDetailState() {
   routeDetailState.abortController?.abort();
   routeDetailState.abortController = null;
   routeDetailState.etaRequest = null;
+  clearInterval(routeDetailState.detailTicker);
+  routeDetailState.detailTicker = null;
+}
+function startRouteDetailTicker() {
+  clearInterval(routeDetailState.detailTicker);
+  routeDetailState.detailTicker = setInterval(() => {
+    if (routeDetailState.open && routeDetailState.stopsStatus === 'ready') renderRouteDetail();
+  }, 30000);
 }
 async function fareData() {
   if (!fareMemo.has('all')) fareMemo.set('all', getJSON('./fare-index.json', 12000).catch(() => ({})));
@@ -866,7 +874,7 @@ async function switchRouteDetailDirection() {
   const request = beginRouteDetailGeneration();
   routeDetailState.item = next; routeDetailState.routeId = uid(next); routeDetailState.variantKey = routeVariantKey(next);
   routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = null; routeDetailState.selectedStopId = null; routeDetailState.etaByStop.clear(); routeDetailState.etaRequest = null; routeDetailState.fareLabel = null; routeDetailState.sweepStatus = 'loading';
-  renderRouteDetail();
+  startRouteDetailTicker(); renderRouteDetail();
   try {
     const stops = await getRouteStopsCached(next, { signal:request.signal });
     if (!isCurrentRouteDetailGeneration(request.generation)) return;
@@ -962,7 +970,7 @@ async function openRouteDetail(it, trigger) {
   routeDetailReturnFocus = trigger || document.activeElement;
   routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.fareLabel = null; routeDetailState.sweepStatus = 'loading';
   const request = beginRouteDetailGeneration();
-  routeDetail.classList.add('on'); routeDetail.setAttribute('aria-hidden', 'false'); document.body.classList.add('detail-open');
+  routeDetail.classList.add('on'); routeDetail.setAttribute('aria-hidden', 'false'); document.body.classList.add('detail-open'); startRouteDetailTicker();
   routeDetailBody.innerHTML = '<div class="detail-loading">載入路線站點…</div>';
   history.pushState({ buspulseRouteDetail:true }, '', '#route-detail'); routeDetail.querySelector('.detail-back').focus();
   try {

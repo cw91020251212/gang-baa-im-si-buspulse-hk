@@ -67,6 +67,7 @@ test('Escape and browser Back close the overlay and restore the entry focus', as
   await page.keyboard.press('Escape');
   await expect(page.locator('#routeDetail')).not.toHaveClass(/on/);
   await expect(entry).toBeFocused();
+  await expect.poll(() => page.evaluate(() => routeDetailState.detailTicker)).toBeNull();
   await entry.click();
   await page.goBack();
   await expect(page.locator('#routeDetail')).not.toHaveClass(/on/);
