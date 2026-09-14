@@ -10,7 +10,7 @@ A lightweight Progressive Web App for checking real-time Hong Kong bus arrival i
 - Route lines are matched to the road network through OSRM where available, rather than drawing a straight line between stops.
 - Search route numbers by prefix, so entering `74` can return routes such as `74K` and `74X` where available.
 - Show the official route full fare beside the selected stop.
-- Enable a per-route arrival/alighting alarm with a configurable 1–5 minute lead time. The selected stop on a route card is the alert target; the card flashes, a short bell plays, and local system notifications are used when the browser allows them.
+- Enable a per-route arrival/alighting alarm with a configurable 1–5 minute lead time. Arrival sound, vibration and notification are strictly opt-in: a route only alerts after its bell button has been turned on by the user. Routes displayed on the board but left unarmed never produce an arrival sound. After one arrival reminder, the alarm turns itself off; disabling the bell, deleting the route or clearing all alarms also cancels queued fallback and native reminders.
 - Calculate the countdown locally from the latest ETA received by the browser.
 - Store local alarm plans in the browser and use the Service Worker only for local notification display and app-shell caching.
 - Provide display preferences for font size, 12/24-hour time, and dark/light mode.

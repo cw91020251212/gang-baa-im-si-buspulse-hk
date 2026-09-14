@@ -229,6 +229,7 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
   .sheet{max-width:600px;margin:0 auto;border-radius:20px 20px 0 0}
 }
 .bus-saver{position:fixed;inset:0;z-index:1000;background:#000;color:#777;display:none;cursor:pointer;touch-action:manipulation;user-select:none}.bus-saver.on{display:block}.bus-saver-road{position:absolute;left:0;right:0;bottom:27%;height:2px;background:#282828;box-shadow:0 16px 0 #111}.bus-saver-vehicle{position:absolute;left:0;top:0;width:132px;height:56px;will-change:transform;transition:transform 5s linear;filter:drop-shadow(0 3px 8px #ff443533)}.bus-saver-body{position:absolute;left:4px;right:0;bottom:9px;height:35px;border-radius:7px 12px 5px 5px;background:linear-gradient(180deg,#ff5a52,#c51f2b 68%,#8f1724);border:2px solid #ff928b}.bus-saver-body:before{content:"";position:absolute;left:11px;right:12px;top:6px;height:13px;border-radius:3px;background:linear-gradient(90deg,#7fd8ec 0 22%,#142c49 22% 27%,#83dceb 27% 51%,#142c49 51% 56%,#8ee2ed 56% 80%,#142c49 80% 85%,#7ed8e8 85%);border:1px solid #ffaaa3}.bus-saver-body:after{content:"";position:absolute;left:0;top:0;width:9px;height:29px;border-radius:5px 0 0 4px;background:#ff8177}.bus-saver-wheel{position:absolute;bottom:1px;width:15px;height:15px;border-radius:50%;background:#161616;border:3px solid #777;box-shadow:inset 0 0 0 2px #292929}.bus-saver-wheel.a{left:22px}.bus-saver-wheel.b{right:17px}.bus-saver-hint{position:absolute;left:50%;bottom:calc(18px + var(--safe-b));transform:translateX(-50%);font-size:11px;letter-spacing:.04em;color:#777;white-space:nowrap}.bus-saver-time{position:absolute;top:calc(18px + var(--safe-t));right:18px;color:#444;font:600 12px ui-monospace,monospace}@media(prefers-reduced-motion:reduce){.bus-saver-vehicle{transition-duration:10s}}
+.bus-saver-vehicle{width:190px;height:82px;filter:drop-shadow(0 5px 8px #0009)}.bus-saver-body{left:4px;right:0;bottom:13px;height:51px;border:2px solid #f7d58a;border-radius:10px 18px 7px 7px;background:linear-gradient(180deg,#f6b44b 0 12%,#d92d36 13% 68%,#92243d 69% 100%);box-shadow:inset 0 -7px 0 #243c67}.bus-saver-body:before{content:none}.bus-saver-body:after{content:none}.bus-saver-roof{position:absolute;left:16px;right:17px;top:-7px;height:8px;border-radius:10px 14px 0 0;background:#f5d28b;border:2px solid #f7d58a;border-bottom:0}.bus-saver-window{position:absolute;top:8px;height:19px;background:linear-gradient(145deg,#b9e6f0 0 22%,#315778 23% 72%,#8fd3df 73%);border:2px solid #f9d98f;border-radius:3px 5px 2px 2px;box-shadow:inset 0 0 0 1px #183452}.bus-saver-window.w1{left:14px;width:35px}.bus-saver-window.w2{left:54px;width:35px}.bus-saver-window.w3{left:94px;width:35px}.bus-saver-door{position:absolute;right:13px;top:8px;width:25px;height:35px;border:2px solid #f9d98f;border-radius:3px 3px 1px 1px;background:linear-gradient(90deg,#8fd3df 0 45%,#284967 46% 53%,#8fd3df 54%)}.bus-saver-destination{position:absolute;right:16px;top:-4px;padding:1px 5px;border-radius:2px;background:#202a42;color:#ffe8a6;font:bold 7px ui-monospace,monospace;letter-spacing:.05em;z-index:2}.bus-saver-lower-stripe{position:absolute;left:0;right:0;bottom:13px;height:5px;background:#54c6b2;box-shadow:0 5px 0 #e8c24b}.bus-saver-logo{position:absolute;left:12px;bottom:20px;color:#fff4bd;font:bold 10px ui-monospace,monospace;letter-spacing:.08em}.bus-saver-lamp{position:absolute;left:6px;top:31px;width:6px;height:7px;border-radius:50%;background:#fff0ad;box-shadow:0 0 7px #fff0ad}.bus-saver-wheel{bottom:0;width:19px;height:19px;border:3px solid #b8c3d2;background:#151a27;box-shadow:inset 0 0 0 4px #4f6076}.bus-saver-wheel.a{left:25px}.bus-saver-wheel.b{right:21px}.bus-saver-wheel:after{content:"";position:absolute;inset:5px;border-radius:50%;background:#e7b54d}.bus-saver-hint{font-size:11px}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
@@ -262,7 +263,7 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
 <div class="bus-saver" id="busSaver" role="button" tabindex="0" aria-label="巴士螢幕保護，輕觸返回報時器">
   <div class="bus-saver-time" id="busSaverTime">--:--</div>
   <div class="bus-saver-road"></div>
-  <div class="bus-saver-vehicle" id="busSaverVehicle" aria-hidden="true"><div class="bus-saver-body"><i class="bus-saver-wheel a"></i><i class="bus-saver-wheel b"></i></div></div>
+  <div class="bus-saver-vehicle" id="busSaverVehicle" aria-hidden="true"><div class="bus-saver-body"><span class="bus-saver-roof"></span><span class="bus-saver-destination">BUS</span><span class="bus-saver-window w1"></span><span class="bus-saver-window w2"></span><span class="bus-saver-window w3"></span><span class="bus-saver-door"></span><span class="bus-saver-lower-stripe"></span><span class="bus-saver-logo">BP</span><span class="bus-saver-lamp"></span><i class="bus-saver-wheel a"></i><i class="bus-saver-wheel b"></i></div></div>
   <div class="bus-saver-hint">螢幕保護中 · 輕觸返回巴士報時器</div>
 </div>
 <script>
@@ -653,7 +654,7 @@ function save() {
 }
 const uid = it => [it.co, it.route, it.dir || it.route_seq, it.stopId || it.seq].join('|');
 function closeArrivalNotifications() {
-  try { navigator.serviceWorker?.getRegistration().then(reg => reg?.getNotifications().then(ns => ns.filter(n => n.tag?.startsWith('buspulse-')).forEach(n => n.close()))); } catch {}
+  try { navigator.serviceWorker?.getRegistration().then(reg => reg?.getNotifications({ includeTriggered:true }).then(ns => ns.filter(n => n.tag?.startsWith('buspulse-')).forEach(n => n.close()))); } catch {}
 }
 function cleanupOrphanAlarms() {
   const valid = new Set(items.map(uid)); let changed = false;
@@ -663,7 +664,7 @@ function cleanupOrphanAlarms() {
 }
 function clearAllArrivalAlarms() {
   if (!confirm('確定要關閉所有路線嘅到站鬧鐘嗎？之後可以逐條重新開啟。')) return;
-  alarms = {}; alarmSeen.clear(); saveAlarms(); closeArrivalNotifications(); shell();
+  alarms = {}; alarmSeen.clear(); alarmPlans = {}; alarmFallbackTimers.forEach(timers => timers.forEach(t => clearTimeout(t.handle || t))); alarmFallbackTimers.clear(); saveAlarms(); saveAlarmPlans(); closeArrivalNotifications(); shell();
   const n=document.querySelector('#alarmClearNote'); if(n) n.textContent='所有到站鬧鐘已關閉。';
 }
 cleanupOrphanAlarms();
@@ -792,6 +793,7 @@ async function toggleAlarm(id, button) {
     // Turning the alarm off must also cancel any already planned local reminder and close a notification that may still be on screen.
     closeArrivalNotifications();
     if (activeAlarmAlerts.has(id)) stopAlarmAlert(id);
+    delete alarmPlans[id];
     saveAlarmPlans();
   }
   saveAlarms();
@@ -835,7 +837,8 @@ function stopAlarmAlert(id) {
   navigator.vibrate?.(0);
 }
 async function unlockAudio() { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'closed') audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') await audioCtx.resume(); return audioCtx; } catch { return null; } }
-async function ringBell() {
+async function ringBell(options = {}) {
+  if (!options.userInitiated && !options.alarmAuthorized) return false;
   if (prefs.webSound === false) return false;
   try {
     const ctx = await unlockAudio();
@@ -865,7 +868,8 @@ async function notifyArrival(it, min, tripKey) {
   const id = uid(it);
   // Defensive guard: a queued timer or an in-flight API response must not
   // create a new alert after the user has switched this route off.
-  if (!alarms[id]) return;
+  const alarmAuthorized = !!alarms[id];
+  if (!alarmAuthorized) return;
   const lateMinutes = Math.max(0, Math.round(-Number(min || 0)));
   const isCatchup = lateMinutes > 0;
   const body = isCatchup
@@ -881,7 +885,7 @@ async function notifyArrival(it, min, tripKey) {
   // Stop this one-time alarm only after the catch-up message has been placed
   // on the route card, so the user gets visible feedback even if audio is blocked.
   disableAlarmAfterArrival(id);
-  const webPlayed = await ringBell();
+  const webPlayed = await ringBell({ alarmAuthorized });
   const alert = {card,notification:null}; activeAlarmAlerts.set(id, alert);
   if (card) { card.classList.remove('alert-flash'); void card.offsetWidth; card.classList.add('alert-flash'); alert.timer=setTimeout(() => { card.classList.remove('alert-flash'); if(activeAlarmAlerts.get(id)===alert) activeAlarmAlerts.delete(id); }, 12000); }
   if (prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission === 'granted') {
@@ -1110,7 +1114,7 @@ function updateGetoff(it, coords) {
   const before=Math.max(0,state.targetSeq-nearest.seq);
   const note=document.querySelector('#getoffNote'); if(note) note.textContent=nearest.seq >= state.targetSeq ? '已接近／到達目標站：' + state.targetName : '目前接近第 ' + nearest.seq + ' 站，距離目標約 ' + before + ' 個站';
   const key=state.targetSeq + ':' + nearest.seq;
-  if (before <= 1 && nearest.seq < state.targetSeq && state.alertKey !== key) { state.alertKey=key; saveGetoff(); ringBell(); if(navigator.vibrate) navigator.vibrate([300,120,300,120,500]); const card=board.querySelector('[data-id="'+cssEscape(uid(it))+'"]'); if(card){card.classList.remove('alert-flash');void card.offsetWidth;card.classList.add('alert-flash');setTimeout(()=>card.classList.remove('alert-flash'),12000);} if(prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission==='granted') navigator.serviceWorker?.ready.then(reg=>reg.showNotification('就嚟落車喇',{body:it.route+' 下一個站：'+state.targetName,icon:'./icon-192.png',tag:'getoff-'+uid(it),requireInteraction:true,silent:false})).catch(()=>{}); }
+  if (before <= 1 && nearest.seq < state.targetSeq && state.alertKey !== key) { state.alertKey=key; saveGetoff(); ringBell({ alarmAuthorized:true }); if(navigator.vibrate) navigator.vibrate([300,120,300,120,500]); const card=board.querySelector('[data-id="'+cssEscape(uid(it))+'"]'); if(card){card.classList.remove('alert-flash');void card.offsetWidth;card.classList.add('alert-flash');setTimeout(()=>card.classList.remove('alert-flash'),12000);} if(prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission==='granted') navigator.serviceWorker?.ready.then(reg=>reg.showNotification('就嚟落車喇',{body:it.route+' 下一個站：'+state.targetName,icon:'./icon-192.png',tag:'getoff-'+uid(it),requireInteraction:true,silent:false})).catch(()=>{}); }
 }
 
 function renderPip() {
@@ -1560,7 +1564,7 @@ function viewPrefs() {
   $('#soundSel').addEventListener('change', e => { prefs.sound=e.target.value; savePrefs(); });
   $('#soundLenSel').addEventListener('change', e => { prefs.soundLen=e.target.value; savePrefs(); });
   $('#webSoundSel').addEventListener('change', e => { prefs.webSound=e.target.value === 'true'; if (!prefs.webSound) prefs.systemSilent=false; savePrefs(); });
-  $('#previewSoundBtn').addEventListener('click', () => { unlockAudio(); ringBell(); });
+  $('#previewSoundBtn').addEventListener('click', () => { unlockAudio(); ringBell({ userInitiated:true }); });
   $('#busSaverDelay').addEventListener('change', e => { prefs.screenSaverIdle=+e.target.value; savePrefs(); scheduleBusSaver(); });
   $('#openBusSaverBtn').addEventListener('click', () => { closeSheet(); openBusSaver(); });
   $('#fontSel').addEventListener('change', e => { prefs.font=e.target.value; savePrefs(); applyPrefs(); });
@@ -1603,7 +1607,7 @@ function viewHome() {
 
   sBody.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
     const removed = items[+b.dataset.del], id = removed && uid(removed);
-    items.splice(+b.dataset.del, 1); if (id) { delete alarms[id]; alarmSeen.delete(id); delete getoff[id]; saveAlarms(); saveGetoff(); }
+    items.splice(+b.dataset.del, 1); if (id) { delete alarms[id]; delete alarmPlans[id]; alarmSeen.delete(id); clearAlarmFallbackTimers(id); delete getoff[id]; saveAlarms(); saveAlarmPlans(); saveGetoff(); }
     save(); closeArrivalNotifications(); shell(); refresh(); viewHome();
   }));
   sBody.querySelectorAll('[data-up]').forEach(b => b.addEventListener('click', () => {

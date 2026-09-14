@@ -1,5 +1,5 @@
 /* BusPulse HK service worker: app shell cache and local notifications only. */
-const SHELL = 'buspulse-hk-shell-v28-bus-screensaver';
+const SHELL = 'buspulse-hk-shell-v29-explicit-alarm-opt-in';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(SHELL).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
