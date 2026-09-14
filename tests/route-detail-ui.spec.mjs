@@ -95,3 +95,16 @@ test('detail fare lookup follows direction and never invents first or last servi
   expect(result.inbound).toBe('$11.5');
   expect(result.missing).toBe('官方資料未提供');
 });
+
+test('arrow keys move between stops and keep the selected ETA panel in sync', async ({ page }) => {
+  await prepare(page);
+  await page.locator('[data-detail-id]').click();
+  const first = page.locator('[data-detail-stop="1"]');
+  await first.focus();
+  await first.press('ArrowDown');
+  await expect(page.locator('.detail-current-name')).toContainText('第二站');
+  await expect(page.locator('[data-detail-stop="2"]')).toBeFocused();
+  await page.locator('[data-detail-stop="2"]').press('ArrowUp');
+  await expect(page.locator('.detail-current-name')).toContainText('第一站');
+  await expect(first).toBeFocused();
+});

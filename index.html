@@ -959,6 +959,13 @@ function renderRouteDetail() {
     routeDetailState.selectedSeq = stop.seq; routeDetailState.selectedStopId = stop.id; renderRouteDetail();
     routeDetailBody.querySelector('[data-detail-stop="' + cssEscape(String(stop.seq)) + '"]')?.focus({ preventScroll:true });
   }));
+  routeDetailBody.querySelectorAll('[data-detail-stop]').forEach(button => button.addEventListener('keydown', event => {
+    if (!['ArrowDown','ArrowUp'].includes(event.key)) return;
+    event.preventDefault();
+    const buttons = [...routeDetailBody.querySelectorAll('[data-detail-stop]')];
+    const next = buttons[buttons.indexOf(button) + (event.key === 'ArrowDown' ? 1 : -1)];
+    if (next) next.click();
+  }));
   routeDetailBody.querySelector('[data-detail-retry]')?.addEventListener('click', () => {
     const stop = routeDetailState.stops.find(s => String(s.id) === routeDetailBody.querySelector('[data-detail-retry]')?.dataset.detailRetry);
     if (!stop || !routeDetailState.item || !routeDetailState.etaRequest) return;
