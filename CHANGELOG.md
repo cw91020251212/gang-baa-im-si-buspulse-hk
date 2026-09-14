@@ -1,5 +1,13 @@
 # BusPulse HK 修改紀錄
 
+## 2026-09-15 — 路線詳細頁、逐站 ETA 及部署門檻
+
+新增可由路線卡開啟的全畫面沿途車站時間線。使用者可以逐站選擇，查看 KMB、城巴及綠色專線小巴的獨立 ETA 狀態；KMB 使用整條路線資料分組，CTB／GMB 使用有限併發查詢。資料失敗時會優先使用短期本站快照並清楚標示過期或估算狀態。
+
+符合嚴格相鄰站時間條件時，時間線可顯示「推算中」marker；介面明確說明「按相鄰站 ETA 推算，並非巴士 GPS」，不會宣稱真實車輛位置。詳情頁 ETA 查詢與現有到站鬧鐘、GPS、落車提醒、聲音及通知完全隔離；快速切換、關閉頁面及刪除路線時會取消過時請求。
+
+GitHub Pages 現在先執行完整 Playwright、inline JavaScript、Service Worker 及 whitespace 檢查，全部成功後才會由乾淨 `_site/` staging 部署，避免把測試檔案及 `node_modules` 上載到公開網站。Service Worker shell 更新至 `buspulse-hk-shell-v31-route-detail`。
+
 ## 2026-09-14 — 重新設計 App／網站巴士圖標
 
 重新繪製 `icon-192.png` 及 `icon-512.png`：改用深藍品牌底、多色巴士、金黃色車頂、反光車窗、車輪、車燈、BusPulse 標誌及訊號線。新圖標同步套用於 PWA 安裝圖標、favicon、頁面頂部品牌標誌及未設定路線時的空白畫面，並更新 Service Worker 快取版本至 `buspulse-hk-shell-v30-redesigned-app-icon`。

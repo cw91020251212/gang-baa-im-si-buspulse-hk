@@ -15,7 +15,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test:
+    name: Test before deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run all tests
+        run: npm test
+      - name: Check inline JavaScript and service worker syntax
+        run: |
+          sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > /tmp/buspulse-inline.js
+          node --check /tmp/buspulse-inline.js
+          node --check sw.js
+      - name: Check whitespace
+        run: git diff --check
+
   deploy:
+    name: Deploy clean site
+    needs: test
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -27,10 +54,20 @@ jobs:
         uses: actions/configure-pages@v5
         with:
           enablement: true
+      - name: Stage runtime site only
+        run: |
+          rm -rf _site
+          mkdir -p _site
+          cp index.html manifest.json sw.js icon-192.png icon-512.png fare-index.json place-index.json _site/
+          test -f _site/index.html
+          test -f _site/sw.js
+          test ! -e _site/tests
+          test ! -e _site/node_modules
+          find _site -maxdepth 1 -type f -printf '%f\n' | sort
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
       - name: Deploy site
         id: deployment
         uses: actions/deploy-pages@v4
