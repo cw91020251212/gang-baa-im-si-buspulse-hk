@@ -19,6 +19,20 @@ test('KMB parser groups by stop and preserves scheduled remarks', async ({ page 
   expect(result.nullEta).toEqual([]);
 });
 
+test('detail ETA cells include a clock time and scheduled remark', async ({ page }) => {
+  await page.goto('./?smoke=route-detail-eta-panel', { waitUntil: 'domcontentloaded' });
+  const result = await page.evaluate(() => {
+    const stop = { id:'panel-stop', name:'測試站', seq:1 };
+    routeDetailState.etaByStop.set(stop.id, { status:'ready', etas:[
+      { iso:new Date(Date.now() + 300000).toISOString(), min:5, sched:false },
+      { iso:new Date(Date.now() + 600000).toISOString(), min:10, sched:true, rmk:'原定班次' }
+    ] });
+    return detailEtaPanel(stop);
+  });
+  expect(result).toMatch(/\d{2}:\d{2}/);
+  expect(result).toContain('原定班次');
+});
+
 test('conservative inferred segment requires adjacent fresh non-scheduled ETAs', async ({ page }) => {
   await page.goto('./?smoke=route-detail-inference', { waitUntil: 'domcontentloaded' });
   const result = await page.evaluate(() => {
