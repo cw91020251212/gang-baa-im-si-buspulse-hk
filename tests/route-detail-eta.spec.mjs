@@ -42,3 +42,28 @@ test('conservative inferred segment requires adjacent fresh non-scheduled ETAs',
   expect(result.stale).toEqual([]);
   expect(result.mixedBatch).toEqual([]);
 });
+
+test('recent station snapshot is used only as stale fallback', async ({ page }) => {
+  await page.addInitScript(() => {
+    const now = Date.now();
+    localStorage.setItem('busboard.eta-snapshot.v1', JSON.stringify({
+      'KMB|N271|O|cached-stop': {
+        savedAt: now - 30_000,
+        etas: [{ iso:new Date(now + 240_000).toISOString(), min:4, rmk:'', sched:false }]
+      }
+    }));
+  });
+  await page.goto('./?smoke=route-detail-snapshot', { waitUntil: 'domcontentloaded' });
+  const result = await page.evaluate(() => {
+    const it = { co:'KMB', route:'N271', dir:'O', service_type:'1', seq:2, stopId:'cached-stop', stopName:'快取站' };
+    const stop = { seq:2, id:'cached-stop', name:'快取站' };
+    applyDetailEtaResult(it, stop, [], '讀取失敗', 1);
+    const stale = detailEtaStateFor(stop);
+    const fresh = { seq:2, id:'fresh-stop', name:'新鮮站' };
+    applyDetailEtaResult(it, fresh, [], '讀取失敗', 1);
+    return { staleStatus:stale.status, staleCount:stale.etas.length, freshStatus:detailEtaStateFor(fresh).status };
+  });
+  expect(result.staleStatus).toBe('stale');
+  expect(result.staleCount).toBe(1);
+  expect(result.freshStatus).toBe('error');
+});
