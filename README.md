@@ -64,6 +64,10 @@ npm test
 
 GitHub Pages is gated by the same test suite. The deployment job only runs after tests, inline JavaScript syntax, service-worker syntax and whitespace checks pass, and it uploads a clean `_site/` containing runtime files only.
 
+## Route-detail handoff reports
+
+The route-detail work was deliberately divided into independently reviewable stages. The [final engineering handoff](ROUTE_DETAIL_RESEARCH_FINAL.md) records the API contracts, data model, conservative ETA-inference rules, accessibility requirements, side-effect boundaries and rollback plan. The original [research brief](ROUTE_DETAIL_RESEARCH.md) records the problem definition and investigation scope; the supporting [API report](research-stage-1-api.md), [UX report](research-stage-2-ux.md) and [implementation plan](research-stage-3-implementation.md) can be assigned separately to another engineer.
+
 ## Data and privacy
 
 The app calls the official public APIs directly from the browser. Saved routes and local alarm plans stay in the browser's local storage; there is no application server, account system or Push subscription database.
