@@ -496,7 +496,7 @@ async function etaKMB(it) {
   const d = (await getJSON(
     KMB + '/route-eta/' + encodeURIComponent(it.route) + '/' + it.service_type
   )).data;
-  return (parseKmbRouteEta(d, it).get(Number(it.seq)) || []).map(e => ({ iso:e.iso, min:e.min, rmk:e.rmk, sched:e.sched }));
+  return (parseKmbRouteEta(d, it).get(Number(it.seq)) || []).map(e => ({ iso:e.iso, min:e.min, rmk:e.rmk, sched:e.sched, dataTimestamp:e.dataTimestamp }));
 }
 
 async function etaCTB(it) {
@@ -505,7 +505,7 @@ async function etaCTB(it) {
   )).data;
   return (d || []).filter(e => e.eta && e.dir === it.dir).map(e => ({
     iso: e.eta, min: minsFrom(e.eta),
-    rmk: e.rmk_tc || '', sched: /原定|預定|Scheduled/i.test(e.rmk_tc || '')
+    rmk: e.rmk_tc || '', sched: /原定|預定|Scheduled/i.test(e.rmk_tc || ''), dataTimestamp:e.data_timestamp || e.generated_timestamp || null
   }));
 }
 
@@ -516,7 +516,7 @@ async function etaGMB(it) {
   const rows = Array.isArray(d) ? (d[0] ? d[0].eta : []) : (d.eta || []);
   return (rows || []).filter(e => e.timestamp).map(e => ({
     iso: e.timestamp, min: e.diff != null ? Math.round(e.diff) : minsFrom(e.timestamp),
-    rmk: e.remarks_tc || '', sched: false
+    rmk: e.remarks_tc || '', sched: false, dataTimestamp:e.data_timestamp || e.generated_timestamp || null
   }));
 }
 
@@ -844,7 +844,9 @@ function detailStatusText(stop) {
   if (state.status === 'stale') return '網絡暫時中斷，按上次資料估算（' + (state.cachedAt ? new Date(state.cachedAt).toLocaleTimeString('en-GB',{hour12:false}) : '時間不明') + '）；資料可能已過期。';
   if (state.status === 'error') return '暫時讀取失敗；可以稍後重新載入。';
   if (!state.etas?.length) return '暫時冇班次資料（可能已收車）。';
-  return '即時資料・更新於 ' + (state.fetchedAt ? new Date(state.fetchedAt).toLocaleTimeString('en-GB',{hour12:false}) : '剛才');
+  const fetched = state.fetchedAt ? new Date(state.fetchedAt).toLocaleTimeString('en-GB',{hour12:false}) : '剛才';
+  const source = state.sourceTimestamp && Number.isFinite(Date.parse(state.sourceTimestamp)) ? '・官方資料 ' + new Date(state.sourceTimestamp).toLocaleTimeString('en-GB',{hour12:false}) : '';
+  return '即時資料・讀取於 ' + fetched + source;
 }
 function detailStatusAction(stop) {
   const state = detailEtaStateFor(stop);
@@ -888,7 +890,8 @@ function applyDetailEtaResult(it, stop, etas, error, batchId) {
   if (!error) {
     const clean = (etas || []).filter(e => e.iso && Number.isFinite(Date.parse(e.iso)) && e.min >= -2).slice(0,4);
     if (clean.length) cacheEta(id, clean);
-    setDetailEtaState(stop.id, { status:'ready', etas:clean, fetchedAt:new Date().toISOString(), batchId });
+    const sourceTimestamp = clean.map(e => e.dataTimestamp).find(ts => ts && Number.isFinite(Date.parse(ts))) || null;
+    setDetailEtaState(stop.id, { status:'ready', etas:clean, fetchedAt:new Date().toISOString(), sourceTimestamp, batchId });
     return;
   }
   const fallback = cachedEta(id);

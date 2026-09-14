@@ -6,7 +6,7 @@ test('KMB parser groups by stop and preserves scheduled remarks', async ({ page 
     const now = Date.now();
     const grouped = parseKmbRouteEta([
       { seq:1, dir:'O', eta:new Date(now + 300000).toISOString(), eta_seq:1, rmk_tc:'' },
-      { seq:1, dir:'O', eta:new Date(now + 600000).toISOString(), eta_seq:2, rmk_tc:'原定班次' },
+      { seq:1, dir:'O', eta:new Date(now + 600000).toISOString(), eta_seq:2, rmk_tc:'原定班次', data_timestamp:'2026-09-15T04:00:00+08:00' },
       { seq:2, dir:'I', eta:new Date(now + 400000).toISOString(), eta_seq:1 },
       { seq:3, dir:'O', eta:null, eta_seq:1 }
     ], { dir:'O' });
@@ -15,6 +15,7 @@ test('KMB parser groups by stop and preserves scheduled remarks', async ({ page 
   expect(result.keys).toEqual([1]);
   expect(result.first).toHaveLength(2);
   expect(result.first[1].sched).toBe(true);
+  expect(result.first[1].dataTimestamp).toBe('2026-09-15T04:00:00+08:00');
   expect(result.inbound).toBeUndefined();
   expect(result.nullEta).toEqual([]);
 });
@@ -31,6 +32,16 @@ test('detail ETA cells include a clock time and scheduled remark', async ({ page
   });
   expect(result).toMatch(/\d{2}:\d{2}/);
   expect(result).toContain('原定班次');
+});
+
+test('detail status keeps official provider time separate from fetch time', async ({ page }) => {
+  await page.goto('./?smoke=route-detail-source-time', { waitUntil:'domcontentloaded' });
+  const result = await page.evaluate(() => {
+    const stop = { id:'source-stop', name:'資料站' };
+    setDetailEtaState(stop.id, { status:'ready', fetchedAt:new Date().toISOString(), sourceTimestamp:'2026-09-15T04:00:00+08:00', etas:[{ iso:new Date(Date.now() + 300000).toISOString(), min:5 }] });
+    return detailStatusText(stop);
+  });
+  expect(result).toContain('官方資料');
 });
 
 test('conservative inferred segment requires adjacent fresh non-scheduled ETAs', async ({ page }) => {
