@@ -228,6 +228,7 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
   .top{max-width:600px;margin:0 auto}
   .sheet{max-width:600px;margin:0 auto;border-radius:20px 20px 0 0}
 }
+.bus-saver{position:fixed;inset:0;z-index:1000;background:#000;color:#777;display:none;cursor:pointer;touch-action:manipulation;user-select:none}.bus-saver.on{display:block}.bus-saver-road{position:absolute;left:0;right:0;bottom:27%;height:2px;background:#282828;box-shadow:0 16px 0 #111}.bus-saver-vehicle{position:absolute;left:0;top:0;width:132px;height:56px;will-change:transform;transition:transform 5s linear;filter:drop-shadow(0 3px 8px #ff443533)}.bus-saver-body{position:absolute;left:4px;right:0;bottom:9px;height:35px;border-radius:7px 12px 5px 5px;background:linear-gradient(180deg,#ff5a52,#c51f2b 68%,#8f1724);border:2px solid #ff928b}.bus-saver-body:before{content:"";position:absolute;left:11px;right:12px;top:6px;height:13px;border-radius:3px;background:linear-gradient(90deg,#7fd8ec 0 22%,#142c49 22% 27%,#83dceb 27% 51%,#142c49 51% 56%,#8ee2ed 56% 80%,#142c49 80% 85%,#7ed8e8 85%);border:1px solid #ffaaa3}.bus-saver-body:after{content:"";position:absolute;left:0;top:0;width:9px;height:29px;border-radius:5px 0 0 4px;background:#ff8177}.bus-saver-wheel{position:absolute;bottom:1px;width:15px;height:15px;border-radius:50%;background:#161616;border:3px solid #777;box-shadow:inset 0 0 0 2px #292929}.bus-saver-wheel.a{left:22px}.bus-saver-wheel.b{right:17px}.bus-saver-hint{position:absolute;left:50%;bottom:calc(18px + var(--safe-b));transform:translateX(-50%);font-size:11px;letter-spacing:.04em;color:#777;white-space:nowrap}.bus-saver-time{position:absolute;top:calc(18px + var(--safe-t));right:18px;color:#444;font:600 12px ui-monospace,monospace}@media(prefers-reduced-motion:reduce){.bus-saver-vehicle{transition-duration:10s}}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
@@ -257,6 +258,12 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
     <button class="iconbtn" id="closeBtn" aria-label="關閉設定">✕</button>
   </div>
   <div class="sbody" id="sBody"></div>
+</div>
+<div class="bus-saver" id="busSaver" role="button" tabindex="0" aria-label="巴士螢幕保護，輕觸返回報時器">
+  <div class="bus-saver-time" id="busSaverTime">--:--</div>
+  <div class="bus-saver-road"></div>
+  <div class="bus-saver-vehicle" id="busSaverVehicle" aria-hidden="true"><div class="bus-saver-body"><i class="bus-saver-wheel a"></i><i class="bus-saver-wheel b"></i></div></div>
+  <div class="bus-saver-hint">螢幕保護中 · 輕觸返回巴士報時器</div>
 </div>
 <script>
 'use strict';
@@ -538,9 +545,17 @@ function forgetAlarmPlan(id, key) {
   if (!alarmPlans[id].length) delete alarmPlans[id];
   saveAlarmPlans();
 }
-function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true }; } }
+function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:45000 }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:45000 }; } }
 function loadAlarms() { try { return JSON.parse(localStorage.getItem(ALARM_KEY) || '{}') || {}; } catch { return {}; } }
 function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} }
+const busSaver = document.getElementById('busSaver'), busSaverVehicle = document.getElementById('busSaverVehicle'), busSaverTime = document.getElementById('busSaverTime');
+let busSaverTimer = null, busSaverMoveTimer = null, busSaverActive = false;
+function busSaverLabel(ms) { return ms === 0 ? '只限手動' : ms < 60000 ? (ms / 1000) + ' 秒' : (ms / 60000) + ' 分鐘'; }
+function moveBusSaver() { if (!busSaverActive || !busSaverVehicle) return; const maxX = Math.max(0, innerWidth - 150), maxY = Math.max(80, innerHeight * .7); busSaverVehicle.style.transform = 'translate(' + Math.round(Math.random() * maxX) + 'px,' + Math.round(70 + Math.random() * maxY) + 'px)'; }
+function openBusSaver() { if (busSaverActive) return; busSaverActive = true; clearTimeout(busSaverTimer); busSaver.classList.add('on'); moveBusSaver(); clearInterval(busSaverMoveTimer); busSaverMoveTimer = setInterval(moveBusSaver, 5200); }
+function closeBusSaver() { if (!busSaverActive) return; busSaverActive = false; busSaver.classList.remove('on'); clearInterval(busSaverMoveTimer); busSaverMoveTimer = null; scheduleBusSaver(); }
+function scheduleBusSaver() { clearTimeout(busSaverTimer); busSaverTimer = null; const delay = Number(prefs.screenSaverIdle); if (delay > 0 && items.length && !busSaverActive) busSaverTimer = setTimeout(openBusSaver, delay); }
+function registerBusActivity() { if (busSaverActive) return; scheduleBusSaver(); }
 function saveAlarms() { try { localStorage.setItem(ALARM_KEY, JSON.stringify(alarms)); } catch {} }
 function backupFile() {
   const payload = { format:'BusPulse HK backup', version:1, exportedAt:new Date().toISOString(), items, userDefaults, alarms, getoff, prefs };
@@ -1454,6 +1469,7 @@ async function refresh(options = {}) {
 /* clock + staleness indicator */
 setInterval(() => {
   clock.textContent = new Date().toLocaleTimeString('en-GB', { hour12:prefs.time12 });
+  if (busSaverTime) busSaverTime.textContent = new Date().toLocaleTimeString('en-GB', { hour12:false, hour:'2-digit', minute:'2-digit' });
   if (lastOK && Date.now() - lastOK > 75000 && !inFlight) dot.className = 'dot stale';
   wakeAlarmPlans();
 }, 1000);
@@ -1510,6 +1526,11 @@ mask.addEventListener('click', closeSheet);
 $('#closeBtn').addEventListener('click', closeSheet);
 $('#fab').addEventListener('click', () => { viewHome(); openSheet(); });
 $('#prefsBtn').addEventListener('click', () => { viewPrefs(); openSheet(); });
+busSaver.addEventListener('click', closeBusSaver);
+busSaver.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') { e.preventDefault(); closeBusSaver(); } });
+document.addEventListener('pointerdown', e => { if (!e.target.closest('#busSaver')) registerBusActivity(); }, { passive:true });
+document.addEventListener('keydown', e => { if (busSaverActive && e.key !== 'Tab') closeBusSaver(); else registerBusActivity(); });
+window.addEventListener('resize', moveBusSaver);
 
 function viewPrefs() {
   sTitle.textContent = '顯示與提醒設定';
@@ -1523,19 +1544,25 @@ function viewPrefs() {
     '<div class="pref-row"><div>提示聲長度<small>只影響網站前景播放嘅聲效</small></div><select class="pref-select" id="soundLenSel"><option value="short">較短</option><option value="normal">標準</option><option value="long">較長</option></select></div>' +
     '<div class="pref-row"><div>聲音來源<small>測試網站聲效或手機系統通知聲</small></div><select class="pref-select" id="webSoundSel"><option value="true">網站聲效＋系統聲</option><option value="false">只用系統通知聲</option></select></div>' +
     '<button class="wide" id="previewSoundBtn">🔔 試聽目前提示聲</button></div></details>' +
+    '<details class="settings-group"><summary>螢幕保護</summary><div class="group-body">' +
+    '<div class="hint">黑色畫面只保留一架側面紅色巴士移動，適合長開報時器；輕觸畫面即可返回。</div>' +
+    '<div class="pref-row"><div>幾耐無操作後開始<small>只要已設定至少一條路線，就會在閒置後自動開啟</small></div><select class="pref-select" id="busSaverDelay"><option value="15000">15 秒</option><option value="30000">30 秒</option><option value="45000">45 秒</option><option value="60000">1 分鐘</option><option value="120000">2 分鐘</option><option value="300000">5 分鐘</option><option value="0">只限手動</option></select></div>' +
+    '<button class="wide" id="openBusSaverBtn">🚌 立即開啟螢幕保護</button></div></details>' +
     '<details class="settings-group"><summary>外觀</summary><div class="group-body">' +
     '<div class="pref-row"><div>字體大小<small>只影響主畫面閱讀大小</small></div><select class="pref-select" id="fontSel"><option value="normal">標準</option><option value="large">較大</option></select></div>' +
     '<div class="pref-row"><div>時間顯示<small>ETA 卡片時間及頂部時鐘</small></div><select class="pref-select" id="timeSel"><option value="false">24 小時制</option><option value="true">12 小時制</option></select></div>' +
     '<div class="pref-row"><div>顏色模式<small>可以選擇黑暗或光明版</small></div><select class="pref-select" id="themeSel"><option value="dark">黑暗模式</option><option value="light">光明模式</option></select></div></div></details>' +
     '<details class="settings-group"><summary>本地鬧鐘診斷</summary><div class="group-body"><div class="hint">本地鬧鐘依賴瀏覽器通知權限；請保持網站或已安裝的 App 可正常運作。</div><div class="diag-box" id="diagBox"></div></div></details>' +
     '<button class="wide" id="prefsBack">← 返回路線設定</button>';
-  $('#leadSel').value = String(prefs.lead); $('#soundSel').value = prefs.sound; $('#soundLenSel').value = prefs.soundLen; $('#webSoundSel').value = String(prefs.webSound !== false); $('#fontSel').value = prefs.font; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
+  $('#leadSel').value = String(prefs.lead); $('#soundSel').value = prefs.sound; $('#soundLenSel').value = prefs.soundLen; $('#webSoundSel').value = String(prefs.webSound !== false); $('#busSaverDelay').value = String(prefs.screenSaverIdle); $('#fontSel').value = prefs.font; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
   updateNotificationButton();
   $('#leadSel').addEventListener('change', e => { prefs.lead=+e.target.value; savePrefs(); });
   $('#soundSel').addEventListener('change', e => { prefs.sound=e.target.value; savePrefs(); });
   $('#soundLenSel').addEventListener('change', e => { prefs.soundLen=e.target.value; savePrefs(); });
   $('#webSoundSel').addEventListener('change', e => { prefs.webSound=e.target.value === 'true'; if (!prefs.webSound) prefs.systemSilent=false; savePrefs(); });
   $('#previewSoundBtn').addEventListener('click', () => { unlockAudio(); ringBell(); });
+  $('#busSaverDelay').addEventListener('change', e => { prefs.screenSaverIdle=+e.target.value; savePrefs(); scheduleBusSaver(); });
+  $('#openBusSaverBtn').addEventListener('click', () => { closeSheet(); openBusSaver(); });
   $('#fontSel').addEventListener('change', e => { prefs.font=e.target.value; savePrefs(); applyPrefs(); });
   $('#timeSel').addEventListener('change', e => { prefs.time12=e.target.value === 'true'; savePrefs(); });
   $('#themeSel').addEventListener('change', e => { prefs.theme=e.target.value; savePrefs(); applyPrefs(); });
@@ -1846,6 +1873,7 @@ if ('serviceWorker' in navigator) {
    =================================================================== */
 shell();
 startLoop();
+scheduleBusSaver();
 </script>
 </body>
 </html>

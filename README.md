@@ -14,6 +14,7 @@ A lightweight Progressive Web App for checking real-time Hong Kong bus arrival i
 - Calculate the countdown locally from the latest ETA received by the browser.
 - Store local alarm plans in the browser and use the Service Worker only for local notification display and app-shell caching.
 - Provide display preferences for font size, 12/24-hour time, and dark/light mode.
+- Provide a black screensaver for long-running bus monitoring, with a moving red side-view bus and adjustable automatic start time of 15 seconds, 30 seconds, 45 seconds, 1 minute, 2 minutes or 5 minutes; it can also be set to manual-only and is dismissed by tapping the screen.
 - Offer a `▣ 開啟最上層小窗` action using the browser Document Picture-in-Picture API where supported. Android devices without this API can use system split-screen mode instead.
 - Installable as a PWA on supported mobile browsers.
 - Mobile-first interface with a compact, colourful arrival board.
@@ -25,6 +26,8 @@ The alarm is a local, ETA-based reminder. The browser must first obtain an ETA f
 The app does not use Web Push, a Cloudflare Worker, VAPID keys, server-side subscriptions or a background server poller. These components were removed because the local alarm already fulfils the current product requirement, while Web Push added registration, permission, subscription, server and maintenance complexity without an essential product benefit. The removal rationale and the implementation record are in [WEB_PUSH_POSTMORTEM.md](WEB_PUSH_POSTMORTEM.md).
 
 Notification delivery remains subject to browser and operating-system permissions, background execution rules, battery optimisation and network availability. The interface must not promise guaranteed delivery after the browser or operating system has stopped the page.
+
+The screensaver is a visual idle mode and does not stop ETA polling or local alarm logic while the page remains active. Mobile browsers may throttle or suspend background pages, so keeping the installed app visible and allowing the relevant battery and notification permissions remains important for long waits.
 
 ## Map notes
 
