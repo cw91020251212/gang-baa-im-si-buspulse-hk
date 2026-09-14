@@ -861,11 +861,15 @@ function detailStatusAction(stop) {
   return retry + '<button class="detail-refresh" type="button" data-detail-refresh>立即更新全部車站 ETA</button>';
 }
 function detailEtaCoverageText() {
-  const ready = routeDetailState.stops.filter(stop => {
+  let ready = 0, near = 0;
+  routeDetailState.stops.forEach(stop => {
     const state = detailEtaStateFor(stop);
-    return state.status === 'ready' && state.etas?.some(eta => !eta.sched);
-  }).length;
-  return ready ? '有巴士 ETA 預報：' + ready + ' 個站' : '巴士 ETA 預報：讀取中';
+    const live = (state.etas || []).filter(eta => !eta.sched);
+    if (state.status === 'ready' && live.length) ready++;
+    if (live.some(eta => { const iso = eta.iso && Date.parse(eta.iso); return Number.isFinite(iso) && (iso - Date.now()) <= 5 * 60000 && iso >= Date.now() - 2 * 60000; })) near++;
+  });
+  if (!ready) return '巴士 ETA 預報：讀取中';
+  return '即將到站提示：' + near + ' 個站 · ETA 預報：' + ready + ' 個站';
 }
 function detailFareValue(it, fares) {
   const routeSeq = it.co === 'GMB' ? (+it.route_seq || 1) : (it.dir === 'I' ? 2 : 1);
