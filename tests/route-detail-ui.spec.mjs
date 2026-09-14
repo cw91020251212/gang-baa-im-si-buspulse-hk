@@ -53,6 +53,9 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('.stop-row.is-selected')).toContainText('第二站');
   await expect(page.locator('.detail-status')).toContainText('即時資料');
   await expect(page.locator('.detail-eta strong').first()).toContainText('8');
+  await expect(page.locator('.detail-live-dock')).toBeVisible();
+  await expect(page.locator('.detail-live-dock .detail-eta')).toHaveCount(3);
+  await expect(page.locator('.detail-status')).toHaveAttribute('aria-live', 'polite');
   await expect(page.locator('.detail-inference')).toContainText('推算中');
   await expect(page.locator('.detail-inference')).toContainText('並非巴士 GPS');
 });
