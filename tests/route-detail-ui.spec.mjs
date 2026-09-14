@@ -74,6 +74,14 @@ test('Escape and browser Back close the overlay and restore the entry focus', as
   await expect(page.locator('#routeDetail')).not.toHaveClass(/on/);
 });
 
+test('route detail trigger is compact and does not add a text row to the card', async ({ page }) => {
+  await prepare(page);
+  const entry = page.locator('[data-detail-id]').first();
+  await expect(entry).toHaveAttribute('aria-label', '查看完整路線及沿途車站');
+  await expect(entry.locator('xpath=..')).toHaveClass(/chead/);
+  await expect(page.locator('text=查看完整路線及沿途車站　›')).toHaveCount(0);
+});
+
 test('reverse direction swaps supported route variants without inventing a GMB variant', async ({ page }) => {
   await page.goto('./?smoke=route-detail-reverse', { waitUntil: 'domcontentloaded' });
   const result = await page.evaluate(kmbItem => ({
