@@ -1795,7 +1795,16 @@ async function roadPath(stops) {
       try {
         const q=await getJSON('https://router.project-osrm.org/route/v1/driving/' + a.lng + ',' + a.lat + ';' + b.lng + ',' + b.lat + '?overview=full&geometries=geojson&steps=false', 12000);
         const line=q.routes?.[0]?.geometry?.coordinates || [];
-        if (line.length > 1) { if (i > 1) line.shift(); segmented.push(...line.map(x => [x[1],x[0]])); continue; }
+        if (line.length > 1) {
+          const lats=line.map(x=>x[1]), lngs=line.map(x=>x[0]);
+          const outside=line.some(x => Math.abs(x[1]-((a.lat+b.lat)/2)) > .18 || Math.abs(x[0]-((a.lng+b.lng)/2)) > .25);
+          const directKm=gapKm(a,b), routeKm=Number(q.routes?.[0]?.distance || 0)/1000;
+          // OSRM may choose a ferry/跨境 detour between nearby airport stops.
+          // Reject implausible segments before drawing them.
+          if (!outside && routeKm > 0 && routeKm <= Math.max(25, directKm * 6)) {
+            if (i > 1) line.shift(); segmented.push(...line.map(x => [x[1],x[0]])); continue;
+          }
+        }
       } catch {}
       if (i > 1) segmented.pop();
       segmented.push([a.lat,a.lng],[b.lat,b.lng]);
