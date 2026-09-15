@@ -163,6 +163,15 @@ test('scheduled ETA within five minutes still gets a near-arrival cue', async ({
   expect(result).toEqual({ near:true, far:false });
 });
 
+test('ETA wave estimate creates distinct virtual route positions', async ({ page }) => {
+  await page.goto('./?smoke=route-detail-virtual-buses', { waitUntil: 'domcontentloaded' });
+  const result = await page.evaluate(() => virtualBusSegmentSeqs(
+    [{ seq:1 }, { seq:2 }, { seq:3 }, { seq:4 }, { seq:5 }, { seq:6 }, { seq:7 }, { seq:8 }], 4
+  ));
+  expect(result).toHaveLength(4);
+  expect(new Set(result).size).toBe(4);
+});
+
 test('arrow keys move between stops and keep the selected ETA panel in sync', async ({ page }) => {
   await prepare(page);
   await page.locator('[data-detail-id]').click();
