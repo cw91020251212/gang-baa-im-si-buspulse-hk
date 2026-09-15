@@ -823,7 +823,7 @@ const routeDetailState = {
   open:false, routeId:null, variantKey:null, stops:[], stopsStatus:'idle',
   stopsError:null, selectedSeq:null, selectedStopId:null, etaByStop:new Map(),
   vehicleInference:{ status:'hidden', fromStopId:null, toStopId:null, reason:null, observedAt:null },
-  generation:0, abortController:null, etaRequest:null, fareLabel:null, detailTicker:null, detailLastOK:null, sweepStatus:'idle'
+  generation:0, abortController:null, etaRequest:null, fareLabel:null, scheduleLabel:null, detailTicker:null, detailLastOK:null, sweepStatus:'idle'
 };
 function beginRouteDetailGeneration() {
   routeDetailState.generation += 1;
@@ -947,6 +947,29 @@ function detailEtaCoverageText() {
   if (!ready) return '巴士 ETA 預報：讀取中';
   return '即將到站提示：' + near + ' 個站 · ETA 預報：' + ready + ' 個站';
 }
+const kmbScheduleMemo = new Map();
+function scheduleMinutes(text) {
+  const m = String(text || '').match(/^(\d{1,2}):(\d{2})/); return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+function scheduleClock(minute) { if (!Number.isFinite(minute)) return '—'; const h = Math.floor(minute / 60); return String(h).padStart(2,'0') + ':' + String(minute % 60).padStart(2,'0'); }
+function parseKmbSchedule(data, bound) {
+  const rows = Object.values(data || {}).flat().filter(x => String(x.ServiceType || '').trim() === '01');
+  const field = 'BoundText' + bound, freqField = 'BoundTime' + bound;
+  const ranges = rows.map(row => { const text = String(row[field] || ''); const m = text.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/); return m ? { start:scheduleMinutes(m[1]), end:scheduleMinutes(m[2]), freq:String(row[freqField] || ''), day:String(row.DayType || '').trim() } : null; }).filter(Boolean);
+  const first = Math.min(...ranges.map(r => r.start)), last = Math.max(...ranges.map(r => r.end));
+  const now = new Date(), day = now.getDay(), dayType = day === 6 ? 'S' : day === 0 ? 'H' : 'MF', minute = now.getHours() * 60 + now.getMinutes();
+  const current = ranges.find(r => (r.day === dayType || r.day === 'D') && minute >= r.start && minute <= r.end) || null;
+  return { first, last, current, ranges };
+}
+async function loadDetailSchedule(it, generation) {
+  if (it?.co !== 'KMB') { routeDetailState.scheduleLabel = null; return; }
+  const bound = it.dir === 'I' ? 2 : 1, key = String(it.route).toUpperCase() + '|' + bound;
+  try {
+    if (!kmbScheduleMemo.has(key)) kmbScheduleMemo.set(key, getJSON('https://search.kmb.hk/KMBWebSite/Function/FunctionRequest.ashx?action=getschedule&route=' + encodeURIComponent(it.route) + '&bound=' + bound));
+    const result = await kmbScheduleMemo.get(key), parsed = parseKmbSchedule(result.data, bound);
+    if (isCurrentRouteDetailGeneration(generation)) { routeDetailState.scheduleLabel = parsed; renderRouteDetail(); }
+  } catch { if (isCurrentRouteDetailGeneration(generation)) { routeDetailState.scheduleLabel = { error:true }; renderRouteDetail(); } }
+}
 function estimateActiveBusWaves(stops = routeDetailState.stops, etaByStop = routeDetailState.etaByStop) {
   const rows = stops.map(stop => {
     const state = etaByStop.get(String(stop.id));
@@ -975,9 +998,16 @@ function detailServiceBlock(it) {
   const provider = it?.co === 'KMB' ? '九巴官方路線及時間表' : it?.co === 'CTB' ? '城巴官方路線搜尋' : '運輸署專線小巴資料';
   const stop = routeDetailState.stops.find(s => s.seq === routeDetailState.selectedSeq) || routeDetailState.stops[0];
   const etas = (stop ? (detailEtaStateFor(stop).etas || []) : []).filter(e => e.iso && !e.sched).slice(0, 3);
-  const now = detailClock(new Date().toISOString());
+  const now = detailClock(new Date().toISOString()), schedule = routeDetailState.scheduleLabel;
+  const scheduleText = schedule?.error ? '官方時間表暫時讀取失敗' : schedule ? ('首班車 ' + scheduleClock(schedule.first) + ' · 尾班車 ' + scheduleClock(schedule.last) + (schedule.current?.freq ? ' · 當前時段 ' + esc(schedule.current.freq) + ' 分鐘／班' : '')) : '首班車／尾班車讀取中';
   const rows = etas.length ? etas.map((e, i) => '<div class="detail-timetable-row ' + (!i ? 'current' : '') + '"><b>' + (i === 0 ? '即將一班' : '之後一班 ' + i) + '</b><span>' + esc(detailClock(e.iso)) + '</span><small>' + esc(detailEtaLabel(e)) + '</small></div>').join('') : '<div class="detail-timetable-empty">此站暫未收到即時班次</div>';
-  return '<details class="detail-service"><summary>營運時間表及服務資料 <small>官方來源 · 按目前時間更新</small></summary><div class="detail-service-body"><div class="detail-timetable-head">目前時間 <b>' + esc(now) + '</b> · ' + esc(stop?.name || '所選車站') + '</div><div class="detail-timetable" aria-live="polite">' + rows + '</div><p class="detail-service-note"><strong>即時資料：</strong>以上係此站目前收到嘅官方 ETA，畫面會隨時間及更新結果改變；首班／尾班請以官方時間表為準。</p><p class="detail-service-note"><strong>ETA 時間斷層法：</strong>上方「ETA 推算行駛中」係按沿線第一班 ETA 的時間回流估算，代表可能行車波段，並非車輛 GPS 數據。</p><a class="detail-service-link" href="' + esc(url) + '" target="_blank" rel="noopener">開啟 ' + esc(provider) + ' ↗</a></div></details>';
+  return '<details class="detail-service"><summary>營運時間表及服務資料 <small>官方來源 · 按目前時間更新</small></summary><div class="detail-service-body"><div class="detail-timetable-head">目前時間 <b>' + esc(now) + '</b> · ' + esc(stop?.name || '所選車站') + '</div><div class="detail-timetable-head"><b>' + scheduleText + '</b></div><div class="detail-timetable" aria-live="polite">' + rows + '</div><p class="detail-service-note"><strong>即時資料：</strong>以上係此站目前收到嘅官方 ETA，畫面會隨時間及更新結果改變；首班／尾班請以官方時間表為準。</p><p class="detail-service-note"><strong>ETA 時間斷層法：</strong>上方「ETA 推算行駛中」係按沿線第一班 ETA 的時間回流估算，代表可能行車波段，並非車輛 GPS 數據。</p><a class="detail-service-link" href="' + esc(url) + '" target="_blank" rel="noopener">開啟 ' + esc(provider) + ' ↗</a></div></details>';
+}
+function detailScheduleSummary() {
+  const s = routeDetailState.scheduleLabel;
+  if (!s) return '<span>首班車：讀取中</span><span>尾班車：讀取中</span>';
+  if (s.error) return '<span>首班車：官方時間表暫時失敗</span><span>尾班車：官方時間表暫時失敗</span>';
+  return '<span>首班車：' + esc(scheduleClock(s.first)) + '</span><span>尾班車：' + esc(scheduleClock(s.last)) + '</span>';
 }
 function detailFareValue(it, fares) {
   const routeSeq = it.co === 'GMB' ? (+it.route_seq || 1) : (it.dir === 'I' ? 2 : 1);
@@ -1097,7 +1127,7 @@ function renderRouteDetail() {
     if (ea && eb && detailEtaIsApproaching(ea) && Date.parse(eb.iso) > Date.parse(ea.iso) && Date.parse(eb.iso) - Date.parse(ea.iso) <= 20 * 60000) enRouteSeqs.add(routeDetailState.stops[i].seq);
   }
   routeDetailBody.innerHTML =
-    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '">' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><span>共 ' + routeDetailState.stops.length + ' 個站</span><span title="按 ETA 時間斷層法推算">ETA 推算行駛中：' + (busEstimate.samples ? busEstimate.count + ' 部' : '讀取中') + '</span><span>' + detailEtaCoverageText() + '</span><span>首班：官方未提供</span><span>尾班：官方未提供</span><span>全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
+    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '">' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><span>共 ' + routeDetailState.stops.length + ' 個站</span><span title="按 ETA 時間斷層法推算">ETA 推算行駛中：' + (busEstimate.samples ? busEstimate.count + ' 部' : '讀取中') + '</span><span>' + detailEtaCoverageText() + '</span>' + detailScheduleSummary() + '<span>全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
     '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
     detailEtaPanel(current) +
     '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +
@@ -1141,7 +1171,7 @@ async function openRouteDetail(it, trigger) {
   try {
     const stops = await getRouteStopsCached(it, { signal:request.signal });
     if (!isCurrentRouteDetailGeneration(request.generation)) return;
-    routeDetailState.stops = stops; routeDetailState.stopsStatus = 'ready'; routeDetailState.etaRequest = request; renderRouteDetail(); loadDetailFare(it, request.generation); loadRouteDetailEtas(it, request, routeDetailState.selectedStopId).then(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'ready'; }).catch(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'error'; });
+    routeDetailState.stops = stops; routeDetailState.stopsStatus = 'ready'; routeDetailState.etaRequest = request; renderRouteDetail(); loadDetailFare(it, request.generation); loadDetailSchedule(it, request.generation); loadRouteDetailEtas(it, request, routeDetailState.selectedStopId).then(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'ready'; }).catch(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'error'; });
   } catch (e) {
     if (!isCurrentRouteDetailGeneration(request.generation)) return;
     routeDetailState.stopsStatus = 'error'; renderRouteDetail();

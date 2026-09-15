@@ -37,6 +37,13 @@ async function prepare(page) {
       ] })
     });
   });
+  await page.route('**/search.kmb.hk/KMBWebSite/Function/FunctionRequest.ashx?action=getschedule**', route => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ result:true, data:{ '01': [
+      { ServiceType:'01', DayType:'MF', BoundText1:'05:30-06:00', BoundTime1:'15', BoundText2:'05:45-06:15', BoundTime2:'20' },
+      { ServiceType:'01', DayType:'MF', BoundText1:'06:00-24:20', BoundTime1:'8-11', BoundText2:'06:15-24:00', BoundTime2:'10-15' }
+    ] } })
+  }));
   await page.goto('./?smoke=route-detail-ui', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('[data-detail-id]')).toBeVisible();
 }
@@ -74,6 +81,8 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('.detail-service')).toContainText('營運時間表及服務資料');
   await expect(page.locator('.detail-service')).toContainText('官方來源');
   await expect(page.locator('.detail-service-link')).toHaveAttribute('href', /search\.kmb\.hk/);
+  await expect(page.locator('.detail-meta')).toContainText('首班車：05:30');
+  await expect(page.locator('.detail-meta')).toContainText('尾班車：24:20');
 });
 
 test('Escape and browser Back close the overlay and restore the entry focus', async ({ page }) => {
