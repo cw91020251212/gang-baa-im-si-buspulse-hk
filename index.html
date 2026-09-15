@@ -1236,7 +1236,7 @@ function renderRouteDetail() {
     if (linked || clustered) return;
     independentNear.push({ seq:st.seq, eta });
   });
-  independentNear.forEach(item => markerAfter.set(item.seq, '<div class="detail-inference virtual independent" role="status" aria-label="估計巴士即將到達第 ' + esc(item.seq) + ' 站"><span class="bus-front-marker" role="img" aria-label="估計巴士位置" title="估計巴士位置"></span><b>即將到站</b><small>第 ' + esc(item.seq) + ' 站有獨立 ETA 訊號</small></div>'));
+  independentNear.forEach(item => markerAfter.set(item.seq, '<div class="detail-inference virtual independent" role="status" aria-label="估計巴士即將到達第 ' + esc(item.seq) + ' 站"><span class="virtual-bus-card"><span class="bus-front-marker" role="img" aria-label="估計巴士位置" title="估計巴士位置"></span></span><span class="virtual-bus-copy"><b>估計巴士即將到站</b><small>估計位置：第 ' + esc(item.seq) + ' 站有獨立 ETA 訊號</small></span></div>'));
   const visibleBusCount = markerAfter.size;
   const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
   const nearStation = null;
