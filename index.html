@@ -293,6 +293,7 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
 @media(prefers-reduced-motion:reduce){.near-arrival-dot,.detail-between-bus .bus-front-marker,.detail-inference .bus-front-marker{animation:none!important}}
 body.light .route-detail{background:var(--bg-deep)}
 .detail-title-operator{font-weight:900}.detail-title-operator.KMB{color:#e7192d}.detail-title-route{color:var(--tx)}
+.eta.sch{opacity:1}.eta.sch .m{font-size:21px}.eta.eta-near .m,.detail-eta.eta-near strong{color:var(--now)}.eta.eta-soon .m,.detail-eta.eta-soon strong{color:var(--soon)}.eta.eta-later .m,.detail-eta.eta-later strong{color:var(--late)}.detail-eta.scheduled small{color:var(--dim)}
 .detail-inference.virtual:before{content:none;display:none}
 
 /* Moovey bilingual station rhythm */
@@ -911,7 +912,7 @@ function detailVehicleStatus(stop) {
 }
 function detailEtaPanel(stop) {
   const state = detailEtaStateFor(stop), labels = ['即將到達','下一班','第三班'];
-  const cells = [0,1,2].map(i => { const eta = state.etas?.[i], near = i === 0 && eta && detailEtaShouldShowBus(eta); return '<div class="detail-eta ' + (near ? 'near-arrival' : '') + '"><strong>' + (near ? '<i class="near-arrival-dot" aria-hidden="true"></i>' : '') + detailEtaLabel(eta) + '</strong><span>' + labels[i] + '</span><small>' + detailEtaClock(eta) + (detailEtaRemark(eta) ? ' · ' + esc(detailEtaRemark(eta)) : '') + '</small></div>'; }).join('');
+  const cells = [0,1,2].map(i => { const eta = state.etas?.[i], near = i === 0 && eta && detailEtaShouldShowBus(eta), min = eta?.iso && Number.isFinite(Date.parse(eta.iso)) ? Math.round((Date.parse(eta.iso) - Date.now()) / 60000) : eta?.min, tone = Number.isFinite(min) ? (min <= 2 ? 'eta-near' : min <= 10 ? 'eta-soon' : 'eta-later') : '', scheduled = eta?.sched ? ' scheduled' : ''; return '<div class="detail-eta ' + tone + scheduled + ' ' + (near ? 'near-arrival' : '') + '"><strong>' + (near ? '<i class="near-arrival-dot" aria-hidden="true"></i>' : '') + detailEtaLabel(eta) + '</strong><span>' + labels[i] + '</span><small>' + detailEtaClock(eta) + (detailEtaRemark(eta) ? ' · ' + esc(detailEtaRemark(eta)) : '') + '</small></div>'; }).join('');
   return '<div class="detail-eta-panel" aria-label="目前車站即時到站時間">' + cells + '</div>';
 }
 function detailStatusText(stop) {
@@ -1900,7 +1901,7 @@ function paint(it, res) {
     const liveMin = e.iso && Number.isFinite(Date.parse(e.iso)) ? Math.round((Date.parse(e.iso) - Date.now()) / 60000) : e.min;
     const hhmm = new Date(e.iso).toLocaleTimeString('en-GB',
       { hour:'2-digit', minute:'2-digit', hour12:false });
-    const cls = ['eta', 'i' + Math.min(i, 2)];
+    const cls = ['eta', liveMin <= 2 ? 'eta-near' : liveMin <= 10 ? 'eta-soon' : 'eta-later'];
     if (e.sched) cls.push('sch');
     let big;
     if (liveMin <= 0) { cls.push('arr'); big = '<div class="eta-main"><div class="m">即將到達</div></div>'; }
