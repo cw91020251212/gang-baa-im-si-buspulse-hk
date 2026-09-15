@@ -167,6 +167,7 @@ body.light .eta .m,body.light .fare,body.light .co,body.light .detail-route-icon
 .empty p{font-size:13.5px; line-height:1.75}
 .foot{padding:20px 15px calc(20px + var(--safe-b)); text-align:center;
   font-size:10.5px; color:#3f4757; line-height:1.7}
+.info-bar{position:fixed;left:10px;right:10px;bottom:calc(76px + var(--safe-b));z-index:55;min-height:30px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--card) 94%,transparent);box-shadow:0 4px 16px rgba(0,0,0,.18);backdrop-filter:blur(12px);color:var(--dim);font-size:10.5px;line-height:30px;cursor:pointer;user-select:none}.info-bar-main{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.info-bar-main:before{content:'ⓘ';margin-right:5px;color:var(--accent)}.info-bar.expanded{padding:8px 10px;line-height:1.45;cursor:default}.info-bar.expanded .info-bar-main{white-space:normal;overflow:visible;text-overflow:clip}.info-bar-details{display:none;margin-top:5px;color:var(--faint);font-size:10.5px;line-height:1.5}.info-bar.expanded .info-bar-details{display:block}.info-bar-actions{display:none;flex-wrap:wrap;gap:6px;margin-top:7px}.info-bar.expanded .info-bar-actions{display:flex}.info-bar-actions button{border:1px solid rgba(108,140,255,.42);border-radius:7px;padding:4px 8px;background:rgba(108,140,255,.12);color:var(--tx);font:700 10px inherit;cursor:pointer}.info-bar-hint{margin-left:5px;color:var(--faint);font-size:9px}.light .info-bar{background:rgba(228,234,238,.96);color:#30465d;border-color:#b7c5cf}.light .info-bar-main:before{color:#245f9c}
 /* ---------- fab ---------- */
 .fab{
   position:fixed; right:16px; bottom:calc(18px + var(--safe-b)); z-index:60;
@@ -397,6 +398,11 @@ body.light .detail-gps-panel{background:#e2e9ee;border-color:#8ea8bd}.light .det
   資料來源：data.gov.hk 實時到站 API<br>
   到站時間僅供參考，實際班次可能有變
 </div>
+<aside class="info-bar" id="infoBar" role="status" tabindex="0" aria-label="補充資訊，撳一下查看完整內容">
+  <span class="info-bar-main" id="infoBarMain">正在整理補充資訊…</span><span class="info-bar-hint">撳開</span>
+  <div class="info-bar-details" id="infoBarDetails"></div>
+  <div class="info-bar-actions" id="infoBarActions"></div>
+</aside>
 
 <section class="route-detail" id="routeDetail" aria-hidden="true" aria-labelledby="routeDetailTitle">
   <div class="route-detail-head">
@@ -877,6 +883,7 @@ cleanupOrphanAlarms();
    =================================================================== */
 const $ = s => document.querySelector(s);
 const board = $('#board'), dot = $('#dot'), clock = $('#clock'), refreshBtn = $('#refreshBtn');
+const infoBar = $('#infoBar'), infoBarMain = $('#infoBarMain'), infoBarDetails = $('#infoBarDetails'), infoBarActions = $('#infoBarActions');
 const routeDetail = $('#routeDetail'), routeDetailBody = $('#routeDetailBody'), routeDetailTitle = $('#routeDetailTitle'), routeDetailOperator = $('#routeDetailOperator'), routeDetailRoute = $('#routeDetailRoute'), routeDetailSubTitle = $('#routeDetailSubTitle');
 let routeDetailReturnFocus = null;
 const esc = s => String(s == null ? '' : s)
@@ -884,6 +891,36 @@ const esc = s => String(s == null ? '' : s)
 const cssEscape = s => (globalThis.CSS && typeof CSS.escape === 'function') ? CSS.escape(String(s)) : String(s).replace(/[^a-zA-Z0-9_-]/g, ch => '\\' + ch.charCodeAt(0).toString(16) + ' ');
 let lastOK = 0, inFlight = false;
 const latestResults = new Map();
+function updateInfoBar() {
+  if (!infoBar) return;
+  const lines = [];
+  items.forEach(it => {
+    const result = latestResults.get(uid(it));
+    if (!result) { lines.push(it.route + '：資料讀取中'); return; }
+    if (result.err && !result.stale) { lines.push(it.route + '：資料暫時讀取失敗'); return; }
+    if (!result.etas?.length) { lines.push(it.route + '：此站暫時冇班次資料，可能已收車'); return; }
+    const remarks = [...new Set(result.etas.map(e => e.rmk).filter(Boolean))];
+    if (result.stale) lines.push(it.route + '：網絡暫時中斷，顯示上次資料');
+    if (remarks.length) lines.push(it.route + '：' + remarks.join('、'));
+    if (alarms[uid(it)]) lines.push(it.route + '：到站提醒已開啟');
+    if (getoff[uid(it)]?.active) lines.push(it.route + '：已設定落車站「' + getoff[uid(it)].targetName + '」');
+  });
+  if (!items.length) lines.push('未設定路線；可以撳右下角「＋ 設定路線」開始。');
+  if (routeDetailState.open && routeDetailState.item) {
+    const gps = routeDetailState.gpsSource === 'eta' ? '巴士 API ETA 數據推算中' : routeDetailState.gpsSource === 'network' ? '網絡／基站定位中' : routeDetailState.gpsStatus === 'watching' ? 'GPS 定位中' : 'GPS 未開啟';
+    lines.push(routeDetailState.item.route + ' 詳情：' + gps);
+  }
+  const unique = [...new Set(lines)];
+  infoBarMain.textContent = unique[0] || '暫時冇補充資訊';
+  infoBarDetails.innerHTML = unique.slice(0, 8).map(line => '<div>' + esc(line) + '</div>').join('') || '<div>暫時冇補充資訊。</div>';
+  infoBarActions.innerHTML = '';
+  if (routeDetailState.open && routeDetailState.item && routeDetailState.gpsStatus !== 'watching') {
+    const gpsButton = document.createElement('button'); gpsButton.type = 'button'; gpsButton.textContent = '開啟 GPS 跟車'; gpsButton.dataset.infoAction = 'gps'; infoBarActions.appendChild(gpsButton);
+  }
+  if (!items.length) {
+    const setupButton = document.createElement('button'); setupButton.type = 'button'; setupButton.textContent = '設定路線'; setupButton.dataset.infoAction = 'setup'; infoBarActions.appendChild(setupButton);
+  }
+}
 // Keep a short-lived ETA snapshot so a temporary API/network failure does not
 // erase the user's countdown or cancel an alarm that was already knowable.
 const ETA_CACHE_KEY = 'busboard.eta-snapshot.v1';
@@ -1358,6 +1395,7 @@ function renderRouteDetail() {
     loadRouteDetailEtas(routeDetailState.item, request, routeDetailState.selectedStopId).catch(() => {}).finally(() => { if (button.isConnected) { button.disabled = false; button.textContent = '立即更新全部車站 ETA'; } });
   });
   routeDetailBody.querySelector('[data-detail-reverse]')?.addEventListener('click', switchRouteDetailDirection);
+  updateInfoBar();
 }
 async function openRouteDetail(it, trigger) {
   routeDetailReturnFocus = trigger || document.activeElement;
@@ -1379,6 +1417,7 @@ function closeRouteDetail(options = {}) {
   if (!routeDetailState.open) return;
   const useHistory = options.history !== false;
   closeRouteDetailState(); routeDetailState.item = null; routeDetail.classList.remove('on'); routeDetail.setAttribute('aria-hidden', 'true'); document.body.classList.remove('detail-open');
+  updateInfoBar();
   routeDetailReturnFocus?.focus?.();
   if (useHistory && history.state?.buspulseRouteDetail) history.back();
 }
@@ -1389,6 +1428,7 @@ function shell() {
     board.innerHTML =
       '<div class="empty"><img class="big" src="icon-192.png" alt="BusPulse HK 巴士圖標">' +
       '<p>仲未揀路線<br>揿右下角<b>＋ 設定路線</b>加你嘅巴士</p></div>';
+    updateInfoBar();
     return;
   }
   board.innerHTML = items.map(it => {
@@ -1432,6 +1472,7 @@ function shell() {
     if (item) button.addEventListener('click', () => openRouteDetail(item, button));
   });
   updateFares().catch(() => {});
+  updateInfoBar();
 }
 
 async function toggleAlarm(id, button) {
@@ -2121,6 +2162,7 @@ async function refresh(options = {}) {
     console.warn('BusPulse refresh failed', e);
   } finally {
     inFlight = false;
+    updateInfoBar();
     if (manual && refreshBtn) {
       refreshBtn.disabled = false;
       refreshBtn.classList.remove('loading');
@@ -2178,6 +2220,20 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pageshow', () => { wakeAlarmPlans(); refresh(); });
 window.addEventListener('online', () => { wakeAlarmPlans(); refresh(); });
 refreshBtn.addEventListener('click', () => { refresh({ manual:true }); });
+infoBar.addEventListener('click', event => {
+  const action = event.target.closest('[data-info-action]');
+  if (action) {
+    event.stopPropagation();
+    if (action.dataset.infoAction === 'setup') { viewHome(); openSheet(); }
+    if (action.dataset.infoAction === 'gps' && routeDetailState.item) startRouteDetailGps(routeDetailState.item);
+    return;
+  }
+  infoBar.classList.toggle('expanded');
+  infoBar.setAttribute('aria-label', infoBar.classList.contains('expanded') ? '補充資訊，撳一下收合' : '補充資訊，撳一下查看完整內容');
+});
+infoBar.addEventListener('keydown', event => {
+  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); infoBar.click(); }
+});
 /* ===================================================================
    SETTINGS SHEET
    =================================================================== */
