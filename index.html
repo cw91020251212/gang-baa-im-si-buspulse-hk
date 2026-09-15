@@ -961,11 +961,12 @@ function updateInfoBar() {
     if (alarms[uid(it)]) { important = true; lines.push(it.route + '：到站提醒已開啟'); }
     if (getoff[uid(it)]?.active) { important = true; lines.push(it.route + '：已設定落車站「' + getoff[uid(it)].targetName + '」'); }
   });
-  if (!items.length) { important = true; lines.push('未設定路線；可以撳右下角「＋ 設定路線」開始。'); }
+  if (!items.length) lines.push('第一步：撳右下角「＋ 設定路線」加入你常坐嘅巴士。');
   if (routeDetailState.open && routeDetailState.item) {
     const gps = routeDetailState.gpsSource === 'eta' ? '巴士 API ETA 數據推算中' : routeDetailState.gpsSource === 'network' ? '網絡／基站定位中' : routeDetailState.gpsStatus === 'watching' ? 'GPS 定位中' : 'GPS 未開啟';
     lines.push(routeDetailState.item.route + ' 詳情：' + gps);
   }
+  if (items.length && !lines.length) lines.push('小提示：撳路線右側「☷」可睇沿途車站、ETA、GPS 跟車及落車提醒。');
   const unique = [...new Set(lines)];
   const paint = (bar, main, details, actions, list, isImportant, allowGps, allowSetup) => {
     if (!bar) return;
@@ -977,10 +978,10 @@ function updateInfoBar() {
     const pinned = localStorage.getItem('buspulse.info.pinned') === '1';
     bar.classList.toggle('pinned', pinned);
     const pin = document.createElement('button'); pin.type = 'button'; pin.textContent = pinned ? '取消長開' : '長開資訊欄'; pin.dataset.infoAction = 'pin'; actions.appendChild(pin);
-    bar.classList.toggle('collapsed', !pinned && !isImportant && !bar.classList.contains('expanded'));
+    if (isImportant && !pinned) bar.classList.remove('collapsed');
   };
   paint(infoBar, infoBarMain, infoBarDetails, infoBarActions, unique, important, routeDetailState.open && routeDetailState.item && routeDetailState.gpsStatus !== 'watching', !items.length);
-  const detailLines = routeDetailState.open && routeDetailState.item ? [routeDetailState.item.route + ' 詳情：' + (routeDetailState.gpsSource === 'eta' ? '巴士 API ETA 數據推算中' : routeDetailState.gpsSource === 'network' ? '網絡／基站定位中' : routeDetailState.gpsStatus === 'watching' ? 'GPS 定位中' : 'GPS 未開啟')] : [];
+  const detailLines = routeDetailState.open && routeDetailState.item ? [routeDetailState.item.route + ' 詳情：' + (routeDetailState.gpsSource === 'eta' ? '巴士 API ETA 數據推算中' : routeDetailState.gpsSource === 'network' ? '網絡／基站定位中' : routeDetailState.gpsStatus === 'watching' ? 'GPS 定位中' : 'GPS 未開啟'), routeDetailState.gpsStatus === 'watching' ? '提示：揀時間軸車站可以查看該站 ETA；已設定落車站後會顯示落車提示。' : '提示：需要跟住巴士位置，可以撳「開啟 GPS 跟車」。'] : ['詳細頁提示：撳時間軸車站可以查看該站 ETA；需要時再開啟 GPS 跟車。'];
   if (routeDetailState.sweepStatus === 'error') { detailLines.unshift('詳細頁部分資料暫時讀取失敗'); }
   paint(detailInfoBar, detailInfoBarMain, detailInfoBarDetails, detailInfoBarActions, detailLines, routeDetailState.sweepStatus === 'error', !!(routeDetailState.item && routeDetailState.gpsStatus !== 'watching'), false);
 }
@@ -2304,7 +2305,7 @@ function bindInfoBar(bar) {
   bar.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); bar.click(); } });
 }
 bindInfoBar(infoBar); bindInfoBar(detailInfoBar);
-const collapseInfoOnScroll = () => { [infoBar, detailInfoBar].forEach(bar => { if (bar && !bar.classList.contains('pinned')) { bar.classList.remove('expanded'); if (window.scrollY > 12 || routeDetail?.scrollTop > 52) bar.classList.add('collapsed'); } }); };
+const collapseInfoOnScroll = () => { [infoBar, detailInfoBar].forEach(bar => { if (bar && !bar.classList.contains('pinned')) { bar.classList.remove('expanded'); if (window.scrollY > 12 || routeDetail?.scrollTop > 52) bar.classList.add('collapsed'); else bar.classList.remove('collapsed'); } }); };
 window.addEventListener('scroll', collapseInfoOnScroll, { passive:true });
 routeDetail.addEventListener('scroll', collapseInfoOnScroll, { passive:true });
 /* ===================================================================
