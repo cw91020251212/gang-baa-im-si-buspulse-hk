@@ -2367,7 +2367,7 @@ document.addEventListener('pointerdown', event => {
   });
 });
 const fab = document.querySelector('#fab');
-const moveFabForInfo = () => { if (!fab) return; const bar = document.body.classList.contains('detail-open') ? detailInfoBar : infoBar; const height = bar && bar.offsetParent !== null ? bar.offsetHeight : 0; fab.style.bottom = `calc(${Math.max(76, height + 24)}px + var(--safe-b))`; };
+const moveFabForInfo = () => { if (!fab) return; const bar = document.body.classList.contains('detail-open') ? detailInfoBar : infoBar; const height = bar && bar.offsetParent !== null ? bar.offsetHeight : 0; fab.style.bottom = `calc(${Math.max(12, height + 8)}px + var(--safe-b))`; };
 new ResizeObserver(moveFabForInfo).observe(infoBar); new ResizeObserver(moveFabForInfo).observe(detailInfoBar); window.addEventListener('resize', moveFabForInfo);
 const collapseInfoOnScroll = () => { [infoBar, detailInfoBar].forEach(bar => { if (bar) { bar.classList.remove('expanded'); if (bar.classList.contains('pinned')) { bar.classList.remove('collapsed'); bar.classList.add('compact'); } else if (window.scrollY > 12 || routeDetail?.scrollTop > 52) { bar.classList.remove('compact'); bar.classList.add('collapsed'); } } }); };
 window.addEventListener('scroll', collapseInfoOnScroll, { passive:true });
