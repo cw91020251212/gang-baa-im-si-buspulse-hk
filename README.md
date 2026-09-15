@@ -93,3 +93,9 @@ Add the license that matches your intended use before publishing.
 ## Credits
 
 Data source: [data.gov.hk](https://data.gov.hk/); map tiles © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright).
+
+## Moovey-first route-detail layout
+
+The full-screen route detail now follows a Moovey-inspired information hierarchy rather than adding more rows to the compact route card. The route identity, company badge, direction, stop count and fare remain compact at the top; the live station panel presents exactly three ETA cards; and the complete station timeline remains available below. When the detail page scrolls, the live panel collapses to the three ETA cards only, so the station list can move underneath without allowing its circles or labels to float above the live information. Both dark and light themes use the same dimensions and hierarchy.
+
+The visual reconstruction specification is recorded in [MOOVEY_LAYOUT_RECONSTRUCTION.md](MOOVEY_LAYOUT_RECONSTRUCTION.md). Existing official ETA handling, direction switching, station selection, retries, manual refresh, conservative in-transit markers and accessibility behavior remain unchanged.
