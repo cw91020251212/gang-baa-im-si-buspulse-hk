@@ -67,6 +67,9 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('.detail-bus-status')).toContainText('巴士');
   await expect(page.locator('[aria-label="巴士即將到站"]').first()).toBeVisible();
   await expect(page.locator('[aria-label="巴士在途中"]').first()).toBeVisible();
+  await expect(page.locator('.detail-service')).toContainText('營運時間表及服務資料');
+  await expect(page.locator('.detail-service')).toContainText('官方來源');
+  await expect(page.locator('.detail-service-link')).toHaveAttribute('href', /search\.kmb\.hk/);
 });
 
 test('Escape and browser Back close the overlay and restore the entry focus', async ({ page }) => {

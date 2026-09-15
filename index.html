@@ -263,6 +263,11 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
 .detail-live-dock.compact .detail-eta span{font-size:9px;margin-top:3px;}
 .detail-live-dock.compact .detail-eta small{font-size:8.5px;margin-top:3px;}
 .detail-live-dock.compact{padding-top:3px;padding-bottom:5px;}
+.detail-service{margin:16px 0 10px;border:1px solid var(--line);border-radius:14px;background:var(--card);overflow:hidden;}
+.detail-service summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 13px;cursor:pointer;font-size:13px;font-weight:850;list-style:none;}
+.detail-service summary::-webkit-details-marker{display:none}.detail-service summary:after{content:'＋';color:var(--faint);font-size:17px}.detail-service[open] summary:after{content:'－'}.detail-service-body{padding:0 13px 12px;border-top:1px solid var(--line)}
+.detail-service-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}.detail-service-item{padding:9px 10px;border-radius:10px;background:var(--card2);font-size:11px}.detail-service-item b{display:block;color:var(--tx);font-size:12px}.detail-service-item span{display:block;color:var(--faint);margin-top:3px;line-height:1.35}.detail-service-note{margin:9px 0 0;color:var(--faint);font-size:10.5px;line-height:1.45}.detail-service-note strong{color:var(--dim)}
+.detail-service-link{display:inline-block;margin-top:9px;color:var(--now);font-size:11px;font-weight:800;text-decoration:none}.detail-service-link:hover{text-decoration:underline}
 .detail-section-title{margin:13px 3px 6px;font-size:13px;}
 .stop-timeline{padding-top:0;background:var(--card);border-radius:16px;padding:5px 7px 12px;box-shadow:0 3px 14px rgba(0,0,0,.06);}
 .stop-timeline:before{left:25px;top:24px;bottom:25px;}
@@ -935,6 +940,17 @@ function detailEtaCoverageText() {
   if (!ready) return '巴士 ETA 預報：讀取中';
   return '即將到站提示：' + near + ' 個站 · ETA 預報：' + ready + ' 個站';
 }
+function detailOfficialServiceUrl(it) {
+  const route = String(it?.route || '').toUpperCase().replace(/\s+/g, '');
+  if (it?.co === 'KMB') return 'https://search.kmb.hk/KMBWebSite/?action=routesearch&route=' + encodeURIComponent(route) + '&lang=zh-hk';
+  if (it?.co === 'CTB') return 'https://www.citybus.com.hk/routesearch/';
+  return 'https://data.gov.hk/tc-data/dataset/hk-td-tis_15-gmb';
+}
+function detailServiceBlock(it) {
+  const url = detailOfficialServiceUrl(it);
+  const provider = it?.co === 'KMB' ? '九巴官方路線及時間表' : it?.co === 'CTB' ? '城巴官方路線搜尋' : '運輸署專線小巴資料';
+  return '<details class="detail-service"><summary>營運時間表及服務資料 <small>官方來源</small></summary><div class="detail-service-body"><div class="detail-service-grid"><div class="detail-service-item"><b>即時班次</b><span>以上方三格 ETA 為準</span></div><div class="detail-service-item"><b>首班／尾班</b><span>此頁不自行推算</span></div></div><p class="detail-service-note"><strong>官方時間表：</strong>請開啟 ' + esc(provider) + ' 查看星期、特別班次及班距。官方頁面內容可能按日期或路線調整。</p><a class="detail-service-link" href="' + esc(url) + '" target="_blank" rel="noopener">開啟官方時間表 ↗</a></div></details>';
+}
 function detailFareValue(it, fares) {
   const routeSeq = it.co === 'GMB' ? (+it.route_seq || 1) : (it.dir === 'I' ? 2 : 1);
   const route = String(it.route || '').toUpperCase().replace(/\s+/g, '');
@@ -1050,7 +1066,7 @@ function renderRouteDetail() {
     detailEtaPanel(current) +
     '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +
     '<div class="detail-section-title"><span>沿途車站列表</span><small>共 ' + routeDetailState.stops.length + ' 個站</small></div>' +
-    '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected' : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (st.seq === selected ? '，已選' : '，按兩下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-copy"><strong>' + esc(st.seq) + '　' + esc(st.name) + '</strong><small>' + esc(st.id) + '</small></span>' + (detailEtaIsNear(next) ? '<span class="stop-bus-state" role="img" aria-label="巴士即將到站" title="巴士即將到站"><b aria-hidden="true">🚌</b> 接近</span>' : (enRouteSeqs.has(st.seq) ? '<span class="stop-bus-state enroute" role="img" aria-label="巴士在途中" title="巴士在途中"><b aria-hidden="true">🚌</b> 途中</span>' : '')) + '<span class="stop-state">' + (state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></button>'; return row + (markerAfter.get(st.seq) || ''); }).join('') + '</div>';
+    '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected' : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (st.seq === selected ? '，已選' : '，按兩下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-copy"><strong>' + esc(st.seq) + '　' + esc(st.name) + '</strong><small>' + esc(st.id) + '</small></span>' + (detailEtaIsNear(next) ? '<span class="stop-bus-state" role="img" aria-label="巴士即將到站" title="巴士即將到站"><b aria-hidden="true">🚌</b> 接近</span>' : (enRouteSeqs.has(st.seq) ? '<span class="stop-bus-state enroute" role="img" aria-label="巴士在途中" title="巴士在途中"><b aria-hidden="true">🚌</b> 途中</span>' : '')) + '<span class="stop-state">' + (state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></button>'; return row + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it);
   updateRouteDetailCompact();
   routeDetailBody.querySelectorAll('[data-detail-stop]').forEach(button => button.addEventListener('click', () => {
     const stop = routeDetailState.stops.find(s => String(s.seq) === button.dataset.detailStop);
