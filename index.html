@@ -457,6 +457,21 @@ body.detail-open .detail-info-bar{display:block;}
 .light .info-bar-collapse{color:#36556d;}
 .light .schedule-first,.light .schedule-last{color:#982b38!important;}
 .light .wide.danger{color:#8f1d2c;border:1px solid #b54b5e;background:#f3d5da;font-weight:850;}
+body.text-large .card .rt{font-size:1.18em}
+body.text-large .card .dest{font-size:1.12em}
+body.text-large .card .stop-edit{font-size:1.12em}
+body.text-large .card .fare{font-size:1.08em}
+body.text-large .card .eta .m{font-size:1.18em}
+body.text-large .card .eta .u,body.text-large .card .alarm-note{font-size:1.12em}
+body.text-large .detail-route-line{font-size:1.14em}
+body.text-large .detail-meta,body.text-large .detail-info-bar{font-size:1.12em}
+body.text-large .stop-copy strong{font-size:1.14em}
+body.text-large .stop-copy small,body.text-large .stop-state{font-size:1.12em}
+body.text-large .info-bar{font-size:12px}
+body.text-large .sbody .hint,body.text-large .sbody .settings-intro,body.text-large .sbody .lbl{font-size:1.12em}
+body.text-large .sbody .wide,body.text-large .sbody .seg{font-size:1.12em}
+body.text-large .sbody .sv .n{font-size:1.12em}
+body.text-large .sbody .sv .d{font-size:1.1em}
 /* A live station keeps only the inner station-content frame; the row itself is transparent. */
 .stop-row.is-live,
 .light .stop-row.is-live{background:transparent!important;border-color:transparent!important;box-shadow:none!important;}
@@ -980,6 +995,9 @@ const cssEscape = s => (globalThis.CSS && typeof CSS.escape === 'function') ? CS
 let lastOK = 0, inFlight = false;
 const latestResults = new Map();
 let infoFocusId = null;
+document.body.classList.toggle('text-large', localStorage.getItem('buspulse.text-large') === '1');
+function textSizeLabel() { return document.body.classList.contains('text-large') ? 'A− 還原文字大小' : 'A＋ 文字放大'; }
+function toggleTextSize() { const large = !document.body.classList.contains('text-large'); document.body.classList.toggle('text-large', large); localStorage.setItem('buspulse.text-large', large ? '1' : '0'); updateInfoBar(); }
 function updateInfoBar() {
   if (!infoBar) return;
   const lines = [];
@@ -1016,6 +1034,7 @@ function updateInfoBar() {
     actions.innerHTML = '';
     if (allowGps) { const b = document.createElement('button'); b.type = 'button'; b.textContent = '開啟 GPS 跟車'; b.dataset.infoAction = 'gps'; actions.appendChild(b); }
     if (allowSetup) { const b = document.createElement('button'); b.type = 'button'; b.textContent = '設定路線'; b.dataset.infoAction = 'setup'; actions.appendChild(b); }
+    const textSize = document.createElement('button'); textSize.type = 'button'; textSize.textContent = textSizeLabel(); textSize.dataset.infoAction = 'text-size'; actions.appendChild(textSize);
     const pinned = localStorage.getItem('buspulse.info.pinned') === '1';
     bar.classList.toggle('pinned', pinned);
     const pin = document.createElement('button'); pin.type = 'button'; pin.textContent = pinned ? '取消長駐' : '長駐'; pin.dataset.infoAction = 'pin'; actions.appendChild(pin);
@@ -2344,6 +2363,7 @@ function bindInfoBar(bar) {
       event.stopPropagation();
       if (action.dataset.infoAction === 'setup') { viewHome(); openSheet(); }
       if (action.dataset.infoAction === 'gps' && routeDetailState.item) startRouteDetailGps(routeDetailState.item);
+      if (action.dataset.infoAction === 'text-size') { toggleTextSize(); }
       if (action.dataset.infoAction === 'collapse') { bar.classList.remove('expanded','compact'); bar.classList.add('collapsed'); }
       if (action.dataset.infoAction === 'pin') { const next = localStorage.getItem('buspulse.info.pinned') === '1' ? '0' : '1'; localStorage.setItem('buspulse.info.pinned', next); updateInfoBar(); }
       return;
@@ -2425,6 +2445,7 @@ function viewPrefs() {
     '<div class="pref-row"><div>時間顯示<small>ETA 卡片時間及頂部時鐘</small></div><select class="pref-select" id="timeSel"><option value="false">24 小時制</option><option value="true">12 小時制</option></select></div>' +
     '<div class="pref-row"><div>顏色模式<small>可以選擇黑暗或光明版</small></div><select class="pref-select" id="themeSel"><option value="dark">黑暗模式</option><option value="light">光明模式</option></select></div></div></details>' +
     '<details class="settings-group"><summary>本地鬧鐘診斷</summary><div class="group-body"><div class="hint">本地鬧鐘依賴瀏覽器通知權限；請保持網站或已安裝的 App 可正常運作。</div><div class="diag-box" id="diagBox"></div></div></details>' +
+    '<button class="wide" data-text-size-toggle>' + textSizeLabel() + '</button>' +
     '<button class="wide" id="prefsBack">← 返回路線設定</button>';
   $('#leadSel').value = String(prefs.lead); $('#soundSel').value = prefs.sound; $('#soundLenSel').value = prefs.soundLen; $('#webSoundSel').value = String(prefs.webSound !== false); $('#busSaverDelay').value = String(prefs.screenSaverIdle); $('#fontSel').value = prefs.font; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
   updateNotificationButton();
@@ -2441,6 +2462,7 @@ function viewPrefs() {
   $('#notifyBtn').addEventListener('click', toggleNotificationSetting);
   renderDiagnostics();
   $('#prefsBack').addEventListener('click', viewHome);
+  sBody.querySelector('[data-text-size-toggle]')?.addEventListener('click', () => { toggleTextSize(); viewPrefs(); });
 }
 
 /* ---------- view 1: home (saved list + add) ---------- */
@@ -2461,6 +2483,7 @@ function viewHome() {
       '</div>').join('') + '</div>';
   }
   h += '<button class="wide p" id="addBtn">＋ 加新路線</button>';
+  h += '<button class="wide" data-text-size-toggle>' + textSizeLabel() + '</button>';
   h += '<div class="lbl">其他</div>';
   h += '<div class="backup-box"><b>資料備份</b><br><span id="backupNote">' + backupReminder() + '</span><div class="backup-actions"><button class="wide" id="exportBtn">⬇ 下載備份</button><button class="wide" id="shareBtn">↗ 分享備份</button></div><button class="wide" id="importBtn">⬆ 還原備份</button><input type="file" id="backupFile" accept="application/json,.json" style="display:none"></div>';
   h += '<div class="backup-box"><b>到站提醒管理</b><br><span id="alarmClearNote">刪除路線後，該路線嘅鬧鐘會自動清理。</span><button class="wide danger" id="clearAlarmsBtn">關閉所有到站鬧鐘</button></div>';
@@ -2472,6 +2495,7 @@ function viewHome() {
   h += '<div class="hint">設定會存喺呢部機嘅瀏覽器，下次開返一樣。</div>';
   sBody.innerHTML = h;
   sBody.scrollTop = 0;
+  sBody.querySelector('[data-text-size-toggle]')?.addEventListener('click', () => { toggleTextSize(); viewHome(); });
 
   sBody.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
     const removed = items[+b.dataset.del], id = removed && uid(removed);
