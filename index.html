@@ -272,6 +272,13 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
 .detail-inference{margin-left:42px;margin-right:5px;border-radius:9px;padding:7px 9px;font-size:10px;}
 @media(max-width:380px){.detail-route-line{font-size:16px}.detail-route-line .tag{font-size:14px;padding:6px 8px}.detail-meta{font-size:10px}.detail-eta strong{font-size:18px}.detail-eta{min-height:74px}}
 body.light .route-detail{background:var(--bg-deep)}
+
+/* Moovey bilingual station rhythm */
+.stop-copy small{letter-spacing:.045em;text-transform:uppercase;color:var(--faint);}
+.detail-route-line .tag.KMB{background:#e7192d;color:#fff;border:0;}
+.detail-route-line .tag.CTB{background:#f1a51a;color:#17233a;border:0;}
+.detail-route-line .tag.GMB{background:#1bb978;color:#fff;border:0;}
+.detail-meta{font-variant-numeric:tabular-nums;}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
@@ -441,9 +448,9 @@ async function stopsKMB(v) {
     KMB + '/route-stop/' + encodeURIComponent(v.route) + '/' + v.bound + '/' + v.service_type
   )).data;
   const names = await cached('kmb:stops', () => getJSON(KMB + '/stop').then(d => {
-    const m = new Map(); d.data.forEach(s => m.set(s.stop, { name: s.name_tc, lat: +s.lat, lng: +s.long })); return m;
+    const m = new Map(); d.data.forEach(s => m.set(s.stop, { name: s.name_tc, name_en: s.name_en, lat: +s.lat, lng: +s.long })); return m;
   }));
-  return rs.map(s => { const info = names.get(s.stop) || {}; return { seq: +s.seq, id: s.stop, name: info.name || s.stop, lat: info.lat, lng: info.lng }; });
+  return rs.map(s => { const info = names.get(s.stop) || {}; return { seq: +s.seq, id: s.stop, name: info.name || s.stop, name_en: info.name_en || '', lat: info.lat, lng: info.lng }; });
 }
 
 async function stopsCTB(v) {
@@ -451,12 +458,12 @@ async function stopsCTB(v) {
     CTB + '/route-stop/CTB/' + encodeURIComponent(v.route) + '/' + v.bound
   )).data;
   const out = await Promise.all(rs.map(async s => {
-    let nm = s.stop, lat, lng;
+    let nm = s.stop, nameEn = s.name_en || '', lat, lng;
     try {
       const info = (await cached('ctb:stop:' + s.stop, () => getJSON(CTB + '/stop/' + s.stop))).data || {};
-      nm = info.name_tc || s.stop; lat = +(info.lat || info.latitude); lng = +(info.long || info.lng || info.longitude);
+      nm = info.name_tc || s.stop; nameEn = info.name_en || nameEn; lat = +(info.lat || info.latitude); lng = +(info.long || info.lng || info.longitude);
     } catch {}
-    return { seq: +s.seq, id: s.stop, name: nm, lat, lng };
+    return { seq: +s.seq, id: s.stop, name: nm, name_en: nameEn, lat, lng };
   }));
   return out;
 }
@@ -464,7 +471,7 @@ async function stopsCTB(v) {
 async function stopsGMB(v) {
   const d = (await getJSON(GMB + '/route-stop/' + v.route_id + '/' + v.route_seq)).data;
   return (d.route_stops || []).map(s => ({
-    seq: +s.stop_seq, id: String(s.stop_id), name: s.name_tc,
+    seq: +s.stop_seq, id: String(s.stop_id), name: s.name_tc, name_en: s.name_en || s.stop_name_en || '',
     lat: +(s.lat || s.latitude), lng: +(s.long || s.lng || s.longitude)
   }));
 }
@@ -871,6 +878,7 @@ function detailEtaLabel(eta) {
 }
 function detailEtaClock(eta) { return eta?.iso && Number.isFinite(Date.parse(eta.iso)) ? new Date(eta.iso).toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit'}) : '—'; }
 function detailEtaRemark(eta) { return eta?.rmk || (eta?.sched ? '原定班次' : ''); }
+function detailStopSubline(stop) { return (stop.name_en ? stop.name_en + ' ' : '') + '(' + stop.id + ')'; }
 function detailEtaStateFor(stop) { return routeDetailState.etaByStop.get(String(stop.id)) || { status:'loading', etas:[] }; }
 function detailVehicleStatus(stop) {
   const eta = detailEtaStateFor(stop).etas?.[0];
