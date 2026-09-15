@@ -440,6 +440,13 @@ body.detail-open #infoBar{display:none;}
 body.detail-open .detail-info-bar{display:block;}
 .info-bar.collapsed{left:0;right:0;bottom:var(--safe-b);width:auto;height:4px;min-height:4px;margin:0!important;border:0;border-radius:0;background:#718cff;opacity:.72;}
 .light .info-bar.collapsed{background:#4b78a1;}
+.info-bar.compact{left:10px;right:10px;bottom:calc(8px + var(--safe-b));min-height:30px;height:30px;padding:0 10px;border-radius:9px;}
+.info-bar.compact .info-bar-details,.info-bar.compact .info-bar-actions,.info-bar.compact .info-bar-hint{display:none;}
+.info-bar.compact .info-bar-collapse{display:block;}
+.info-bar.compact .info-bar-main{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:0;}
+.info-bar.compact .info-bar-collapse{position:static;border:0;padding:3px 2px;opacity:.78;}
+.info-bar.compact .info-bar-main{flex:1;}
+.info-bar.compact .info-bar-collapse:after{content:' ⋯';margin-left:3px;}
 .info-bar:not(.expanded){display:flex;align-items:center;gap:8px;}
 .info-bar:not(.expanded) .info-bar-main{flex:1;min-width:0;}
 .info-bar-collapse{flex:0 0 auto;border:0;background:transparent;color:inherit;font:700 10px inherit;cursor:pointer;white-space:nowrap;padding:3px 2px;}
@@ -449,6 +456,7 @@ body.detail-open .detail-info-bar{display:block;}
 .info-bar.collapsed .info-bar-hint{display:none;}
 .light .info-bar-collapse{color:#36556d;}
 .light .schedule-first,.light .schedule-last{color:#982b38!important;}
+.light .wide.danger{color:#982b38;border-color:#d78d99;background:#f7e1e4;}
 /* A live station keeps only the inner station-content frame; the row itself is transparent. */
 .stop-row.is-live,
 .light .stop-row.is-live{background:transparent!important;border-color:transparent!important;box-shadow:none!important;}
@@ -1003,7 +1011,8 @@ function updateInfoBar() {
     const pinned = localStorage.getItem('buspulse.info.pinned') === '1';
     bar.classList.toggle('pinned', pinned);
     const pin = document.createElement('button'); pin.type = 'button'; pin.textContent = pinned ? '取消長駐' : '長駐'; pin.dataset.infoAction = 'pin'; actions.appendChild(pin);
-    if (isImportant && !pinned) bar.classList.remove('collapsed');
+    if (pinned) { bar.classList.remove('collapsed'); if (!bar.classList.contains('expanded')) bar.classList.add('compact'); }
+    else if (isImportant && !bar.classList.contains('expanded')) { bar.classList.remove('collapsed'); bar.classList.add('compact'); }
   };
   paint(infoBar, infoBarMain, infoBarDetails, infoBarActions, unique, important, routeDetailState.open && routeDetailState.item && routeDetailState.gpsStatus !== 'watching', !items.length);
   const detailLines = routeDetailState.open && routeDetailState.item ? [routeDetailState.item.route + ' 詳情：' + (routeDetailState.gpsSource === 'eta' ? '巴士 API ETA 數據推算中' : routeDetailState.gpsSource === 'network' ? '網絡／基站定位中' : routeDetailState.gpsStatus === 'watching' ? 'GPS 定位中' : 'GPS 未開啟'), routeDetailState.gpsStatus === 'watching' ? '提示：揀時間軸車站可以查看該站 ETA；已設定落車站後會顯示落車提示。' : '提示：需要跟住巴士位置，可以撳「開啟 GPS 跟車」。'] : ['詳細頁提示：撳時間軸車站可以查看該站 ETA；需要時再開啟 GPS 跟車。'];
@@ -2311,6 +2320,7 @@ window.addEventListener('online', () => { wakeAlarmPlans(); refresh(); });
 refreshBtn.addEventListener('click', () => { refresh({ manual:true }); });
 function bindInfoBar(bar) {
   if (!bar) return;
+  if (localStorage.getItem('buspulse.info.pinned') !== '1') bar.classList.add('collapsed');
   let longPress = null, suppressClick = false;
   bar.addEventListener('click', event => {
     if (suppressClick) { suppressClick = false; return; }
@@ -2319,22 +2329,32 @@ function bindInfoBar(bar) {
       event.stopPropagation();
       if (action.dataset.infoAction === 'setup') { viewHome(); openSheet(); }
       if (action.dataset.infoAction === 'gps' && routeDetailState.item) startRouteDetailGps(routeDetailState.item);
-      if (action.dataset.infoAction === 'collapse') { bar.classList.remove('expanded'); bar.classList.add('collapsed'); }
+      if (action.dataset.infoAction === 'collapse') { bar.classList.remove('expanded','compact'); bar.classList.add('collapsed'); }
       if (action.dataset.infoAction === 'pin') { const next = localStorage.getItem('buspulse.info.pinned') === '1' ? '0' : '1'; localStorage.setItem('buspulse.info.pinned', next); updateInfoBar(); }
       return;
     }
-    bar.classList.toggle('expanded'); bar.classList.remove('collapsed');
-    bar.setAttribute('aria-label', bar.classList.contains('expanded') ? '補充資訊，撳一下收合' : '補充資訊，撳一下查看完整內容');
+    if (bar.classList.contains('collapsed')) { bar.classList.remove('collapsed'); bar.classList.add('compact'); }
+    else if (bar.classList.contains('compact')) { bar.classList.remove('compact'); bar.classList.add('expanded'); }
+    else { bar.classList.remove('expanded'); bar.classList.add('compact'); }
+    bar.setAttribute('aria-label', bar.classList.contains('expanded') ? '完整補充資訊，撳一下收合成一行' : '補充資訊，撳一下查看');
   });
-  bar.addEventListener('pointerdown', () => { longPress = setTimeout(() => { suppressClick = true; bar.classList.remove('expanded'); bar.classList.add('collapsed'); }, 650); });
+  bar.addEventListener('pointerdown', () => { longPress = setTimeout(() => { suppressClick = true; bar.classList.remove('expanded','compact'); bar.classList.add('collapsed'); }, 650); });
   ['pointerup','pointercancel','pointerleave'].forEach(type => bar.addEventListener(type, () => { if (longPress) { clearTimeout(longPress); longPress = null; } }));
   bar.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); bar.click(); } });
 }
 bindInfoBar(infoBar); bindInfoBar(detailInfoBar);
+document.addEventListener('pointerdown', event => {
+  [infoBar, detailInfoBar].forEach(bar => {
+    if (bar && bar.classList.contains('expanded') && !bar.contains(event.target)) {
+      bar.classList.remove('expanded');
+      bar.classList.add('compact');
+    }
+  });
+});
 const fab = document.querySelector('#fab');
-const moveFabForInfo = () => { if (!fab) return; const bar = document.body.classList.contains('detail-open') ? detailInfoBar : infoBar; const height = bar && bar.offsetParent !== null ? bar.offsetHeight : 0; fab.style.bottom = `calc(${Math.max(12, height + 16)}px + var(--safe-b))`; };
+const moveFabForInfo = () => { if (!fab) return; const bar = document.body.classList.contains('detail-open') ? detailInfoBar : infoBar; const height = bar && bar.offsetParent !== null ? bar.offsetHeight : 0; fab.style.bottom = `calc(${Math.max(58, height + 16)}px + var(--safe-b))`; };
 new ResizeObserver(moveFabForInfo).observe(infoBar); new ResizeObserver(moveFabForInfo).observe(detailInfoBar); window.addEventListener('resize', moveFabForInfo);
-const collapseInfoOnScroll = () => { [infoBar, detailInfoBar].forEach(bar => { if (bar && !bar.classList.contains('pinned')) { bar.classList.remove('expanded'); if (window.scrollY > 12 || routeDetail?.scrollTop > 52) bar.classList.add('collapsed'); else bar.classList.remove('collapsed'); } }); };
+const collapseInfoOnScroll = () => { [infoBar, detailInfoBar].forEach(bar => { if (bar) { bar.classList.remove('expanded'); if (bar.classList.contains('pinned')) { bar.classList.remove('collapsed'); bar.classList.add('compact'); } else if (window.scrollY > 12 || routeDetail?.scrollTop > 52) { bar.classList.remove('compact'); bar.classList.add('collapsed'); } } }); };
 window.addEventListener('scroll', collapseInfoOnScroll, { passive:true });
 routeDetail.addEventListener('scroll', collapseInfoOnScroll, { passive:true });
 /* ===================================================================
