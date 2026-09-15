@@ -293,6 +293,7 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
 @media(prefers-reduced-motion:reduce){.near-arrival-dot,.detail-between-bus .bus-front-marker,.detail-inference .bus-front-marker{animation:none!important}}
 body.light .route-detail{background:var(--bg-deep)}
 .detail-title-operator{font-weight:900}.detail-title-operator.KMB{color:#e7192d}.detail-title-route{color:var(--tx)}
+.detail-inference.virtual:before{content:none;display:none}
 
 /* Moovey bilingual station rhythm */
 .stop-copy small{letter-spacing:.045em;text-transform:uppercase;color:var(--faint);}
@@ -1156,13 +1157,14 @@ function renderRouteDetail() {
   const busEstimate = estimateActiveBusWaves();
   const inferred = deriveEstimatedSegments(routeDetailState.stops, routeDetailState.etaByStop);
   routeDetailState.vehicleInference = inferred[0] ? { status:'estimated', ...inferred[0] } : { status:'hidden', reason:'暫無足夠資料推算巴士位置' };
-  const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop);
+  const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop)
+    .slice(0, Math.max(0, Number(busEstimate.count) || 0));
   const markerAfter = new Map(virtualSegments.map(segment => [segment.fromSeq, '<div class="detail-inference virtual" role="status" aria-label="巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間：按 ETA 推算，並非 GPS。"><span class="bus-front-marker enroute" role="img" aria-label="ETA 推算巴士位置" title="ETA 推算巴士位置"></span><b>' + (segment.confidence === 'approaching' ? '即將到站 · ETA 推算' : '途中 · ETA 推算') + '</b><small>約 ' + esc(busEstimate.count || virtualSegments.length) + ' 部行駛中；圖示位置按相鄰站 ETA 推算，並非巴士 GPS。</small></div>']));
   const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
   // A station ETA is not a vehicle count. Without a direct vehicle-position
   // feed, show at most one near-arrival marker: either the inferred segment
   // marker above, or the single nearest live ETA station.
-  const nearCandidate = inferred.length ? null : routeDetailState.stops
+  const nearCandidate = (inferred.length || virtualSegments.length || busEstimate.count <= 0) ? null : routeDetailState.stops
     .map(st => ({ seq:st.seq, eta:detailEtaStateFor(st).etas?.find(e => detailEtaShouldShowBus(e)) }))
     .filter(x => x.eta)
     .sort((a,b) => (Number(a.eta.min) - Number(b.eta.min)) || (Date.parse(a.eta.iso) - Date.parse(b.eta.iso)))[0];
