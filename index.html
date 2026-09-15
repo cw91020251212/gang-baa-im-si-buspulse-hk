@@ -440,7 +440,7 @@ body.detail-open #infoBar{display:none;}
 body.detail-open .detail-info-bar{display:block;}
 .info-bar.collapsed{left:0;right:0;bottom:var(--safe-b);width:auto;height:4px;min-height:4px;margin:0!important;border:0;border-radius:0;background:#718cff;opacity:.72;}
 .light .info-bar.collapsed{background:#4b78a1;}
-.info-bar.compact{left:10px;right:10px;bottom:calc(8px + var(--safe-b));min-height:30px;height:30px;padding:0 10px;border-radius:9px;}
+.info-bar.compact{left:0;right:0;bottom:var(--safe-b);min-height:34px;height:34px;padding:0 12px;border-radius:0;}
 .info-bar.compact .info-bar-details,.info-bar.compact .info-bar-actions,.info-bar.compact .info-bar-hint{display:none;}
 .info-bar.compact .info-bar-collapse{display:block;}
 .info-bar.compact .info-bar-main{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:0;}
@@ -456,7 +456,7 @@ body.detail-open .detail-info-bar{display:block;}
 .info-bar.collapsed .info-bar-hint{display:none;}
 .light .info-bar-collapse{color:#36556d;}
 .light .schedule-first,.light .schedule-last{color:#982b38!important;}
-.light .wide.danger{color:#982b38;border-color:#d78d99;background:#f7e1e4;}
+.light .wide.danger{color:#8f1d2c;border:1px solid #b54b5e;background:#f3d5da;font-weight:850;}
 /* A live station keeps only the inner station-content frame; the row itself is transparent. */
 .stop-row.is-live,
 .light .stop-row.is-live{background:transparent!important;border-color:transparent!important;box-shadow:none!important;}
@@ -979,27 +979,35 @@ const esc = s => String(s == null ? '' : s)
 const cssEscape = s => (globalThis.CSS && typeof CSS.escape === 'function') ? CSS.escape(String(s)) : String(s).replace(/[^a-zA-Z0-9_-]/g, ch => '\\' + ch.charCodeAt(0).toString(16) + ' ');
 let lastOK = 0, inFlight = false;
 const latestResults = new Map();
+let infoFocusId = null;
 function updateInfoBar() {
   if (!infoBar) return;
   const lines = [];
   let important = false;
+  let stoppedCount = 0;
   items.forEach(it => {
     const result = latestResults.get(uid(it));
     if (!result) { lines.push(it.route + '：資料讀取中'); return; }
     if (result.err && !result.stale) { important = true; lines.push(it.route + '：資料暫時讀取失敗'); return; }
-    if (!result.etas?.length) { important = true; lines.push(it.route + '：此站暫時冇班次資料，可能已收車'); return; }
+    if (!result.etas?.length) { stoppedCount++; if (infoFocusId === uid(it)) { important = true; lines.push(it.route + '：此站暫時冇班次資料，可能已收車'); } return; }
     const remarks = [...new Set(result.etas.map(e => e.rmk).filter(Boolean))];
     if (result.stale) { important = true; lines.push(it.route + '：網絡暫時中斷，顯示上次資料'); }
-    if (remarks.length) { important = true; lines.push(it.route + '：' + remarks.join('、')); }
+    if (infoFocusId === uid(it)) {
+      const first = result.etas[0];
+      const etaText = Number.isFinite(Number(first?.min)) ? ('下一班約 ' + Math.max(0, Number(first.min)) + ' 分鐘到站') : '';
+      if (etaText) { important = true; lines.push(it.route + '：' + etaText); }
+      if (remarks.length) { important = true; lines.push(it.route + '：' + remarks.join('、')); }
+    }
     if (alarms[uid(it)]) { important = true; lines.push(it.route + '：到站提醒已開啟'); }
     if (getoff[uid(it)]?.active) { important = true; lines.push(it.route + '：已設定落車站「' + getoff[uid(it)].targetName + '」'); }
   });
+  if (items.length && stoppedCount === items.length) { important = true; lines.unshift('你揀嘅巴士線而家全部暫時冇班次，可能已收車；可以考慮其他交通工具。'); }
   if (!items.length) lines.push('第一步：撳右下角「＋ 路線」加入你常坐嘅巴士。');
   if (routeDetailState.open && routeDetailState.item) {
     const gps = routeDetailState.gpsSource === 'eta' ? '巴士 API ETA 數據推算中' : routeDetailState.gpsSource === 'network' ? '網絡／基站定位中' : routeDetailState.gpsStatus === 'watching' ? 'GPS 定位中' : 'GPS 未開啟';
     lines.push(routeDetailState.item.route + ' 詳情：' + gps);
   }
-  if (items.length && !lines.length) lines.push('小提示：撳路線右側「☷」可睇沿途車站、ETA、GPS 跟車及落車提醒。');
+  if (items.length && !lines.length) lines.push('小提示：撳一張路線卡可以查看該線目前有用嘅 ETA 或服務提示。');
   const unique = [...new Set(lines)];
   const paint = (bar, main, details, actions, list, isImportant, allowGps, allowSetup) => {
     if (!bar) return;
@@ -1568,6 +1576,13 @@ function shell() {
   board.querySelectorAll('[data-detail-id]').forEach(button => {
     const item = items.find(x => uid(x) === button.dataset.detailId);
     if (item) button.addEventListener('click', () => openRouteDetail(item, button));
+  });
+  board.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', event => {
+      if (event.target.closest('button,a')) return;
+      const item = items.find(x => uid(x) === card.dataset.id);
+      if (item) { infoFocusId = uid(item); updateInfoBar(); }
+    });
   });
   updateFares().catch(() => {});
   updateInfoBar();
@@ -2352,7 +2367,7 @@ document.addEventListener('pointerdown', event => {
   });
 });
 const fab = document.querySelector('#fab');
-const moveFabForInfo = () => { if (!fab) return; const bar = document.body.classList.contains('detail-open') ? detailInfoBar : infoBar; const height = bar && bar.offsetParent !== null ? bar.offsetHeight : 0; fab.style.bottom = `calc(${Math.max(58, height + 16)}px + var(--safe-b))`; };
+const moveFabForInfo = () => { if (!fab) return; const bar = document.body.classList.contains('detail-open') ? detailInfoBar : infoBar; const height = bar && bar.offsetParent !== null ? bar.offsetHeight : 0; fab.style.bottom = `calc(${Math.max(76, height + 24)}px + var(--safe-b))`; };
 new ResizeObserver(moveFabForInfo).observe(infoBar); new ResizeObserver(moveFabForInfo).observe(detailInfoBar); window.addEventListener('resize', moveFabForInfo);
 const collapseInfoOnScroll = () => { [infoBar, detailInfoBar].forEach(bar => { if (bar) { bar.classList.remove('expanded'); if (bar.classList.contains('pinned')) { bar.classList.remove('collapsed'); bar.classList.add('compact'); } else if (window.scrollY > 12 || routeDetail?.scrollTop > 52) { bar.classList.remove('compact'); bar.classList.add('collapsed'); } } }); };
 window.addEventListener('scroll', collapseInfoOnScroll, { passive:true });
