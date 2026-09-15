@@ -435,6 +435,7 @@ body.light .detail-gps-panel{background:#e2e9ee;border-color:#8ea8bd}.light .det
 }
 /* Final placement: the information bar is always reachable at the viewport bottom. */
 .info-bar{position:fixed!important;left:10px;right:10px;bottom:calc(8px + var(--safe-b));z-index:80;margin:0!important;}
+.info-bar.no-info{display:none!important;}
 .detail-info-bar{display:none;}
 body.detail-open #infoBar{display:none;}
 body.detail-open .detail-info-bar{display:block;}
@@ -1005,7 +1006,7 @@ function updateInfoBar() {
   let stoppedCount = 0;
   items.forEach(it => {
     const result = latestResults.get(uid(it));
-    if (!result) { lines.push(it.route + '：資料讀取中'); return; }
+    if (!result) { return; }
     if (result.err && !result.stale) { important = true; lines.push(it.route + '：資料暫時讀取失敗'); return; }
     if (!result.etas?.length) { stoppedCount++; if (infoFocusId === uid(it)) { important = true; lines.push(it.route + '：此站暫時冇班次資料，可能已收車'); } return; }
     const remarks = [...new Set(result.etas.map(e => e.rmk).filter(Boolean))];
@@ -1020,17 +1021,18 @@ function updateInfoBar() {
     if (getoff[uid(it)]?.active) { important = true; lines.push(it.route + '：已設定落車站「' + getoff[uid(it)].targetName + '」'); }
   });
   if (items.length && stoppedCount === items.length) { important = true; lines.unshift('你揀嘅巴士線而家全部暫時冇班次，可能已收車；可以考慮其他交通工具。'); }
-  if (!items.length) lines.push('第一步：撳右下角「＋ 路線」加入你常坐嘅巴士。');
   if (routeDetailState.open && routeDetailState.item) {
     const gps = routeDetailState.gpsSource === 'eta' ? '巴士 API ETA 數據推算中' : routeDetailState.gpsSource === 'network' ? '網絡／基站定位中' : routeDetailState.gpsStatus === 'watching' ? 'GPS 定位中' : 'GPS 未開啟';
     lines.push(routeDetailState.item.route + ' 詳情：' + gps);
   }
-  if (items.length && !lines.length) lines.push('小提示：撳一張路線卡可以查看該線目前有用嘅 ETA 或服務提示。');
   const unique = [...new Set(lines)];
   const paint = (bar, main, details, actions, list, isImportant, allowGps, allowSetup) => {
     if (!bar) return;
-    main.textContent = list[0] || '暫時冇補充資訊';
-    details.innerHTML = list.slice(0, 8).map(line => '<div>' + esc(line) + '</div>').join('') || '<div>暫時冇補充資訊。</div>';
+    const hasInfo = list.length > 0;
+    bar.classList.toggle('no-info', !hasInfo);
+    if (!hasInfo) { main.textContent = ''; details.innerHTML = ''; actions.innerHTML = ''; return; }
+    main.textContent = list[0];
+    details.innerHTML = list.slice(0, 8).map(line => '<div>' + esc(line) + '</div>').join('');
     actions.innerHTML = '';
     if (allowGps) { const b = document.createElement('button'); b.type = 'button'; b.textContent = '開啟 GPS 跟車'; b.dataset.infoAction = 'gps'; actions.appendChild(b); }
     if (allowSetup) { const b = document.createElement('button'); b.type = 'button'; b.textContent = '設定路線'; b.dataset.infoAction = 'setup'; actions.appendChild(b); }
@@ -1042,7 +1044,7 @@ function updateInfoBar() {
     else if (isImportant && !bar.classList.contains('expanded')) { bar.classList.remove('collapsed'); bar.classList.add('compact'); }
   };
   paint(infoBar, infoBarMain, infoBarDetails, infoBarActions, unique, important, routeDetailState.open && routeDetailState.item && routeDetailState.gpsStatus !== 'watching', !items.length);
-  const detailLines = routeDetailState.open && routeDetailState.item ? [routeDetailState.item.route + ' 詳情：' + (routeDetailState.gpsSource === 'eta' ? '巴士 API ETA 數據推算中' : routeDetailState.gpsSource === 'network' ? '網絡／基站定位中' : routeDetailState.gpsStatus === 'watching' ? 'GPS 定位中' : 'GPS 未開啟'), routeDetailState.gpsStatus === 'watching' ? '提示：揀時間軸車站可以查看該站 ETA；已設定落車站後會顯示落車提示。' : '提示：需要跟住巴士位置，可以撳「開啟 GPS 跟車」。'] : ['詳細頁提示：撳時間軸車站可以查看該站 ETA；需要時再開啟 GPS 跟車。'];
+  const detailLines = routeDetailState.open && routeDetailState.item && (routeDetailState.gpsSource || routeDetailState.gpsStatus === 'watching') ? [routeDetailState.item.route + ' 詳情：' + (routeDetailState.gpsSource === 'eta' ? '巴士 API ETA 數據推算中' : routeDetailState.gpsSource === 'network' ? '網絡／基站定位中' : 'GPS 定位中')] : [];
   if (routeDetailState.sweepStatus === 'error') { detailLines.unshift('詳細頁部分資料暫時讀取失敗'); }
   paint(detailInfoBar, detailInfoBarMain, detailInfoBarDetails, detailInfoBarActions, detailLines, routeDetailState.sweepStatus === 'error', !!(routeDetailState.item && routeDetailState.gpsStatus !== 'watching'), false);
 }
