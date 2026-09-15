@@ -433,6 +433,18 @@ body.light .detail-gps-panel{background:#e2e9ee;border-color:#8ea8bd}.light .det
   white-space: normal;
   overflow-wrap: anywhere;
 }
+/* Final placement: the information bar is always reachable at the viewport bottom. */
+.info-bar{position:fixed!important;left:10px;right:10px;bottom:calc(8px + var(--safe-b));z-index:80;margin:0!important;}
+.detail-info-bar{display:none;}
+body.detail-open #infoBar{display:none;}
+body.detail-open .detail-info-bar{display:block;}
+.info-bar.collapsed{left:0;right:0;bottom:var(--safe-b);width:auto;height:4px;min-height:4px;margin:0!important;border:0;border-radius:0;background:#718cff;opacity:.72;}
+.light .info-bar.collapsed{background:#4b78a1;}
+/* A live station keeps only the inner station-content frame; the row itself is transparent. */
+.stop-row.is-live,
+.light .stop-row.is-live{background:transparent!important;border-color:transparent!important;box-shadow:none!important;}
+.stop-row.is-live .stop-content{background:rgba(54,224,160,.1);border:1px solid rgba(54,224,160,.5);}
+.light .stop-row.is-live .stop-content{background:rgba(216,242,227,.72);border-color:rgba(41,148,95,.45);}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
