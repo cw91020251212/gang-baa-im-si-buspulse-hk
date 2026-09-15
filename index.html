@@ -999,7 +999,7 @@ function detailGpsPanel(it, current) {
   if (state.gpsStatus === 'error') return '<div class="detail-gps-panel is-error" role="status">GPS 暫時未能定位，請確認已允許定位。<button type="button" data-detail-gps>重新開啟 GPS</button></div>';
   if (state.gpsStatus !== 'watching') return '<div class="detail-gps-panel" role="status"><span>想睇住巴士行到邊？開啟 GPS 後，時間軸會標示你而家接近嘅站。</span><button type="button" data-detail-gps>⌖ 開啟 GPS 跟車</button></div>';
   const targetNote = target?.active ? (state.gpsSeq >= target.targetSeq ? '你就嚟到喇：' + target.targetName : state.gpsSeq != null && target.targetSeq - state.gpsSeq <= 1 ? '你就嚟到喇，下一個落車：' + target.targetName : '落車站：' + target.targetName) : '';
-  const source = state.gpsSource === 'network' ? '網絡／基站定位' : 'GPS 定位', stale = state.gpsErrorCount > 0 ? ' · 訊號暫時中斷，保留最後位置' : '';
+  const source = state.gpsSource === 'network' ? '網絡／基站定位' : state.gpsSource === 'eta' ? '巴士 API ETA 數據推算' : 'GPS 定位', stale = state.gpsSource === 'eta' ? ' · GPS 暫時中斷，使用巴士數據推算' : state.gpsErrorCount > 0 ? ' · 訊號暫時中斷，保留最後位置' : '';
   return '<div class="detail-gps-panel is-live" role="status"><span><b>● GPS／網絡跟車中</b>　目前接近第 ' + esc(state.gpsSeq || current?.seq || '—') + ' 站「' + esc(current?.name || '讀取中') + '」<small>' + esc(source + stale) + (targetNote ? ' · ' + targetNote : '') + '</small></span><button type="button" data-detail-gps-stop>停止</button></div>';
 }
 function acceptDetailLocation(it, pos, source) {
@@ -1019,7 +1019,7 @@ function detailLocationError() {
   // Do not erase the last station when a bus enters a tunnel. Keep both
   // watchers alive and let a later GPS/network fix update the timeline.
   routeDetailState.gpsErrorCount = Math.min(9, routeDetailState.gpsErrorCount + 1);
-  if (!routeDetailState.gpsPosition) { routeDetailState.gpsStatus = 'error'; routeDetailState.gpsError = '定位訊號未能取得'; }
+  routeDetailState.gpsStatus = 'watching'; routeDetailState.gpsError = '定位訊號未能取得';
   renderRouteDetail();
 }
 function startRouteDetailGps(it) {
@@ -1246,6 +1246,16 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
   }
   return result.sort((a,b) => a.fromSeq - b.fromSeq);
 }
+function applyEtaPositionFallback(segments) {
+  const state = routeDetailState;
+  if (state.gpsStatus !== 'watching' || !segments.length) return;
+  const age = Date.now() - (Number(state.gpsPositionTime) || 0);
+  if (state.gpsSource === 'eta' || state.gpsErrorCount > 0 || age > 45000) {
+    const segment = segments[0];
+    state.gpsSeq = segment.fromSeq;
+    state.gpsSource = 'eta';
+  }
+}
 async function loadRouteDetailEtas(it, request, priorityStopId = routeDetailState.selectedStopId, onlyStopId = null) {
   const ordered = [...routeDetailState.stops].sort((a,b) => String(a.id) === String(priorityStopId) ? -1 : String(b.id) === String(priorityStopId) ? 1 : 0);
   const stops = onlyStopId == null ? ordered : ordered.filter(stop => String(stop.id) === String(onlyStopId));
@@ -1293,6 +1303,7 @@ function renderRouteDetail() {
   // result.  The separate time-drop estimate remains available for diagnosis,
   // but is not allowed to disagree with what the user can see.
   const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop);
+  applyEtaPositionFallback(virtualSegments);
   const markerAfter = new Map(virtualSegments.map(segment => [segment.fromSeq, '<div class="detail-inference virtual" role="status" aria-label="估計巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="virtual-bus-card"><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計巴士位置"></span></span><span class="virtual-bus-copy"><b>' + (segment.confidence === 'approaching' ? '估計巴士即將到站' : '估計巴士正在途中行駛') + '</b><small>估計位置（獨立推算）：第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間</small></span></div>']));
   const visibleBusCount = markerAfter.size;
   const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
