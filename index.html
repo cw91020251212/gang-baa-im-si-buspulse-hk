@@ -906,11 +906,11 @@ function detailVehicleStatus(stop) {
   if (!eta) return '';
   const min = eta.iso && Number.isFinite(Date.parse(eta.iso)) ? Math.round((Date.parse(eta.iso) - Date.now()) / 60000) : eta.min;
   if (!Number.isFinite(min)) return '';
-  return min <= 5 ? '<span class="detail-bus-status"><i class="near-arrival-dot" aria-hidden="true"></i><b aria-hidden="true">🚌</b> 巴士接近中</span>' : '<span class="detail-bus-status"><b aria-hidden="true">🚌</b> 下一班巴士約 ' + esc(Math.max(0, min)) + ' 分鐘後</span>';
+  return min <= 5 ? '<span class="detail-bus-status"><i class="near-arrival-dot" aria-hidden="true"></i><b aria-hidden="true">🚌</b> ' + (eta.sched ? '原定班次接近' : '巴士接近中') + '</span>' : '<span class="detail-bus-status"><b aria-hidden="true">🚌</b> 下一班巴士約 ' + esc(Math.max(0, min)) + ' 分鐘後</span>';
 }
 function detailEtaPanel(stop) {
   const state = detailEtaStateFor(stop), labels = ['即將到達','下一班','第三班'];
-  const cells = [0,1,2].map(i => { const eta = state.etas?.[i], near = i === 0 && eta && detailEtaIsNear(eta); return '<div class="detail-eta ' + (near ? 'near-arrival' : '') + '"><strong>' + (near ? '<i class="near-arrival-dot" aria-hidden="true"></i>' : '') + detailEtaLabel(eta) + '</strong><span>' + labels[i] + '</span><small>' + detailEtaClock(eta) + (detailEtaRemark(eta) ? ' · ' + esc(detailEtaRemark(eta)) : '') + '</small></div>'; }).join('');
+  const cells = [0,1,2].map(i => { const eta = state.etas?.[i], near = i === 0 && eta && detailEtaShouldShowBus(eta); return '<div class="detail-eta ' + (near ? 'near-arrival' : '') + '"><strong>' + (near ? '<i class="near-arrival-dot" aria-hidden="true"></i>' : '') + detailEtaLabel(eta) + '</strong><span>' + labels[i] + '</span><small>' + detailEtaClock(eta) + (detailEtaRemark(eta) ? ' · ' + esc(detailEtaRemark(eta)) : '') + '</small></div>'; }).join('');
   return '<div class="detail-eta-panel" aria-label="目前車站即時到站時間">' + cells + '</div>';
 }
 function detailStatusText(stop) {
@@ -933,7 +933,10 @@ function detailEtaIsNear(eta) {
   return !eta?.sched && Number.isFinite(iso) && (iso - Date.now()) <= 5 * 60000 && iso >= Date.now() - 2 * 60000;
 }
 function detailEtaShouldShowBus(eta) {
-  return detailEtaIsNear(eta) || (!eta?.sched && Number.isFinite(Number(eta?.min)) && Number(eta.min) >= 0 && Number(eta.min) <= 5);
+  // A scheduled ETA can still provide a useful visual cue when it is close.
+  // It is deliberately labelled as an estimated/scheduled approach below;
+  // this does not claim a live vehicle position or GPS fix.
+  return detailEtaIsNear(eta) || (Number.isFinite(Number(eta?.min)) && Number(eta.min) >= 0 && Number(eta.min) <= 5);
 }
 function detailEtaIsApproaching(eta) {
   const iso = eta?.iso && Date.parse(eta.iso);
@@ -1129,10 +1132,12 @@ function renderRouteDetail() {
   // A station ETA is not a vehicle count. Without a direct vehicle-position
   // feed, show at most one near-arrival marker: either the inferred segment
   // marker above, or the single nearest live ETA station.
-  const nearStation = inferred.length ? null : routeDetailState.stops
+  const nearCandidate = inferred.length ? null : routeDetailState.stops
     .map(st => ({ seq:st.seq, eta:detailEtaStateFor(st).etas?.find(e => detailEtaShouldShowBus(e)) }))
     .filter(x => x.eta)
-    .sort((a,b) => Date.parse(a.eta.iso) - Date.parse(b.eta.iso))[0]?.seq;
+    .sort((a,b) => (Number(a.eta.min) - Number(b.eta.min)) || (Date.parse(a.eta.iso) - Date.parse(b.eta.iso)))[0];
+  const nearStation = nearCandidate?.seq ?? null;
+  const nearStationEta = nearCandidate?.eta || null;
   for (let i = 0; i < routeDetailState.stops.length - 1; i++) {
     const a = detailEtaStateFor(routeDetailState.stops[i]), b = detailEtaStateFor(routeDetailState.stops[i + 1]);
     const ea = detailFirstLiveEta(routeDetailState.stops[i]);
@@ -1145,7 +1150,7 @@ function renderRouteDetail() {
     detailEtaPanel(current) +
     '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +
     '<div class="detail-section-title"><span>沿途車站列表</span><small>共 ' + routeDetailState.stops.length + ' 個站</small></div>' +
-    '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected' : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (st.seq === selected ? '，已選' : '，按兩下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-copy"><strong>' + esc(st.seq) + '　' + esc(st.name) + '</strong><small>' + esc(st.name_en || st.id) + '</small></span>' + '<span class="stop-state">' + (state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></button>'; const near = nearStation === st.seq ? '<div class="detail-between-bus" role="img" aria-label="巴士即將到站" title="巴士即將到站"><span class="bus-front-marker"></span><span class="bus-status-label">巴士接近中</span></div>' : ''; return row + near + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it);
+    '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected' : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (st.seq === selected ? '，已選' : '，按兩下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-copy"><strong>' + esc(st.seq) + '　' + esc(st.name) + '</strong><small>' + esc(st.name_en || st.id) + '</small></span>' + '<span class="stop-state">' + (state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></button>'; const near = nearStation === st.seq ? '<div class="detail-between-bus" role="img" aria-label="巴士即將到站" title="巴士即將到站"><span class="bus-front-marker"></span><span class="bus-status-label">' + (nearStationEta?.sched ? '原定班次接近' : '巴士接近中') + '</span></div>' : ''; return row + near + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it);
   updateRouteDetailCompact();
   routeDetailBody.querySelectorAll('[data-detail-stop]').forEach(button => button.addEventListener('click', () => {
     const stop = routeDetailState.stops.find(s => String(s.seq) === button.dataset.detailStop);
