@@ -906,7 +906,7 @@ const routeDetailState = {
   stopsError:null, selectedSeq:null, selectedStopId:null, etaByStop:new Map(),
   vehicleInference:{ status:'hidden', fromStopId:null, toStopId:null, reason:null, observedAt:null },
   generation:0, abortController:null, etaRequest:null, fareLabel:null, scheduleLabel:null, detailTicker:null, detailLastOK:null, sweepStatus:'idle',
-  gpsWatch:null, gpsSeq:null, gpsPosition:null, gpsStatus:'idle', gpsError:null
+  gpsWatch:null, gpsNetworkWatch:null, gpsSeq:null, gpsPosition:null, gpsPositionAccuracy:null, gpsSource:null, gpsPositionTime:0, gpsStatus:'idle', gpsError:null, gpsErrorCount:0
 };
 function beginRouteDetailGeneration() {
   routeDetailState.generation += 1;
@@ -925,8 +925,11 @@ function closeRouteDetailState() {
   routeDetailState.etaRequest = null;
   clearInterval(routeDetailState.detailTicker);
   routeDetailState.detailTicker = null;
-  if (routeDetailState.gpsWatch != null && navigator.geolocation) navigator.geolocation.clearWatch(routeDetailState.gpsWatch);
-  routeDetailState.gpsWatch = null; routeDetailState.gpsSeq = null; routeDetailState.gpsPosition = null; routeDetailState.gpsStatus = 'idle'; routeDetailState.gpsError = null;
+  if (navigator.geolocation) {
+    if (routeDetailState.gpsWatch != null) navigator.geolocation.clearWatch(routeDetailState.gpsWatch);
+    if (routeDetailState.gpsNetworkWatch != null) navigator.geolocation.clearWatch(routeDetailState.gpsNetworkWatch);
+  }
+  routeDetailState.gpsWatch = null; routeDetailState.gpsNetworkWatch = null; routeDetailState.gpsSeq = null; routeDetailState.gpsPosition = null; routeDetailState.gpsPositionAccuracy = null; routeDetailState.gpsSource = null; routeDetailState.gpsPositionTime = 0; routeDetailState.gpsStatus = 'idle'; routeDetailState.gpsError = null; routeDetailState.gpsErrorCount = 0;
 }
 function startRouteDetailTicker() {
   clearInterval(routeDetailState.detailTicker);
@@ -996,24 +999,42 @@ function detailGpsPanel(it, current) {
   if (state.gpsStatus === 'error') return '<div class="detail-gps-panel is-error" role="status">GPS 暫時未能定位，請確認已允許定位。<button type="button" data-detail-gps>重新開啟 GPS</button></div>';
   if (state.gpsStatus !== 'watching') return '<div class="detail-gps-panel" role="status"><span>想睇住巴士行到邊？開啟 GPS 後，時間軸會標示你而家接近嘅站。</span><button type="button" data-detail-gps>⌖ 開啟 GPS 跟車</button></div>';
   const targetNote = target?.active ? (state.gpsSeq >= target.targetSeq ? '你就嚟到喇：' + target.targetName : state.gpsSeq != null && target.targetSeq - state.gpsSeq <= 1 ? '你就嚟到喇，下一個落車：' + target.targetName : '落車站：' + target.targetName) : '';
-  return '<div class="detail-gps-panel is-live" role="status"><span><b>● GPS 跟車中</b>　目前接近第 ' + esc(state.gpsSeq || current?.seq || '—') + ' 站「' + esc(current?.name || '讀取中') + '」' + (targetNote ? '<small>' + esc(targetNote) + '</small>' : '') + '</span><button type="button" data-detail-gps-stop>停止</button></div>';
+  const source = state.gpsSource === 'network' ? '網絡／基站定位' : 'GPS 定位', stale = state.gpsErrorCount > 0 ? ' · 訊號暫時中斷，保留最後位置' : '';
+  return '<div class="detail-gps-panel is-live" role="status"><span><b>● GPS／網絡跟車中</b>　目前接近第 ' + esc(state.gpsSeq || current?.seq || '—') + ' 站「' + esc(current?.name || '讀取中') + '」<small>' + esc(source + stale) + (targetNote ? ' · ' + targetNote : '') + '</small></span><button type="button" data-detail-gps-stop>停止</button></div>';
+}
+function acceptDetailLocation(it, pos, source) {
+  const accuracy = Number(pos.coords.accuracy), at = Number(pos.timestamp) || Date.now(), state = routeDetailState;
+  const currentAccuracy = Number(state.gpsPositionAccuracy), currentAt = Number(state.gpsPositionTime) || 0;
+  // Prefer a more accurate fix, but allow a newer network fix to replace a
+  // stale GPS fix when the bus is indoors or has entered a tunnel.
+  if (state.gpsPosition && Number.isFinite(currentAccuracy) && Number.isFinite(accuracy) && accuracy > currentAccuracy + 35 && at < currentAt + 15000) return;
+  const nearest = nearestDetailStop(state.stops, pos.coords);
+  state.gpsPosition = pos.coords; state.gpsPositionAccuracy = Number.isFinite(accuracy) ? accuracy : null; state.gpsSource = source; state.gpsPositionTime = at; state.gpsErrorCount = 0;
+  state.gpsSeq = nearest?.stop?.seq || state.gpsSeq;
+  if (nearest?.stop) { state.selectedSeq = nearest.stop.seq; state.selectedStopId = nearest.stop.id; }
+  if (getoff[uid(it)]?.active) updateGetoff(it, pos.coords);
+  renderRouteDetail();
+}
+function detailLocationError() {
+  // Do not erase the last station when a bus enters a tunnel. Keep both
+  // watchers alive and let a later GPS/network fix update the timeline.
+  routeDetailState.gpsErrorCount = Math.min(9, routeDetailState.gpsErrorCount + 1);
+  if (!routeDetailState.gpsPosition) { routeDetailState.gpsStatus = 'error'; routeDetailState.gpsError = '定位訊號未能取得'; }
+  renderRouteDetail();
 }
 function startRouteDetailGps(it) {
-  if (routeDetailState.gpsWatch != null) return;
+  if (routeDetailState.gpsWatch != null || routeDetailState.gpsNetworkWatch != null) return;
   if (!navigator.geolocation) { routeDetailState.gpsStatus = 'error'; routeDetailState.gpsError = 'unsupported'; renderRouteDetail(); return; }
-  routeDetailState.gpsStatus = 'watching'; routeDetailState.gpsError = null; renderRouteDetail();
-  routeDetailState.gpsWatch = navigator.geolocation.watchPosition(pos => {
-    const nearest = nearestDetailStop(routeDetailState.stops, pos.coords);
-    routeDetailState.gpsPosition = pos.coords;
-    routeDetailState.gpsSeq = nearest?.stop?.seq || null;
-    if (nearest?.stop) { routeDetailState.selectedSeq = nearest.stop.seq; routeDetailState.selectedStopId = nearest.stop.id; }
-    if (getoff[uid(it)]?.active) updateGetoff(it, pos.coords);
-    renderRouteDetail();
-  }, () => { routeDetailState.gpsStatus = 'error'; routeDetailState.gpsWatch = null; renderRouteDetail(); }, { enableHighAccuracy:true, maximumAge:10000, timeout:20000 });
+  routeDetailState.gpsStatus = 'watching'; routeDetailState.gpsError = null; routeDetailState.gpsErrorCount = 0; renderRouteDetail();
+  routeDetailState.gpsWatch = navigator.geolocation.watchPosition(pos => acceptDetailLocation(it, pos, 'gps'), detailLocationError, { enableHighAccuracy:true, maximumAge:10000, timeout:20000 });
+  // Low-accuracy mode lets the browser use Wi‑Fi/cell-tower positioning when
+  // satellite GPS is blocked by the bus roof or tunnel.
+  routeDetailState.gpsNetworkWatch = navigator.geolocation.watchPosition(pos => acceptDetailLocation(it, pos, 'network'), detailLocationError, { enableHighAccuracy:false, maximumAge:15000, timeout:30000 });
 }
 function stopRouteDetailGps() {
   if (routeDetailState.gpsWatch != null && navigator.geolocation) navigator.geolocation.clearWatch(routeDetailState.gpsWatch);
-  routeDetailState.gpsWatch = null; routeDetailState.gpsStatus = 'idle'; routeDetailState.gpsSeq = null; routeDetailState.gpsPosition = null; renderRouteDetail();
+  if (routeDetailState.gpsNetworkWatch != null && navigator.geolocation) navigator.geolocation.clearWatch(routeDetailState.gpsNetworkWatch);
+  routeDetailState.gpsWatch = null; routeDetailState.gpsNetworkWatch = null; routeDetailState.gpsStatus = 'idle'; routeDetailState.gpsSeq = null; routeDetailState.gpsPosition = null; routeDetailState.gpsPositionAccuracy = null; routeDetailState.gpsSource = null; routeDetailState.gpsPositionTime = 0; routeDetailState.gpsErrorCount = 0; renderRouteDetail();
 }
 function detailVehicleStatus(stop) {
   const eta = detailEtaStateFor(stop).etas?.[0];
