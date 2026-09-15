@@ -1161,11 +1161,16 @@ function renderRouteDetail() {
   // but is not allowed to disagree with what the user can see.
   const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop);
   const markerAfter = new Map(virtualSegments.map(segment => [segment.fromSeq, '<div class="detail-inference virtual" role="status" aria-label="估計巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計巴士位置"></span><b>' + (segment.confidence === 'approaching' ? '即將到站' : '途中行駛中') + '</b><small>估計位置：第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間</small></div>']));
+  const independentNear = [];
   routeDetailState.stops.forEach(st => {
     const eta = detailEtaStateFor(st).etas?.find(e => detailEtaShouldShowBus(e));
     if (!eta || markerAfter.has(st.seq)) return;
-    markerAfter.set(st.seq, '<div class="detail-inference virtual independent" role="status" aria-label="估計巴士即將到達第 ' + esc(st.seq) + ' 站"><span class="bus-front-marker" role="img" aria-label="估計巴士位置" title="估計巴士位置"></span><b>即將到站</b><small>第 ' + esc(st.seq) + ' 站有獨立 ETA 訊號</small></div>');
+    const linked = virtualSegments.some(segment => Math.abs(Number(segment.fromSeq) - Number(st.seq)) <= 2);
+    const clustered = independentNear.some(item => Math.abs(Number(item.seq) - Number(st.seq)) <= 2);
+    if (linked || clustered) return;
+    independentNear.push({ seq:st.seq, eta });
   });
+  independentNear.forEach(item => markerAfter.set(item.seq, '<div class="detail-inference virtual independent" role="status" aria-label="估計巴士即將到達第 ' + esc(item.seq) + ' 站"><span class="bus-front-marker" role="img" aria-label="估計巴士位置" title="估計巴士位置"></span><b>即將到站</b><small>第 ' + esc(item.seq) + ' 站有獨立 ETA 訊號</small></div>'));
   const visibleBusCount = markerAfter.size;
   const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
   const nearStation = null;
