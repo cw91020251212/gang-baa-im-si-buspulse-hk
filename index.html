@@ -993,17 +993,6 @@ function estimateActiveBusWaves(stops = routeDetailState.stops, etaByStop = rout
   }
   return { count, drops, samples:rows.length };
 }
-function virtualBusSegmentSeqs(stops, count) {
-  const segments = Math.max(0, (stops?.length || 0) - 1), wanted = Math.min(Math.max(0, Number(count) || 0), segments);
-  if (!wanted || !segments) return [];
-  const seqs = [];
-  for (let i = 0; i < wanted; i++) {
-    const segmentIndex = Math.max(1, Math.min(segments, Math.round(((i + 1) * segments) / (wanted + 1))));
-    const seq = Number(stops[segmentIndex - 1]?.seq);
-    if (Number.isFinite(seq) && !seqs.includes(seq)) seqs.push(seq);
-  }
-  return seqs;
-}
 function detailOfficialServiceUrl(it) {
   const route = String(it?.route || '').toUpperCase().replace(/\s+/g, '');
   if (it?.co === 'KMB') return 'https://search.kmb.hk/KMBWebSite/?action=routesearch&route=' + encodeURIComponent(route) + '&lang=zh-hk';
@@ -1095,6 +1084,35 @@ function deriveEstimatedSegments(stops, etaByStop, now = Date.now()) {
   }
   return candidates.length ? [candidates.sort((x,y) => Math.abs(x.fromSeq - (stops[0]?.seq || 0)) - Math.abs(y.fromSeq - (stops[0]?.seq || 0)))[0]] : [];
 }
+function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
+  const byWave = new Map();
+  stops.forEach(stop => {
+    const state = etaByStop.get(String(stop.id));
+    (state?.etas || []).forEach(eta => {
+      const time = eta.iso && Date.parse(eta.iso);
+      if (!Number.isFinite(time) || eta.sched) return;
+      const wave = eta.etaSeq == null ? 1 : Number(eta.etaSeq);
+      if (!Number.isFinite(wave)) return;
+      if (!byWave.has(wave)) byWave.set(wave, []);
+      byWave.get(wave).push({ seq:Number(stop.seq), time });
+    });
+  });
+  const result = [];
+  for (const [etaSeq, points] of byWave) {
+    points.sort((a,b) => a.seq - b.seq);
+    let segment = null;
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i], b = points[i + 1];
+      if (b.time <= a.time) continue;
+      if (a.time <= now && now < b.time) { segment = { fromSeq:a.seq, toSeq:b.seq, etaSeq, confidence:'estimated' }; break; }
+    }
+    if (!segment && points[0] && points[0].time > now && points[0].time - now <= 5 * 60000 && points[1] && points[1].time > points[0].time) {
+      segment = { fromSeq:points[0].seq, toSeq:points[1].seq, etaSeq, confidence:'approaching' };
+    }
+    if (segment) result.push(segment);
+  }
+  return result.sort((a,b) => a.fromSeq - b.fromSeq);
+}
 async function loadRouteDetailEtas(it, request, priorityStopId = routeDetailState.selectedStopId, onlyStopId = null) {
   const ordered = [...routeDetailState.stops].sort((a,b) => String(a.id) === String(priorityStopId) ? -1 : String(b.id) === String(priorityStopId) ? 1 : 0);
   const stops = onlyStopId == null ? ordered : ordered.filter(stop => String(stop.id) === String(onlyStopId));
@@ -1138,13 +1156,9 @@ function renderRouteDetail() {
   const busEstimate = estimateActiveBusWaves();
   const inferred = deriveEstimatedSegments(routeDetailState.stops, routeDetailState.etaByStop);
   routeDetailState.vehicleInference = inferred[0] ? { status:'estimated', ...inferred[0] } : { status:'hidden', reason:'暫無足夠資料推算巴士位置' };
-  const markerAfter = new Map(inferred.map(segment => [segment.fromSeq, '<div class="detail-inference" role="status" aria-label="推算中：按相鄰站 ETA 推算，並非巴士 GPS。"><span class="bus-front-marker enroute" role="img" aria-label="巴士在途中" title="巴士在途中"></span><b>途中 · 推算中</b><small>按相鄰站 ETA 推算，並非巴士 GPS。</small></div>']));
-  const enRouteSeqs = new Set(inferred.map(segment => segment.fromSeq));
-  const virtualSeqs = virtualBusSegmentSeqs(routeDetailState.stops, busEstimate.count);
-  virtualSeqs.forEach(seq => {
-    if (enRouteSeqs.has(seq) || markerAfter.has(seq)) return;
-    markerAfter.set(seq, '<div class="detail-inference virtual" role="status" aria-label="約 ' + esc(busEstimate.count) + ' 部巴士：按 ETA 時間斷層法推算位置，並非 GPS。"><span class="bus-front-marker enroute" role="img" aria-label="ETA 推算巴士位置" title="ETA 推算巴士位置"></span><b>約 ' + esc(busEstimate.count) + ' 部 · ETA 推算位置</b><small>虛擬位置提示，並非巴士 GPS。</small></div>');
-  });
+  const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop);
+  const markerAfter = new Map(virtualSegments.map(segment => [segment.fromSeq, '<div class="detail-inference virtual" role="status" aria-label="巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間：按 ETA 推算，並非 GPS。"><span class="bus-front-marker enroute" role="img" aria-label="ETA 推算巴士位置" title="ETA 推算巴士位置"></span><b>' + (segment.confidence === 'approaching' ? '即將到站 · ETA 推算' : '途中 · ETA 推算') + '</b><small>約 ' + esc(busEstimate.count || virtualSegments.length) + ' 部行駛中；圖示位置按相鄰站 ETA 推算，並非巴士 GPS。</small></div>']));
+  const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
   // A station ETA is not a vehicle count. Without a direct vehicle-position
   // feed, show at most one near-arrival marker: either the inferred segment
   // marker above, or the single nearest live ETA station.

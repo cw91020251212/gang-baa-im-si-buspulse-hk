@@ -73,7 +73,7 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('#routeDetailOperator')).toHaveCSS('color', 'rgb(231, 25, 45)');
   await expect(page.locator('.detail-route-icon')).toHaveText('🚌');
   await expect(page.locator('[data-detail-refresh]')).toHaveText('立即更新全部車站 ETA');
-  await expect(page.locator('.detail-inference')).toContainText('推算中');
+  await expect(page.locator('.detail-inference')).toContainText('ETA 推算');
   await expect(page.locator('.detail-inference')).toContainText('並非巴士 GPS');
   await expect(page.locator('.detail-eta.near-arrival .near-arrival-dot').first()).toBeVisible();
   const markerCss = (await page.locator('style').allTextContents()).join('\n');
@@ -81,10 +81,10 @@ test('opens full-screen timeline and changes selected stop without side effects'
   expect(markerCss).toContain('@keyframes nearArrivalFlash');
   await expect(page.locator('.detail-bus-status')).toContainText('巴士');
   await expect(page.locator('[aria-label="巴士即將到站"]')).toHaveCount(0);
-  await expect(page.locator('[aria-label="巴士在途中"]').first()).toBeVisible();
+  await expect(page.locator('[aria-label="ETA 推算巴士位置"]').first()).toBeVisible();
   await expect(page.locator('.stop-copy small').first()).toContainText('FIRST STATION');
   await expect(page.locator('.stop-copy small').first()).not.toContainText('STOP-');
-  await expect(page.locator('.detail-inference').first()).toContainText('途中');
+  await expect(page.locator('.detail-inference').first()).toContainText('ETA 推算');
   await expect(page.locator('.detail-reverse')).toHaveCSS('position', 'absolute');
   await expect(page.locator('.detail-service')).toContainText('營運時間表及服務資料');
   await expect(page.locator('.detail-service')).toContainText('官方來源');
@@ -163,13 +163,20 @@ test('scheduled ETA within five minutes still gets a near-arrival cue', async ({
   expect(result).toEqual({ near:true, far:false });
 });
 
-test('ETA wave estimate creates distinct virtual route positions', async ({ page }) => {
+test('ETA wave estimate places virtual buses between the correct stops', async ({ page }) => {
   await page.goto('./?smoke=route-detail-virtual-buses', { waitUntil: 'domcontentloaded' });
-  const result = await page.evaluate(() => virtualBusSegmentSeqs(
-    [{ seq:1 }, { seq:2 }, { seq:3 }, { seq:4 }, { seq:5 }, { seq:6 }, { seq:7 }, { seq:8 }], 4
-  ));
-  expect(result).toHaveLength(4);
-  expect(new Set(result).size).toBe(4);
+  const result = await page.evaluate(() => {
+    const now = Date.now();
+    const stops = [{id:'a',seq:1},{id:'b',seq:2},{id:'c',seq:3},{id:'d',seq:4}];
+    const etaByStop = new Map([
+      ['a',{status:'ready',etas:[{etaSeq:1,iso:new Date(now-60000).toISOString()},{etaSeq:2,iso:new Date(now+120000).toISOString()}]}],
+      ['b',{status:'ready',etas:[{etaSeq:1,iso:new Date(now+60000).toISOString()},{etaSeq:2,iso:new Date(now-60000).toISOString()}]}],
+      ['c',{status:'ready',etas:[{etaSeq:1,iso:new Date(now+180000).toISOString()},{etaSeq:2,iso:new Date(now+60000).toISOString()}]}],
+      ['d',{status:'ready',etas:[{etaSeq:1,iso:new Date(now+240000).toISOString()},{etaSeq:2,iso:new Date(now+120000).toISOString()}]}]
+    ]);
+    return deriveVirtualBusSegments(stops, etaByStop, now);
+  });
+  expect(result.map(x => x.fromSeq)).toEqual([1,2]);
 });
 
 test('arrow keys move between stops and keep the selected ETA panel in sync', async ({ page }) => {
