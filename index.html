@@ -440,6 +440,15 @@ body.detail-open #infoBar{display:none;}
 body.detail-open .detail-info-bar{display:block;}
 .info-bar.collapsed{left:0;right:0;bottom:var(--safe-b);width:auto;height:4px;min-height:4px;margin:0!important;border:0;border-radius:0;background:#718cff;opacity:.72;}
 .light .info-bar.collapsed{background:#4b78a1;}
+.info-bar:not(.expanded){display:flex;align-items:center;gap:8px;}
+.info-bar:not(.expanded) .info-bar-main{flex:1;min-width:0;}
+.info-bar-collapse{flex:0 0 auto;border:0;background:transparent;color:inherit;font:700 10px inherit;cursor:pointer;white-space:nowrap;padding:3px 2px;}
+.info-bar.expanded .info-bar-collapse{position:absolute;right:10px;top:8px;padding:3px 6px;border:1px solid currentColor;border-radius:6px;opacity:.78;}
+.info-bar.expanded .info-bar-main{padding-right:58px;}
+.info-bar.collapsed .info-bar-collapse{display:none;}
+.info-bar.collapsed .info-bar-hint{display:none;}
+.light .info-bar-collapse{color:#36556d;}
+.light .schedule-first,.light .schedule-last{color:#982b38!important;}
 /* A live station keeps only the inner station-content frame; the row itself is transparent. */
 .stop-row.is-live,
 .light .stop-row.is-live{background:transparent!important;border-color:transparent!important;box-shadow:none!important;}
@@ -464,7 +473,7 @@ body.detail-open .detail-info-bar{display:block;}
   到站時間僅供參考，實際班次可能有變
 </div>
 <aside class="info-bar" id="infoBar" role="status" tabindex="0" aria-label="補充資訊，撳一下查看完整內容">
-  <span class="info-bar-main" id="infoBarMain">正在整理補充資訊…</span><span class="info-bar-hint">撳開</span>
+  <span class="info-bar-main" id="infoBarMain">正在整理補充資訊…</span><button class="info-bar-collapse" type="button" data-info-action="collapse" aria-label="收起資訊欄">收起</button><span class="info-bar-hint">撳開</span>
   <div class="info-bar-details" id="infoBarDetails"></div>
   <div class="info-bar-actions" id="infoBarActions"></div>
 </aside>
@@ -477,7 +486,7 @@ body.detail-open .detail-info-bar{display:block;}
   <div class="route-detail-inner">
     <div id="routeDetailBody" class="detail-loading">載入路線站點…</div>
     <aside class="info-bar detail-info-bar" id="detailInfoBar" role="status" tabindex="0" aria-label="補充資訊，撳一下查看完整內容">
-      <span class="info-bar-main" id="detailInfoBarMain">正在整理補充資訊…</span><span class="info-bar-hint">撳開</span>
+      <span class="info-bar-main" id="detailInfoBarMain">正在整理補充資訊…</span><button class="info-bar-collapse" type="button" data-info-action="collapse" aria-label="收起資訊欄">收起</button><span class="info-bar-hint">撳開</span>
       <div class="info-bar-details" id="detailInfoBarDetails"></div>
       <div class="info-bar-actions" id="detailInfoBarActions"></div>
     </aside>
@@ -993,7 +1002,7 @@ function updateInfoBar() {
     if (allowSetup) { const b = document.createElement('button'); b.type = 'button'; b.textContent = '設定路線'; b.dataset.infoAction = 'setup'; actions.appendChild(b); }
     const pinned = localStorage.getItem('buspulse.info.pinned') === '1';
     bar.classList.toggle('pinned', pinned);
-    const pin = document.createElement('button'); pin.type = 'button'; pin.textContent = pinned ? '取消長開' : '長開資訊欄'; pin.dataset.infoAction = 'pin'; actions.appendChild(pin);
+    const pin = document.createElement('button'); pin.type = 'button'; pin.textContent = pinned ? '取消長駐' : '長駐'; pin.dataset.infoAction = 'pin'; actions.appendChild(pin);
     if (isImportant && !pinned) bar.classList.remove('collapsed');
   };
   paint(infoBar, infoBarMain, infoBarDetails, infoBarActions, unique, important, routeDetailState.open && routeDetailState.item && routeDetailState.gpsStatus !== 'watching', !items.length);
@@ -2310,6 +2319,7 @@ function bindInfoBar(bar) {
       event.stopPropagation();
       if (action.dataset.infoAction === 'setup') { viewHome(); openSheet(); }
       if (action.dataset.infoAction === 'gps' && routeDetailState.item) startRouteDetailGps(routeDetailState.item);
+      if (action.dataset.infoAction === 'collapse') { bar.classList.remove('expanded'); bar.classList.add('collapsed'); }
       if (action.dataset.infoAction === 'pin') { const next = localStorage.getItem('buspulse.info.pinned') === '1' ? '0' : '1'; localStorage.setItem('buspulse.info.pinned', next); updateInfoBar(); }
       return;
     }
@@ -2321,6 +2331,9 @@ function bindInfoBar(bar) {
   bar.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); bar.click(); } });
 }
 bindInfoBar(infoBar); bindInfoBar(detailInfoBar);
+const fab = document.querySelector('#fab');
+const moveFabForInfo = () => { if (!fab) return; const bar = document.body.classList.contains('detail-open') ? detailInfoBar : infoBar; const height = bar && bar.offsetParent !== null ? bar.offsetHeight : 0; fab.style.bottom = `calc(${Math.max(12, height + 16)}px + var(--safe-b))`; };
+new ResizeObserver(moveFabForInfo).observe(infoBar); new ResizeObserver(moveFabForInfo).observe(detailInfoBar); window.addEventListener('resize', moveFabForInfo);
 const collapseInfoOnScroll = () => { [infoBar, detailInfoBar].forEach(bar => { if (bar && !bar.classList.contains('pinned')) { bar.classList.remove('expanded'); if (window.scrollY > 12 || routeDetail?.scrollTop > 52) bar.classList.add('collapsed'); else bar.classList.remove('collapsed'); } }); };
 window.addEventListener('scroll', collapseInfoOnScroll, { passive:true });
 routeDetail.addEventListener('scroll', collapseInfoOnScroll, { passive:true });
