@@ -167,7 +167,7 @@ body.light .eta .m,body.light .fare,body.light .co,body.light .detail-route-icon
 .empty p{font-size:13.5px; line-height:1.75}
 .foot{padding:20px 15px calc(20px + var(--safe-b)); text-align:center;
   font-size:10.5px; color:#3f4757; line-height:1.7}
-.info-bar{position:fixed;left:10px;right:10px;bottom:calc(76px + var(--safe-b));z-index:55;min-height:30px;padding:0 10px;border:1px solid #40516f;border-radius:9px;background:#17233aee;box-shadow:0 4px 16px rgba(0,0,0,.28);backdrop-filter:blur(12px);color:#d8e2f2;font-size:10.5px;line-height:30px;cursor:pointer;user-select:none}.info-bar-main{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.info-bar-main:before{content:'ⓘ';margin-right:5px;color:#9fb4ff}.info-bar.expanded{padding:8px 10px;line-height:1.45;cursor:default}.info-bar.expanded .info-bar-main{white-space:normal;overflow:visible;text-overflow:clip}.info-bar-details{display:none;margin-top:5px;color:#aebbd0;font-size:10.5px;line-height:1.5}.info-bar.expanded .info-bar-details{display:block}.info-bar-actions{display:none;flex-wrap:wrap;gap:6px;margin-top:7px}.info-bar.expanded .info-bar-actions{display:flex}.info-bar-actions button{border:1px solid #718cff;border-radius:7px;padding:4px 8px;background:#293b68;color:#f1f5ff;font:700 10px inherit;cursor:pointer}.info-bar-hint{margin-left:5px;color:#8fa0ba;font-size:9px}.light .info-bar{background:#edf1f3f5;color:#263b51;border-color:#9aabba;box-shadow:0 3px 13px rgba(31,55,78,.18)}.light .info-bar-main:before{color:#185d96}.light .info-bar-details{color:#52677b}.light .info-bar-actions button{background:#dce8f1;border-color:#4b78a1;color:#173853}.light .info-bar-hint{color:#667b8d}
+.info-bar{position:relative;left:auto;right:auto;bottom:auto;z-index:2;margin:10px 10px calc(12px + var(--safe-b));min-height:30px;padding:0 10px;border:1px solid #40516f;border-radius:9px;background:#17233aee;box-shadow:0 4px 16px rgba(0,0,0,.28);backdrop-filter:blur(12px);color:#d8e2f2;font-size:10.5px;line-height:30px;cursor:pointer;user-select:none}.info-bar-main{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.info-bar-main:before{content:'ⓘ';margin-right:5px;color:#9fb4ff}.info-bar.expanded{padding:8px 10px;line-height:1.45;cursor:default}.info-bar.expanded .info-bar-main{white-space:normal;overflow:visible;text-overflow:clip}.info-bar-details{display:none;margin-top:5px;color:#aebbd0;font-size:10.5px;line-height:1.5}.info-bar.expanded .info-bar-details{display:block}.info-bar-actions{display:none;flex-wrap:wrap;gap:6px;margin-top:7px}.info-bar.expanded .info-bar-actions{display:flex}.info-bar-actions button{border:1px solid #718cff;border-radius:7px;padding:4px 8px;background:#293b68;color:#f1f5ff;font:700 10px inherit;cursor:pointer}.info-bar-hint{margin-left:5px;color:#8fa0ba;font-size:9px}.light .info-bar{background:#edf1f3f5;color:#263b51;border-color:#9aabba;box-shadow:0 3px 13px rgba(31,55,78,.18)}.light .info-bar-main:before{color:#185d96}.light .info-bar-details{color:#52677b}.light .info-bar-actions button{background:#dce8f1;border-color:#4b78a1;color:#173853}.light .info-bar-hint{color:#667b8d}
 /* ---------- fab ---------- */
 .fab{
   position:fixed; right:16px; bottom:calc(18px + var(--safe-b)); z-index:60;
@@ -391,6 +391,43 @@ body.light .detail-gps-panel{background:#e2e9ee;border-color:#8ea8bd}.light .det
 .light .stop-row.is-selected,
 .light .stop-row.is-live.is-selected{background:transparent!important;border-color:transparent!important;box-shadow:none!important;}
 .light .stop-row.is-selected .stop-content{background:rgba(8,115,77,.1);border-color:rgba(8,115,77,.45);}
+
+/* Final visual override: one station content frame only. */
+.stop-row.is-selected,
+.stop-row.is-live.is-selected,
+.light .stop-row.is-selected,
+.light .stop-row.is-live.is-selected {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+}
+.stop-row.is-selected .stop-copy,
+.stop-row.is-live.is-selected .stop-copy,
+.light .stop-row.is-selected .stop-copy,
+.light .stop-row.is-live.is-selected .stop-copy {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.stop-row.is-selected .stop-content,
+.stop-row.is-live.is-selected .stop-content {
+  background: rgba(54,224,160,.1) !important;
+  border: 1px solid rgba(54,224,160,.5) !important;
+  box-shadow: none !important;
+}
+.light .stop-row.is-selected .stop-content,
+.light .stop-row.is-live.is-selected .stop-content {
+  background: rgba(8,115,77,.1) !important;
+  border-color: rgba(8,115,77,.45) !important;
+}
+.detail-action-row .detail-action {
+  width: auto;
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
