@@ -434,7 +434,7 @@ body.light .detail-gps-panel{background:#e2e9ee;border-color:#8ea8bd}.light .det
 }
 /* Final placement: the information bar is always reachable at the viewport bottom. */
 .info-bar{position:fixed!important;left:10px;right:10px;bottom:calc(8px + var(--safe-b));z-index:80;margin:0!important;}
-.info-bar.no-info:not(.user-collapsed){display:none!important;}
+.info-bar.no-info{display:flex!important;}
 .detail-info-bar{display:none;}
 body.detail-open #infoBar{display:none;}
 body.detail-open .detail-info-bar{display:block;}
@@ -1031,7 +1031,7 @@ function updateInfoBar() {
     if (!bar) return;
     const hasInfo = list.length > 0;
     bar.classList.toggle('no-info', !hasInfo);
-    if (!hasInfo) { main.textContent = ''; details.innerHTML = ''; actions.innerHTML = ''; return; }
+    if (!hasInfo) { main.textContent = ''; details.innerHTML = ''; actions.innerHTML = ''; bar.classList.remove('expanded','compact'); bar.classList.add('collapsed'); return; }
     main.textContent = list[0];
     details.innerHTML = list.slice(0, 8).map(line => '<div>' + esc(line) + '</div>').join('');
     actions.innerHTML = '';
