@@ -172,8 +172,8 @@ body.light .eta .m,body.light .fare,body.light .co,body.light .detail-route-icon
 /* ---------- fab ---------- */
 .fab{
   position:fixed; right:12px; bottom:calc(12px + var(--safe-b)); z-index:60;
-  background:linear-gradient(135deg,var(--now),#8af0c5); color:#071a14; border:none; border-radius:15px;
-  height:42px; padding:0 14px; font-size:12.5px; font-weight:800; cursor:pointer;
+  background:linear-gradient(135deg,var(--now),#8af0c5); color:#071a14; border:none; border-radius:999px;
+  height:38px; padding:0 13px; font-size:12px; font-weight:800; cursor:pointer;
   box-shadow:0 7px 24px rgba(0,229,138,.32); font-family:inherit;
 }
 .fab:active{transform:scale(.96)}
@@ -468,7 +468,7 @@ body.light .detail-gps-panel{background:#e2e9ee;border-color:#8ea8bd}.light .det
   </div>
 </section>
 
-<button class="fab" id="fab">＋ 設定路線</button>
+<button class="fab" id="fab" aria-label="加入巴士路線">＋ 路線</button>
 
 <div class="mask" id="mask"></div>
 <div class="sheet" id="sheet">
@@ -961,7 +961,7 @@ function updateInfoBar() {
     if (alarms[uid(it)]) { important = true; lines.push(it.route + '：到站提醒已開啟'); }
     if (getoff[uid(it)]?.active) { important = true; lines.push(it.route + '：已設定落車站「' + getoff[uid(it)].targetName + '」'); }
   });
-  if (!items.length) lines.push('第一步：撳右下角「＋ 設定路線」加入你常坐嘅巴士。');
+  if (!items.length) lines.push('第一步：撳右下角「＋ 路線」加入你常坐嘅巴士。');
   if (routeDetailState.open && routeDetailState.item) {
     const gps = routeDetailState.gpsSource === 'eta' ? '巴士 API ETA 數據推算中' : routeDetailState.gpsSource === 'network' ? '網絡／基站定位中' : routeDetailState.gpsStatus === 'watching' ? 'GPS 定位中' : 'GPS 未開啟';
     lines.push(routeDetailState.item.route + ' 詳情：' + gps);
@@ -1491,7 +1491,7 @@ function shell() {
   if (!items.length) {
     board.innerHTML =
       '<div class="empty"><img class="big" src="icon-192.png" alt="BusPulse HK 巴士圖標">' +
-      '<p>仲未揀路線<br>揿右下角<b>＋ 設定路線</b>加你嘅巴士</p></div>';
+      '<p>仲未揀路線<br>揿右下角<b>＋ 路線</b>加你嘅巴士</p></div>';
     updateInfoBar();
     return;
   }
