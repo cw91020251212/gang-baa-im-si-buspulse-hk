@@ -359,8 +359,9 @@ body.light .detail-inference:before{background:#d2e2ff}
 body.light .stop-bus-state{background:#d5efdf;color:#07583d}
 body.light .stop-bus-state.enroute{background:#e1ebff;color:#244f91}
 .detail-live-dock,.detail-live-dock.compact{background:color-mix(in srgb,var(--bg) 76%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
-body.light .detail-live-dock,body.light .detail-live-dock.compact{background:color-mix(in srgb,var(--bg) 76%,transparent)}
-body.light .stop-timeline{background:transparent;border-color:transparent;box-shadow:none}
+body.light .detail-live-dock,body.light .detail-live-dock.compact{background:color-mix(in srgb,var(--bg) 76%,transparent)!important}
+body.light .stop-timeline{background:transparent!important;border-color:transparent!important;box-shadow:none!important}
+body.light .stop-row.is-selected{background:rgba(8,115,77,.12)!important;border-color:rgba(8,115,77,.38)!important}
 .detail-title-operator{font-weight:900}.detail-title-operator.KMB{color:#e7192d}.detail-title-route{color:var(--tx)}
 .eta.sch{opacity:1}.eta.sch .m{font-size:21px}.eta.eta-near .m,.detail-eta.eta-near strong{color:var(--now)}.eta.eta-soon .m,.detail-eta.eta-soon strong{color:var(--soon)}.eta.eta-later .m,.detail-eta.eta-later strong{color:var(--late)}.detail-eta.scheduled small{color:var(--dim)}
 .detail-inference.virtual:before{content:none;display:none}
