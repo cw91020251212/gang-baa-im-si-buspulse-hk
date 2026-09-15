@@ -380,6 +380,17 @@ body.light .stop-row.is-selected{background:rgba(8,115,77,.12)!important;border-
 .stop-row.is-selected{background:transparent;border-color:transparent;box-shadow:none}.stop-row.is-selected .stop-copy{flex:0 1 auto;max-width:calc(100% - 95px);padding:7px 9px;border:1px solid rgba(54,224,160,.5);border-radius:9px;background:rgba(54,224,160,.1)}
 body.light .detail-gps-panel{background:#e2e9ee;border-color:#8ea8bd}.light .detail-gps-panel.is-live{background:#dcefe5;border-color:#29945f}.light .detail-gps-panel small{color:#a51f2a}.light .detail-gps-panel button{background:#d9e5f0;color:#20344b}.light .stop-row.is-live{background:#d8eee1;border-color:#268b59}.light .stop-row.is-live .stop-state{color:#0b7045}.light .schedule-first,.light .schedule-last{color:#b3222b}
 .light .stop-row.is-selected{background:transparent!important;border-color:transparent!important;box-shadow:none!important}.light .stop-row.is-selected .stop-copy{background:rgba(8,115,77,.1);border-color:rgba(8,115,77,.45)}
+
+/* Selected station: frame the complete station content, not the timeline dot. */
+.stop-row.is-selected,
+.stop-row.is-live.is-selected{background:transparent!important;border-color:transparent!important;box-shadow:none!important;outline:none!important;}
+.stop-content{min-width:0;flex:1;display:flex;align-items:center;gap:9px;padding:7px 9px;border:1px solid transparent;border-radius:12px;}
+.stop-row.is-selected .stop-content{background:rgba(54,224,160,.1);border-color:rgba(54,224,160,.5);}
+.stop-row.is-selected .stop-copy{min-width:0;flex:1;max-width:none;padding:0;border:0;border-radius:0;background:transparent;}
+.stop-row.is-selected .stop-state{flex:0 0 auto;align-self:center;}
+.light .stop-row.is-selected,
+.light .stop-row.is-live.is-selected{background:transparent!important;border-color:transparent!important;box-shadow:none!important;}
+.light .stop-row.is-selected .stop-content{background:rgba(8,115,77,.1);border-color:rgba(8,115,77,.45);}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
@@ -1365,7 +1376,7 @@ function renderRouteDetail() {
     '<div class="detail-section-title"><span>沿途車站列表</span><small>共 ' + routeDetailState.stops.length + ' 個站</small></div>' +
     '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const isLive = routeDetailState.gpsSeq === st.seq;
     const isTarget = getoff[uid(it)]?.active && getoff[uid(it)].targetSeq === st.seq;
-    const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected ' : '') + (isLive ? 'is-live ' : '') + (isTarget ? 'is-getoff-target' : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (isLive ? '，你而家接近呢度' : st.seq === selected ? '，已選' : '，按兩下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-copy"><strong>' + esc(st.seq) + '　' + esc(st.name) + '</strong><small>' + (isLive ? '你而家接近呢度' : esc(st.name_en || st.id)) + '</small></span>' + '<span class="stop-state">' + (isLive ? '你而家喺呢度' : isTarget ? '落車站' : state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></button>'; const near = nearStation === st.seq ? '<div class="detail-between-bus" role="img" aria-label="巴士即將到站" title="巴士即將到站"><span class="bus-front-marker"></span><span class="bus-status-label">' + (nearStationEta?.sched ? '原定班次接近' : '巴士接近中') + '</span></div>' : ''; return row + near + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it);
+    const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected ' : '') + (isLive ? 'is-live ' : '') + (isTarget ? 'is-getoff-target' : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (isLive ? '，你而家接近呢度' : st.seq === selected ? '，已選' : '，按兩下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-content"><span class="stop-copy"><strong>' + esc(st.seq) + '　' + esc(st.name) + '</strong><small>' + (isLive ? '你而家接近呢度' : esc(st.name_en || st.id)) + '</small></span>' + '<span class="stop-state">' + (isLive ? '你而家喺呢度' : isTarget ? '落車站' : state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></span></button>'; const near = nearStation === st.seq ? '<div class="detail-between-bus" role="img" aria-label="巴士即將到站" title="巴士即將到站"><span class="bus-front-marker"></span><span class="bus-status-label">' + (nearStationEta?.sched ? '原定班次接近' : '巴士接近中') + '</span></div>' : ''; return row + near + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it);
   updateRouteDetailCompact();
   routeDetailBody.querySelector('[data-detail-gps]')?.addEventListener('click', () => startRouteDetailGps(it));
   routeDetailBody.querySelector('[data-detail-gps-stop]')?.addEventListener('click', stopRouteDetailGps);
