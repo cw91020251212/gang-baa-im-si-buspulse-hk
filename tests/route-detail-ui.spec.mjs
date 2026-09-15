@@ -19,9 +19,9 @@ async function prepare(page) {
   await page.route('**/v1/transport/kmb/stop', route => route.fulfill({
     status: 200, contentType: 'application/json',
     body: JSON.stringify({ data: [
-      { stop:'stop-1', name_tc:'第一站', lat:'22.30', long:'114.20' },
-      { stop:'stop-2', name_tc:'第二站', lat:'22.31', long:'114.21' },
-      { stop:'stop-3', name_tc:'第三站', lat:'22.32', long:'114.22' }
+      { stop:'stop-1', name_tc:'第一站', name_en:'FIRST STATION', lat:'22.30', long:'114.20' },
+      { stop:'stop-2', name_tc:'第二站', name_en:'SECOND STATION', lat:'22.31', long:'114.21' },
+      { stop:'stop-3', name_tc:'第三站', name_en:'THIRD STATION', lat:'22.32', long:'114.22' }
     ] })
   }));
   await page.route('**/v1/transport/kmb/route-eta/**', route => {
@@ -33,7 +33,7 @@ async function prepare(page) {
         { seq:1, dir:'O', eta:new Date(now + 15*60*1000).toISOString(), eta_seq:2 },
         { seq:2, dir:'O', eta:new Date(now + 3*60*1000).toISOString(), eta_seq:1 },
         { seq:2, dir:'O', eta:new Date(now + 18*60*1000).toISOString(), eta_seq:2 },
-        { seq:3, dir:'O', eta:new Date(now + 12*60*1000).toISOString(), eta_seq:1 }
+        { seq:3, dir:'O', eta:new Date(now + 30*60*1000).toISOString(), eta_seq:1 }
       ] })
     });
   });
@@ -67,6 +67,11 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('.detail-bus-status')).toContainText('巴士');
   await expect(page.locator('[aria-label="巴士即將到站"]').first()).toBeVisible();
   await expect(page.locator('[aria-label="巴士在途中"]').first()).toBeVisible();
+  await expect(page.locator('.stop-copy small').first()).toContainText('FIRST STATION');
+  await expect(page.locator('.stop-copy small').first()).not.toContainText('STOP-');
+  await expect(page.locator('.detail-between-bus').first()).toBeVisible();
+  await expect(page.locator('.detail-between-bus').first()).toContainText('巴士接近中');
+  await expect(page.locator('.detail-reverse')).toHaveCSS('position', 'absolute');
   await expect(page.locator('.detail-service')).toContainText('營運時間表及服務資料');
   await expect(page.locator('.detail-service')).toContainText('官方來源');
   await expect(page.locator('.detail-service-link')).toHaveAttribute('href', /search\.kmb\.hk/);

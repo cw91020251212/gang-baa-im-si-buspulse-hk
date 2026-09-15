@@ -238,13 +238,14 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
 .route-detail{background:var(--bg-deep);}
 .route-detail-head{background:var(--bg);border-bottom:1px solid var(--line);}
 .route-detail-inner{max-width:720px;padding:10px 12px 32px;}
-.detail-summary{padding:12px 14px 11px;border:0;border-radius:18px;background:var(--card);box-shadow:0 3px 16px rgba(0,0,0,.08);margin-bottom:8px;}
+.detail-summary{position:relative;padding:12px 14px 11px;border:0;border-radius:18px;background:var(--card);box-shadow:0 3px 16px rgba(0,0,0,.08);margin-bottom:8px;}
 .detail-route-line{display:flex;align-items:center;gap:9px;min-width:0;font-size:18px;line-height:1.2;white-space:nowrap;}
 .detail-route-line > span:last-child{overflow:hidden;text-overflow:ellipsis;}
 .detail-route-line .tag{flex:0 0 auto;padding:7px 10px;border-radius:10px;font-size:16px;line-height:1;}
-.detail-meta{gap:4px 10px;margin-top:8px;font-size:11px;line-height:1.25;}
+.detail-meta{gap:4px 10px;margin-top:8px;padding-right:48px;font-size:11px;line-height:1.25;}
 .detail-meta span{white-space:nowrap;}
-.detail-reverse{float:right;margin:-25px 0 0;padding:6px 9px;border-radius:999px;font-size:10px;}
+.detail-reverse{position:absolute;right:12px;bottom:11px;width:34px;height:28px;margin:0;padding:0;border-radius:999px;font-size:0;line-height:1;}
+.detail-reverse:before{content:'↔';font-size:16px;}
 .detail-live-dock{top:57px;margin:0 -4px 7px;padding:5px 4px 8px;background:color-mix(in srgb,var(--bg-deep) 98%,transparent);}
 .detail-live-dock .detail-current{padding:9px 12px;margin:0 0 6px;border-radius:12px;background:var(--card);border-color:var(--line);}
 .detail-current-label{font-size:10px;}
@@ -267,7 +268,9 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
 .detail-service summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 13px;cursor:pointer;font-size:13px;font-weight:850;list-style:none;}
 .detail-service summary::-webkit-details-marker{display:none}.detail-service summary:after{content:'＋';color:var(--faint);font-size:17px}.detail-service[open] summary:after{content:'－'}.detail-service-body{padding:0 13px 12px;border-top:1px solid var(--line)}
 .detail-service-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}.detail-service-item{padding:9px 10px;border-radius:10px;background:var(--card2);font-size:11px}.detail-service-item b{display:block;color:var(--tx);font-size:12px}.detail-service-item span{display:block;color:var(--faint);margin-top:3px;line-height:1.35}.detail-service-note{margin:9px 0 0;color:var(--faint);font-size:10.5px;line-height:1.45}.detail-service-note strong{color:var(--dim)}
+.detail-timetable-head{margin-top:10px;padding:9px 10px;border-radius:10px;background:var(--card2);font-size:11px;color:var(--dim)}.detail-timetable-head b{color:var(--now)}.detail-timetable{display:grid;gap:6px;margin-top:7px}.detail-timetable-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;background:var(--card2);font-size:11px}.detail-timetable-row.current{outline:1px solid var(--now);background:rgba(54,224,160,.1)}.detail-timetable-row b{color:var(--tx)}.detail-timetable-row span{font-size:15px;font-weight:900;color:var(--tx)}.detail-timetable-row small{color:var(--faint)}.detail-timetable-empty{padding:10px;color:var(--faint);font-size:11px;background:var(--card2);border-radius:10px;margin-top:7px}
 .detail-service-link{display:inline-block;margin-top:9px;color:var(--now);font-size:11px;font-weight:800;text-decoration:none}.detail-service-link:hover{text-decoration:underline}
+.detail-between-bus{position:relative;height:26px;margin:0 0 0 0;z-index:2}.detail-between-bus .bus-front-marker{left:25px;top:50%;}.detail-between-bus .bus-status-label{position:absolute;left:43px;top:50%;transform:translateY(-50%);padding:4px 9px;border-radius:999px;background:rgba(54,224,160,.12);color:var(--now);font-size:10px;font-weight:800;white-space:nowrap}.detail-inference .bus-front-marker{width:18px;height:13px}
 .detail-section-title{margin:13px 3px 6px;font-size:13px;}
 .stop-timeline{padding-top:0;background:var(--card);border-radius:16px;padding:5px 7px 12px;box-shadow:0 3px 14px rgba(0,0,0,.06);}
 .stop-timeline:before{left:25px;top:24px;bottom:25px;}
@@ -276,6 +279,7 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
 .stop-copy small{margin-top:3px;line-height:1.2;}
 .stop-dot{flex-basis:42px;}
 .stop-dot:after{width:14px;height:14px;background:var(--card);}
+.stop-dot .bus-front-marker{display:none;}
 .stop-row.is-selected .stop-dot:after{width:18px;height:18px;}
 .stop-copy strong{font-size:14px;}
 .stop-copy small{font-size:10px;margin-top:3px;}
@@ -922,6 +926,9 @@ function detailEtaIsNear(eta) {
   const iso = eta?.iso && Date.parse(eta.iso);
   return !eta?.sched && Number.isFinite(iso) && (iso - Date.now()) <= 5 * 60000 && iso >= Date.now() - 2 * 60000;
 }
+function detailEtaShouldShowBus(eta) {
+  return detailEtaIsNear(eta) || (!eta?.sched && Number.isFinite(Number(eta?.min)) && Number(eta.min) >= 0 && Number(eta.min) <= 5);
+}
 function detailEtaIsApproaching(eta) {
   const iso = eta?.iso && Date.parse(eta.iso);
   return !eta?.sched && Number.isFinite(iso) && (iso - Date.now()) <= 15 * 60000 && iso >= Date.now() - 2 * 60000;
@@ -946,10 +953,17 @@ function detailOfficialServiceUrl(it) {
   if (it?.co === 'CTB') return 'https://www.citybus.com.hk/routesearch/';
   return 'https://data.gov.hk/tc-data/dataset/hk-td-tis_15-gmb';
 }
+function detailClock(iso) {
+  const d = new Date(iso); return Number.isFinite(d.getTime()) ? d.toLocaleTimeString('zh-HK', { hour:'2-digit', minute:'2-digit', hour12:false }) : '—';
+}
 function detailServiceBlock(it) {
   const url = detailOfficialServiceUrl(it);
   const provider = it?.co === 'KMB' ? '九巴官方路線及時間表' : it?.co === 'CTB' ? '城巴官方路線搜尋' : '運輸署專線小巴資料';
-  return '<details class="detail-service"><summary>營運時間表及服務資料 <small>官方來源</small></summary><div class="detail-service-body"><div class="detail-service-grid"><div class="detail-service-item"><b>即時班次</b><span>以上方三格 ETA 為準</span></div><div class="detail-service-item"><b>首班／尾班</b><span>此頁不自行推算</span></div></div><p class="detail-service-note"><strong>官方時間表：</strong>請開啟 ' + esc(provider) + ' 查看星期、特別班次及班距。官方頁面內容可能按日期或路線調整。</p><a class="detail-service-link" href="' + esc(url) + '" target="_blank" rel="noopener">開啟官方時間表 ↗</a></div></details>';
+  const stop = routeDetailState.stops.find(s => s.seq === routeDetailState.selectedSeq) || routeDetailState.stops[0];
+  const etas = (stop ? (detailEtaStateFor(stop).etas || []) : []).filter(e => e.iso && !e.sched).slice(0, 3);
+  const now = detailClock(new Date().toISOString());
+  const rows = etas.length ? etas.map((e, i) => '<div class="detail-timetable-row ' + (!i ? 'current' : '') + '"><b>' + (i === 0 ? '即將一班' : '之後一班 ' + i) + '</b><span>' + esc(detailClock(e.iso)) + '</span><small>' + esc(detailEtaLabel(e)) + '</small></div>').join('') : '<div class="detail-timetable-empty">此站暫未收到即時班次</div>';
+  return '<details class="detail-service"><summary>營運時間表及服務資料 <small>官方來源 · 按目前時間更新</small></summary><div class="detail-service-body"><div class="detail-timetable-head">目前時間 <b>' + esc(now) + '</b> · ' + esc(stop?.name || '所選車站') + '</div><div class="detail-timetable" aria-live="polite">' + rows + '</div><p class="detail-service-note"><strong>即時資料：</strong>以上係此站目前收到嘅官方 ETA，畫面會隨時間及更新結果改變；首班／尾班請以官方時間表為準。</p><a class="detail-service-link" href="' + esc(url) + '" target="_blank" rel="noopener">開啟 ' + esc(provider) + ' ↗</a></div></details>';
 }
 function detailFareValue(it, fares) {
   const routeSeq = it.co === 'GMB' ? (+it.route_seq || 1) : (it.dir === 'I' ? 2 : 1);
@@ -1066,7 +1080,7 @@ function renderRouteDetail() {
     detailEtaPanel(current) +
     '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +
     '<div class="detail-section-title"><span>沿途車站列表</span><small>共 ' + routeDetailState.stops.length + ' 個站</small></div>' +
-    '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected' : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (st.seq === selected ? '，已選' : '，按兩下查看') + '"><span class="stop-dot ' + ((detailEtaIsNear(next) || enRouteSeqs.has(st.seq)) ? 'has-bus' : '') + '" aria-hidden="true"><span class="bus-front-marker ' + (enRouteSeqs.has(st.seq) ? 'enroute' : '') + '" role="img" aria-label="' + (detailEtaIsNear(next) ? '巴士即將到站' : '巴士在途中') + '" title="' + (detailEtaIsNear(next) ? '巴士即將到站' : '巴士在途中') + '"></span></span><span class="stop-copy"><strong>' + esc(st.seq) + '　' + esc(st.name) + '</strong><small>' + esc(st.id) + '</small></span>' + '<span class="stop-state">' + (state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></button>'; return row + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it);
+    '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected' : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (st.seq === selected ? '，已選' : '，按兩下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-copy"><strong>' + esc(st.seq) + '　' + esc(st.name) + '</strong><small>' + esc(st.name_en || st.id) + '</small></span>' + '<span class="stop-state">' + (state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></button>'; const near = detailEtaShouldShowBus(next) && !enRouteSeqs.has(st.seq) ? '<div class="detail-between-bus" role="img" aria-label="巴士即將到站" title="巴士即將到站"><span class="bus-front-marker"></span><span class="bus-status-label">巴士接近中</span></div>' : ''; return row + near + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it);
   updateRouteDetailCompact();
   routeDetailBody.querySelectorAll('[data-detail-stop]').forEach(button => button.addEventListener('click', () => {
     const stop = routeDetailState.stops.find(s => String(s.seq) === button.dataset.detailStop);
