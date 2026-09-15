@@ -936,7 +936,8 @@ function detailEtaIsNear(eta) {
 function detailEtaShouldShowBus(eta) {
   // A scheduled ETA can still provide a useful visual cue when it is close.
   // It is deliberately labelled as an estimated/scheduled approach below;
-  // this does not claim a live vehicle position or GPS fix.
+  // Keep the visual cue useful; the service section contains the single
+  // methodology note rather than repeating a disclaimer on every marker.
   return detailEtaIsNear(eta) || (Number.isFinite(Number(eta?.min)) && Number(eta.min) >= 0 && Number(eta.min) <= 5);
 }
 function detailEtaIsApproaching(eta) {
@@ -1011,7 +1012,7 @@ function detailServiceBlock(it) {
   const now = detailClock(new Date().toISOString()), schedule = routeDetailState.scheduleLabel;
   const scheduleText = schedule?.error ? '官方時間表暫時讀取失敗' : schedule ? ('首班車 ' + scheduleClock(schedule.first) + ' · 尾班車 ' + scheduleClock(schedule.last) + (schedule.current?.freq ? ' · 當前時段 ' + esc(schedule.current.freq) + ' 分鐘／班' : '')) : '首班車／尾班車讀取中';
   const rows = etas.length ? etas.map((e, i) => '<div class="detail-timetable-row ' + (!i ? 'current' : '') + '"><b>' + (i === 0 ? '即將一班' : '之後一班 ' + i) + '</b><span>' + esc(detailClock(e.iso)) + '</span><small>' + esc(detailEtaLabel(e)) + '</small></div>').join('') : '<div class="detail-timetable-empty">此站暫未收到即時班次</div>';
-  return '<details class="detail-service"><summary>營運時間表及服務資料 <small>官方來源 · 按目前時間更新</small></summary><div class="detail-service-body"><div class="detail-timetable-head">目前時間 <b>' + esc(now) + '</b> · ' + esc(stop?.name || '所選車站') + '</div><div class="detail-timetable-head"><b>' + scheduleText + '</b></div><div class="detail-timetable" aria-live="polite">' + rows + '</div><p class="detail-service-note"><strong>即時資料：</strong>以上係此站目前收到嘅官方 ETA，畫面會隨時間及更新結果改變；首班／尾班請以官方時間表為準。</p><p class="detail-service-note"><strong>ETA 時間斷層法：</strong>上方「ETA 推算行駛中」係按沿線第一班 ETA 的時間回流估算，代表可能行車波段，並非車輛 GPS 數據。</p><a class="detail-service-link" href="' + esc(url) + '" target="_blank" rel="noopener">開啟 ' + esc(provider) + ' ↗</a></div></details>';
+  return '<details class="detail-service"><summary>營運時間表及服務資料 <small>官方來源 · 按目前時間更新</small></summary><div class="detail-service-body"><div class="detail-timetable-head">目前時間 <b>' + esc(now) + '</b> · ' + esc(stop?.name || '所選車站') + '</div><div class="detail-timetable-head"><b>' + scheduleText + '</b></div><div class="detail-timetable" aria-live="polite">' + rows + '</div><p class="detail-service-note"><strong>即時資料：</strong>以上係此站目前收到嘅官方 ETA，畫面會隨時間及更新結果改變；首班／尾班請以官方時間表為準。</p><p class="detail-service-note"><strong>巴士位置估計：</strong>系統會用沿線 ETA 時間斷層及各班 ETA 順序，估計現時有幾多個行駛波段，以及每個波段大約位於邊兩個站之間；板頭數字與下方已顯示嘅估計位置同步更新。</p><a class="detail-service-link" href="' + esc(url) + '" target="_blank" rel="noopener">開啟 ' + esc(provider) + ' ↗</a></div></details>';
 }
 function detailScheduleSummary() {
   const s = routeDetailState.scheduleLabel;
@@ -1161,7 +1162,7 @@ function renderRouteDetail() {
   // result.  The separate time-drop estimate remains available for diagnosis,
   // but is not allowed to disagree with what the user can see.
   const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop);
-  const markerAfter = new Map(virtualSegments.map(segment => [segment.fromSeq, '<div class="detail-inference virtual" role="status" aria-label="巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間：按 ETA 推算，並非 GPS。"><span class="bus-front-marker enroute" role="img" aria-label="ETA 推算巴士位置" title="ETA 推算巴士位置"></span><b>' + (segment.confidence === 'approaching' ? '即將到站 · ETA 推算' : '途中 · ETA 推算') + '</b><small>沿線 ETA 位置提示；圖示位置按相鄰站 ETA 推算，並非巴士 GPS。</small></div>']));
+  const markerAfter = new Map(virtualSegments.map(segment => [segment.fromSeq, '<div class="detail-inference virtual" role="status" aria-label="估計巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計巴士位置"></span><b>' + (segment.confidence === 'approaching' ? '即將到站' : '途中行駛中') + '</b><small>估計位置：第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間</small></div>']));
   const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
   const nearStation = null;
   const nearStationEta = null;
