@@ -119,6 +119,22 @@ test('detail fare lookup follows direction and never invents first or last servi
   expect(result.missing).toBe('官方資料未提供');
 });
 
+test('ETA time-drop estimator counts monotonic waves and one-minute drops', async ({ page }) => {
+  await page.goto('./?smoke=route-detail-estimator', { waitUntil: 'domcontentloaded' });
+  const result = await page.evaluate(() => {
+    const stops = [{ id:'a', seq:1 }, { id:'b', seq:2 }, { id:'c', seq:3 }, { id:'d', seq:4 }];
+    const base = Date.now() + 60000;
+    const etaByStop = new Map([
+      ['a', { status:'ready', etas:[{ iso:new Date(base).toISOString(), etaSeq:1 }] }],
+      ['b', { status:'ready', etas:[{ iso:new Date(base + 180000).toISOString(), etaSeq:1 }] }],
+      ['c', { status:'ready', etas:[{ iso:new Date(base - 60000).toISOString(), etaSeq:1 }] }],
+      ['d', { status:'ready', etas:[{ iso:new Date(base + 120000).toISOString(), etaSeq:1 }] }]
+    ]);
+    return estimateActiveBusWaves(stops, etaByStop);
+  });
+  expect(result).toMatchObject({ count:2, drops:1, samples:4 });
+});
+
 test('arrow keys move between stops and keep the selected ETA panel in sync', async ({ page }) => {
   await prepare(page);
   await page.locator('[data-detail-id]').click();
