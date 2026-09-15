@@ -434,7 +434,7 @@ body.light .detail-gps-panel{background:#e2e9ee;border-color:#8ea8bd}.light .det
 }
 /* Final placement: the information bar is always reachable at the viewport bottom. */
 .info-bar{position:fixed!important;left:10px;right:10px;bottom:calc(8px + var(--safe-b));z-index:80;margin:0!important;}
-.info-bar.no-info{display:none!important;}
+.info-bar.no-info:not(.user-collapsed){display:none!important;}
 .detail-info-bar{display:none;}
 body.detail-open #infoBar{display:none;}
 body.detail-open .detail-info-bar{display:block;}
@@ -1042,7 +1042,7 @@ function updateInfoBar() {
     bar.classList.toggle('pinned', pinned);
     const pin = document.createElement('button'); pin.type = 'button'; pin.textContent = pinned ? '取消長駐' : '長駐'; pin.dataset.infoAction = 'pin'; actions.appendChild(pin);
     if (pinned) { bar.classList.remove('collapsed'); if (!bar.classList.contains('expanded')) bar.classList.add('compact'); }
-    else if (isImportant && !bar.classList.contains('expanded')) { bar.classList.remove('collapsed'); bar.classList.add('compact'); }
+    else if (isImportant && !bar.classList.contains('expanded') && !bar.classList.contains('user-collapsed')) { bar.classList.remove('collapsed'); bar.classList.add('compact'); }
   };
   paint(infoBar, infoBarMain, infoBarDetails, infoBarActions, unique, important, routeDetailState.open && routeDetailState.item && routeDetailState.gpsStatus !== 'watching', !items.length);
   const detailLines = routeDetailState.open && routeDetailState.item && (routeDetailState.gpsSource || routeDetailState.gpsStatus === 'watching') ? [routeDetailState.item.route + ' 詳情：' + (routeDetailState.gpsSource === 'eta' ? '巴士 API ETA 數據推算中' : routeDetailState.gpsSource === 'network' ? '網絡／基站定位中' : 'GPS 定位中')] : [];
@@ -2360,16 +2360,16 @@ function bindInfoBar(bar) {
       if (action.dataset.infoAction === 'setup') { viewHome(); openSheet(); }
       if (action.dataset.infoAction === 'gps' && routeDetailState.item) startRouteDetailGps(routeDetailState.item);
       if (action.dataset.infoAction === 'text-size') { toggleTextSize(); }
-      if (action.dataset.infoAction === 'collapse') { bar.classList.remove('expanded','compact'); bar.classList.add('collapsed'); }
+      if (action.dataset.infoAction === 'collapse') { bar.classList.remove('expanded','compact'); bar.classList.add('collapsed','user-collapsed'); }
       if (action.dataset.infoAction === 'pin') { const next = localStorage.getItem('buspulse.info.pinned') === '1' ? '0' : '1'; localStorage.setItem('buspulse.info.pinned', next); updateInfoBar(); }
       return;
     }
-    if (bar.classList.contains('collapsed')) { bar.classList.remove('collapsed'); bar.classList.add('compact'); }
+    if (bar.classList.contains('collapsed')) { bar.classList.remove('collapsed','user-collapsed'); bar.classList.add('compact'); }
     else if (bar.classList.contains('compact')) { bar.classList.remove('compact'); bar.classList.add('expanded'); }
     else { bar.classList.remove('expanded'); bar.classList.add('compact'); }
     bar.setAttribute('aria-label', bar.classList.contains('expanded') ? '完整補充資訊，撳一下收合成一行' : '補充資訊，撳一下查看');
   });
-  bar.addEventListener('pointerdown', () => { longPress = setTimeout(() => { suppressClick = true; bar.classList.remove('expanded','compact'); bar.classList.add('collapsed'); }, 650); });
+  bar.addEventListener('pointerdown', () => { longPress = setTimeout(() => { suppressClick = true; bar.classList.remove('expanded','compact'); bar.classList.add('collapsed','user-collapsed'); }, 650); });
   ['pointerup','pointercancel','pointerleave'].forEach(type => bar.addEventListener(type, () => { if (longPress) { clearTimeout(longPress); longPress = null; } }));
   bar.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); bar.click(); } });
 }
