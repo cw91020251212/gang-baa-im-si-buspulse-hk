@@ -1091,7 +1091,7 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
     const state = etaByStop.get(String(stop.id));
     (state?.etas || []).forEach(eta => {
       const time = eta.iso && Date.parse(eta.iso);
-      if (!Number.isFinite(time) || eta.sched) return;
+      if (!Number.isFinite(time)) return;
       const wave = eta.etaSeq == null ? 1 : Number(eta.etaSeq);
       if (!Number.isFinite(wave)) return;
       if (!byWave.has(wave)) byWave.set(wave, []);
@@ -1157,23 +1157,14 @@ function renderRouteDetail() {
   const busEstimate = estimateActiveBusWaves();
   const inferred = deriveEstimatedSegments(routeDetailState.stops, routeDetailState.etaByStop);
   routeDetailState.vehicleInference = inferred[0] ? { status:'estimated', ...inferred[0] } : { status:'hidden', reason:'暫無足夠資料推算巴士位置' };
-  // The header wave estimate and visible ETA segments answer different
-  // questions.  A fifth visible ETA can coexist with a four-wave estimate
-  // (for example a near-stop signal not captured by the route-wide drops),
-  // so do not force the two counts to match.  Deduplication still happens by
-  // segment key in markerAfter below.
+  // The header and timeline use one synchronized, deduplicated ETA-segment
+  // result.  The separate time-drop estimate remains available for diagnosis,
+  // but is not allowed to disagree with what the user can see.
   const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop);
   const markerAfter = new Map(virtualSegments.map(segment => [segment.fromSeq, '<div class="detail-inference virtual" role="status" aria-label="巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間：按 ETA 推算，並非 GPS。"><span class="bus-front-marker enroute" role="img" aria-label="ETA 推算巴士位置" title="ETA 推算巴士位置"></span><b>' + (segment.confidence === 'approaching' ? '即將到站 · ETA 推算' : '途中 · ETA 推算') + '</b><small>沿線 ETA 位置提示；圖示位置按相鄰站 ETA 推算，並非巴士 GPS。</small></div>']));
   const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
-  // A station ETA is not a vehicle count. Without a direct vehicle-position
-  // feed, show at most one near-arrival marker: either the inferred segment
-  // marker above, or the single nearest live ETA station.
-  const nearCandidate = (inferred.length || virtualSegments.length) ? null : routeDetailState.stops
-    .map(st => ({ seq:st.seq, eta:detailEtaStateFor(st).etas?.find(e => detailEtaShouldShowBus(e)) }))
-    .filter(x => x.eta)
-    .sort((a,b) => (Number(a.eta.min) - Number(b.eta.min)) || (Date.parse(a.eta.iso) - Date.parse(b.eta.iso)))[0];
-  const nearStation = nearCandidate?.seq ?? null;
-  const nearStationEta = nearCandidate?.eta || null;
+  const nearStation = null;
+  const nearStationEta = null;
   for (let i = 0; i < routeDetailState.stops.length - 1; i++) {
     const a = detailEtaStateFor(routeDetailState.stops[i]), b = detailEtaStateFor(routeDetailState.stops[i + 1]);
     const ea = detailFirstLiveEta(routeDetailState.stops[i]);
@@ -1181,7 +1172,7 @@ function renderRouteDetail() {
     if (ea && eb && detailEtaIsApproaching(ea) && Date.parse(eb.iso) > Date.parse(ea.iso) && Date.parse(eb.iso) - Date.parse(ea.iso) <= 20 * 60000) enRouteSeqs.add(routeDetailState.stops[i].seq);
   }
   routeDetailBody.innerHTML =
-    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><span>共 ' + routeDetailState.stops.length + ' 個站</span><span title="按 ETA 時間斷層法推算">ETA 推算行駛中：' + (busEstimate.samples ? busEstimate.count + ' 部' : '讀取中') + '</span><span>' + detailEtaCoverageText() + '</span>' + detailScheduleSummary() + '<span>全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
+    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><span>共 ' + routeDetailState.stops.length + ' 個站</span><span title="按同一輪 ETA 逐段推算">ETA 推算行駛中：' + (routeDetailState.etaByStop.size ? virtualSegments.length + ' 部' : '讀取中') + '</span><span>' + detailEtaCoverageText() + '</span>' + detailScheduleSummary() + '<span>全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
     '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
     detailEtaPanel(current) +
     '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +
