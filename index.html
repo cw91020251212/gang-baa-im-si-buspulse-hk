@@ -241,7 +241,8 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
 .detail-summary{position:relative;padding:12px 14px 11px;border:0;border-radius:18px;background:var(--card);box-shadow:0 3px 16px rgba(0,0,0,.08);margin-bottom:8px;}
 .detail-route-line{display:flex;align-items:center;gap:9px;min-width:0;font-size:18px;line-height:1.2;white-space:nowrap;}
 .detail-route-line > span:last-child{overflow:hidden;text-overflow:ellipsis;}
-.detail-route-line .tag{flex:0 0 auto;padding:7px 10px;border-radius:10px;font-size:16px;line-height:1;}
+.detail-route-line .tag{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;padding:7px 10px;border-radius:10px;font-size:16px;line-height:1;}
+.detail-route-icon{font-size:15px;line-height:1;filter:saturate(1.15);}
 .detail-meta{gap:4px 10px;margin-top:8px;padding-right:48px;font-size:11px;line-height:1.25;}
 .detail-meta span{white-space:nowrap;}
 .detail-reverse{position:absolute;right:12px;bottom:11px;width:34px;height:28px;margin:0;padding:0;border-radius:999px;font-size:0;line-height:1;}
@@ -270,7 +271,10 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
 .detail-service-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}.detail-service-item{padding:9px 10px;border-radius:10px;background:var(--card2);font-size:11px}.detail-service-item b{display:block;color:var(--tx);font-size:12px}.detail-service-item span{display:block;color:var(--faint);margin-top:3px;line-height:1.35}.detail-service-note{margin:9px 0 0;color:var(--faint);font-size:10.5px;line-height:1.45}.detail-service-note strong{color:var(--dim)}
 .detail-timetable-head{margin-top:10px;padding:9px 10px;border-radius:10px;background:var(--card2);font-size:11px;color:var(--dim)}.detail-timetable-head b{color:var(--now)}.detail-timetable{display:grid;gap:6px;margin-top:7px}.detail-timetable-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;background:var(--card2);font-size:11px}.detail-timetable-row.current{outline:1px solid var(--now);background:rgba(54,224,160,.1)}.detail-timetable-row b{color:var(--tx)}.detail-timetable-row span{font-size:15px;font-weight:900;color:var(--tx)}.detail-timetable-row small{color:var(--faint)}.detail-timetable-empty{padding:10px;color:var(--faint);font-size:11px;background:var(--card2);border-radius:10px;margin-top:7px}
 .detail-service-link{display:inline-block;margin-top:9px;color:var(--now);font-size:11px;font-weight:800;text-decoration:none}.detail-service-link:hover{text-decoration:underline}
-.detail-between-bus{position:relative;height:26px;margin:0 0 0 0;z-index:2}.detail-between-bus .bus-front-marker{left:25px;top:50%;}.detail-between-bus .bus-status-label{position:absolute;left:43px;top:50%;transform:translateY(-50%);padding:4px 9px;border-radius:999px;background:rgba(54,224,160,.12);color:var(--now);font-size:10px;font-weight:800;white-space:nowrap}.detail-inference .bus-front-marker{width:18px;height:13px}
+.detail-between-bus{position:relative;height:26px;margin:0 0 0 0;z-index:2}.detail-between-bus .bus-front-marker{left:25px;top:50%;}.detail-between-bus .bus-status-label{position:absolute;left:43px;top:50%;transform:translateY(-50%);padding:4px 9px;border-radius:999px;background:rgba(54,224,160,.12);color:var(--now);font-size:10px;font-weight:800;white-space:nowrap}.detail-inference .bus-front-marker{width:18px;height:13px}.detail-between-bus .bus-front-marker,.detail-inference .bus-front-marker{animation:busBounce 1.15s ease-in-out infinite;transform:translate(-50%,-50%)}
+.near-arrival-dot{display:inline-block;width:8px;height:8px;margin-right:2px;border-radius:50%;background:#00e58a;box-shadow:0 0 0 3px rgba(0,229,138,.18),0 0 12px rgba(0,229,138,.72);animation:nearArrivalFlash .85s ease-in-out infinite;vertical-align:middle}.detail-eta:first-child .near-arrival-dot{margin-bottom:2px}.detail-eta.near-arrival{border-color:rgba(0,229,138,.62);box-shadow:0 0 0 2px rgba(0,229,138,.08),0 0 18px rgba(0,229,138,.14)}
+@keyframes nearArrivalFlash{0%,100%{opacity:.35;transform:scale(.78)}50%{opacity:1;transform:scale(1.18)}}
+@keyframes busBounce{0%,100%{translate:0 0}50%{translate:0 -5px}}
 .detail-section-title{margin:13px 3px 6px;font-size:13px;}
 .stop-timeline{padding-top:0;background:var(--card);border-radius:16px;padding:5px 7px 12px;box-shadow:0 3px 14px rgba(0,0,0,.06);}
 .stop-timeline:before{left:25px;top:24px;bottom:25px;}
@@ -286,6 +290,7 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
 .stop-state{font-size:10px;}
 .detail-inference{margin-left:42px;margin-right:5px;border-radius:9px;padding:7px 9px;font-size:10px;}
 @media(max-width:380px){.detail-route-line{font-size:16px}.detail-route-line .tag{font-size:14px;padding:6px 8px}.detail-meta{font-size:10px}.detail-eta strong{font-size:18px}.detail-eta{min-height:74px}}
+@media(prefers-reduced-motion:reduce){.near-arrival-dot,.detail-between-bus .bus-front-marker,.detail-inference .bus-front-marker{animation:none!important}}
 body.light .route-detail{background:var(--bg-deep)}
 
 /* Moovey bilingual station rhythm */
@@ -900,11 +905,11 @@ function detailVehicleStatus(stop) {
   if (!eta) return '';
   const min = eta.iso && Number.isFinite(Date.parse(eta.iso)) ? Math.round((Date.parse(eta.iso) - Date.now()) / 60000) : eta.min;
   if (!Number.isFinite(min)) return '';
-  return min <= 5 ? '<span class="detail-bus-status"><b aria-hidden="true">🚌</b> 巴士接近中</span>' : '<span class="detail-bus-status"><b aria-hidden="true">🚌</b> 下一班巴士約 ' + esc(Math.max(0, min)) + ' 分鐘後</span>';
+  return min <= 5 ? '<span class="detail-bus-status"><i class="near-arrival-dot" aria-hidden="true"></i><b aria-hidden="true">🚌</b> 巴士接近中</span>' : '<span class="detail-bus-status"><b aria-hidden="true">🚌</b> 下一班巴士約 ' + esc(Math.max(0, min)) + ' 分鐘後</span>';
 }
 function detailEtaPanel(stop) {
   const state = detailEtaStateFor(stop), labels = ['即將到達','下一班','第三班'];
-  const cells = [0,1,2].map(i => { const eta = state.etas?.[i]; return '<div class="detail-eta"><strong>' + detailEtaLabel(eta) + '</strong><span>' + labels[i] + '</span><small>' + detailEtaClock(eta) + (detailEtaRemark(eta) ? ' · ' + esc(detailEtaRemark(eta)) : '') + '</small></div>'; }).join('');
+  const cells = [0,1,2].map(i => { const eta = state.etas?.[i], near = i === 0 && eta && detailEtaIsNear(eta); return '<div class="detail-eta ' + (near ? 'near-arrival' : '') + '"><strong>' + (near ? '<i class="near-arrival-dot" aria-hidden="true"></i>' : '') + detailEtaLabel(eta) + '</strong><span>' + labels[i] + '</span><small>' + detailEtaClock(eta) + (detailEtaRemark(eta) ? ' · ' + esc(detailEtaRemark(eta)) : '') + '</small></div>'; }).join('');
   return '<div class="detail-eta-panel" aria-label="目前車站即時到站時間">' + cells + '</div>';
 }
 function detailStatusText(stop) {
@@ -1127,7 +1132,7 @@ function renderRouteDetail() {
     if (ea && eb && detailEtaIsApproaching(ea) && Date.parse(eb.iso) > Date.parse(ea.iso) && Date.parse(eb.iso) - Date.parse(ea.iso) <= 20 * 60000) enRouteSeqs.add(routeDetailState.stops[i].seq);
   }
   routeDetailBody.innerHTML =
-    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '">' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><span>共 ' + routeDetailState.stops.length + ' 個站</span><span title="按 ETA 時間斷層法推算">ETA 推算行駛中：' + (busEstimate.samples ? busEstimate.count + ' 部' : '讀取中') + '</span><span>' + detailEtaCoverageText() + '</span>' + detailScheduleSummary() + '<span>全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
+    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><span>共 ' + routeDetailState.stops.length + ' 個站</span><span title="按 ETA 時間斷層法推算">ETA 推算行駛中：' + (busEstimate.samples ? busEstimate.count + ' 部' : '讀取中') + '</span><span>' + detailEtaCoverageText() + '</span>' + detailScheduleSummary() + '<span>全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
     '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
     detailEtaPanel(current) +
     '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +

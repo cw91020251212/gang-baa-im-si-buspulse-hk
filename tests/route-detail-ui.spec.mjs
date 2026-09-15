@@ -68,9 +68,14 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('.detail-live-dock .detail-eta')).toHaveCount(3);
   await expect(page.locator('.detail-live-dock .detail-current')).toBeHidden();
   await expect(page.locator('.detail-status')).toHaveAttribute('aria-live', 'polite');
+  await expect(page.locator('.detail-route-icon')).toHaveText('🚌');
   await expect(page.locator('[data-detail-refresh]')).toHaveText('立即更新全部車站 ETA');
   await expect(page.locator('.detail-inference')).toContainText('推算中');
   await expect(page.locator('.detail-inference')).toContainText('並非巴士 GPS');
+  await expect(page.locator('.detail-eta.near-arrival .near-arrival-dot').first()).toBeVisible();
+  const markerCss = (await page.locator('style').allTextContents()).join('\n');
+  expect(markerCss).toContain('@keyframes busBounce');
+  expect(markerCss).toContain('@keyframes nearArrivalFlash');
   await expect(page.locator('.detail-bus-status')).toContainText('巴士');
   await expect(page.locator('[aria-label="巴士即將到站"]')).toHaveCount(0);
   await expect(page.locator('[aria-label="巴士在途中"]').first()).toBeVisible();
