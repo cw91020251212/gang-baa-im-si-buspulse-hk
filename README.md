@@ -101,3 +101,5 @@ The full-screen route detail now follows a Moovey-inspired information hierarchy
 The visual reconstruction specification is recorded in [MOOVEY_LAYOUT_RECONSTRUCTION.md](MOOVEY_LAYOUT_RECONSTRUCTION.md). Existing official ETA handling, direction switching, station selection, retries, manual refresh, conservative in-transit markers and accessibility behavior remain unchanged.
 
 The detail page also includes a collapsed **營運時間表及服務資料** section below the station timeline. It links directly to the relevant operator or government source for timetable, special-service and headway information. The app does not fabricate first/last-bus times when the selected provider does not expose them in the current data response; the official link remains the authoritative source.
+
+Near-arrival and in-transit states use a compact front-facing bus marker placed on the station timeline rail, following the reference layout. The previous wide right-side status pills are hidden so station names remain clear; station rows have additional vertical breathing room, while inferred movement remains explicitly labelled as non-GPS.
