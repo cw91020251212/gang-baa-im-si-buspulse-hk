@@ -1703,14 +1703,8 @@ async function notifyArrival(it, min, tripKey) {
     ? it.route + ' 往 ' + (it.dest || '') + '，提醒補發：原定約 ' + lateMinutes + ' 分鐘前到達 ' + (it.stopName || '')
     : it.route + ' 往 ' + (it.dest || '') + '，約 ' + (Math.max(0,min)) + ' 分鐘到 ' + (it.stopName || '');
   const card = board.querySelector('[data-id="' + cssEscape(id) + '"]');
-  const note = board.querySelector('[data-alarm-note="' + cssEscape(id) + '"]');
-  if (note) {
-    note.textContent = isCatchup ? '⚠ 頁面暫停期間已錯過提醒：' + it.route + ' 約 ' + lateMinutes + ' 分鐘前到站時間（恢復頁面後補發）' : '🔔 ' + it.route + ' 約 ' + Math.max(0, min) + ' 分鐘到站';
-    note.classList.add('show');
-    if (isCatchup) note.classList.add('catchup');
-  }
-  // Stop this one-time alarm only after the catch-up message has been placed
-  // on the route card, so the user gets visible feedback even if audio is blocked.
+  // The route card stays compact; arrival feedback uses the bell, system notification,
+  // and the existing card flash instead of inserting another message panel.
   disableAlarmAfterArrival(id);
   const webPlayed = await ringBell({ alarmAuthorized });
   const alert = {card,notification:null}; activeAlarmAlerts.set(id, alert);
