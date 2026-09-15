@@ -65,12 +65,11 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('.detail-inference')).toContainText('推算中');
   await expect(page.locator('.detail-inference')).toContainText('並非巴士 GPS');
   await expect(page.locator('.detail-bus-status')).toContainText('巴士');
-  await expect(page.locator('[aria-label="巴士即將到站"]').first()).toBeVisible();
+  await expect(page.locator('[aria-label="巴士即將到站"]')).toHaveCount(0);
   await expect(page.locator('[aria-label="巴士在途中"]').first()).toBeVisible();
   await expect(page.locator('.stop-copy small').first()).toContainText('FIRST STATION');
   await expect(page.locator('.stop-copy small').first()).not.toContainText('STOP-');
-  await expect(page.locator('.detail-between-bus').first()).toBeVisible();
-  await expect(page.locator('.detail-between-bus').first()).toContainText('巴士接近中');
+  await expect(page.locator('.detail-inference').first()).toContainText('途中');
   await expect(page.locator('.detail-reverse')).toHaveCSS('position', 'absolute');
   await expect(page.locator('.detail-service')).toContainText('營運時間表及服務資料');
   await expect(page.locator('.detail-service')).toContainText('官方來源');

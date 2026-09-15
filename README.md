@@ -105,3 +105,5 @@ The detail page also includes a collapsed **營運時間表及服務資料** sec
 Near-arrival and in-transit states use a compact front-facing bus marker placed on the station timeline rail, following the reference layout. The previous wide right-side status pills are hidden so station names remain clear; station rows have additional vertical breathing room, while inferred movement remains explicitly labelled as non-GPS.
 
 The service-information panel is now dynamic rather than static: it shows the selected station, the current local time, and the next official ETA records, highlighting the nearest current entry. It refreshes with the route-detail ticker and retains the operator timetable link for first/last-service and special-service details.
+
+When several consecutive stops report near ETAs, the app does not pretend that each stop represents a separate bus. It shows one conservative between-stop marker when adjacent fresh ETAs support an in-transit inference; otherwise it shows at most one nearest-station approach marker. The timeline uses a deliberately wider station rhythm so users can read a few stops at a time and scroll for the rest.
