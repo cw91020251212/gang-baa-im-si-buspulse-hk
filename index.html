@@ -1027,7 +1027,12 @@ async function loadDetailFare(it, generation) {
 }
 function reverseDetailItem(it) {
   if (!it || !['KMB','CTB'].includes(it.co)) return null;
-  const next = { ...it, origin:it.dest, dest:it.origin, dir:it.dir === 'I' ? 'O' : 'I' };
+  // Some compact route cards only persist stopName + dest.  Do not lose the
+  // endpoint when reversing such an item: the selected stop is the missing
+  // origin/destination fallback, not the literal word 「終點」.
+  const currentOrigin = it.origin || it.stopName || '';
+  const currentDest = it.dest || '';
+  const next = { ...it, origin:currentDest || currentOrigin, dest:currentOrigin || currentDest, dir:it.dir === 'I' ? 'O' : 'I' };
   next.bound = it.bound === 'inbound' ? 'outbound' : 'inbound';
   next.dirLabel = next.origin + ' → ' + next.dest;
   return next;

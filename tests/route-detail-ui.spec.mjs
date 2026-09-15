@@ -115,9 +115,11 @@ test('reverse direction swaps supported route variants without inventing a GMB v
   await page.goto('./?smoke=route-detail-reverse', { waitUntil: 'domcontentloaded' });
   const result = await page.evaluate(kmbItem => ({
     kmb: reverseDetailItem(kmbItem),
+    compact: reverseDetailItem({ ...kmbItem, origin:undefined, stopName:'大埔中心總站' }),
     gmb: reverseDetailItem({ co:'GMB', route:'1', route_id:'G1', route_seq:1, origin:'甲', dest:'乙' })
   }), item);
   expect(result.kmb).toMatchObject({ dir:'I', bound:'inbound', origin:'大埔中心', dest:'觀塘碼頭' });
+  expect(result.compact).toMatchObject({ dir:'I', origin:'大埔中心', dest:'大埔中心總站' });
   expect(result.gmb).toBeNull();
 });
 
