@@ -373,9 +373,12 @@ body.light .stop-row.is-selected{background:rgba(8,115,77,.12)!important;border-
 .detail-route-line .tag.CTB{background:#f1a51a;color:#17233a;border:0;}
 .detail-route-line .tag.GMB{background:#1bb978;color:#fff;border:0;}
 .detail-meta{font-variant-numeric:tabular-nums;}
-.detail-gps-panel{display:flex;align-items:center;justify-content:space-between;gap:9px;margin:9px 0;padding:9px 11px;border:1px solid rgba(108,140,255,.36);border-radius:11px;background:rgba(108,140,255,.10);color:var(--dim);font-size:11px;line-height:1.4}.detail-gps-panel span{min-width:0}.detail-gps-panel small{display:block;color:var(--soon);font-weight:800;margin-top:3px}.detail-gps-panel button{border:1px solid var(--accent);border-radius:7px;padding:5px 8px;background:rgba(108,140,255,.18);color:var(--tx);font:800 10px inherit;cursor:pointer;white-space:nowrap}.detail-gps-panel.is-live{border-color:rgba(54,224,160,.56);background:rgba(54,224,160,.12);color:var(--tx)}.detail-gps-panel.is-live b{color:var(--now)}.detail-gps-panel.is-error{border-color:rgba(255,98,92,.6);background:rgba(255,98,92,.1);color:var(--tx)}.detail-gps-panel.is-error button{border-color:var(--kmb);background:rgba(255,98,92,.15)}
+.detail-gps-panel{display:flex;flex-direction:column;align-items:stretch;gap:9px;margin:9px 0;padding:9px 11px;border:1px solid rgba(108,140,255,.36);border-radius:11px;background:rgba(108,140,255,.10);color:var(--dim);font-size:11px;line-height:1.4}.detail-gps-panel span{min-width:0}.detail-gps-panel small{display:block;color:var(--soon);font-weight:800;margin-top:3px}.detail-gps-panel button{border:1px solid var(--accent);border-radius:7px;padding:5px 8px;background:rgba(108,140,255,.18);color:var(--tx);font:800 10px inherit;cursor:pointer;white-space:nowrap}.detail-gps-panel.is-live{border-color:rgba(54,224,160,.56);background:rgba(54,224,160,.12);color:var(--tx)}.detail-gps-panel.is-live b{color:var(--now)}.detail-gps-panel.is-error{border-color:rgba(255,98,92,.6);background:rgba(255,98,92,.1);color:var(--tx)}.detail-gps-panel.is-error button{border-color:var(--kmb);background:rgba(255,98,92,.15)}
+.detail-action-row{display:flex;align-items:stretch;justify-content:center;gap:7px;width:100%;flex:0 0 auto;margin-top:7px}.detail-action-row .detail-action{width:106px;min-height:30px;padding:5px 6px;display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.15}
 .stop-row.is-live{background:rgba(54,224,160,.16);border-color:var(--now);box-shadow:0 0 0 2px rgba(54,224,160,.16)}.stop-row.is-live .stop-dot:after{width:18px;height:18px;background:var(--now);border-color:var(--now);box-shadow:0 0 0 5px rgba(54,224,160,.2)}.stop-row.is-live .stop-state{color:var(--now);font-weight:900}.stop-row.is-getoff-target .stop-state{color:var(--soon);font-weight:900}.schedule-first,.schedule-last{font-weight:900;color:var(--soon)}
+.stop-row.is-selected{background:transparent;border-color:transparent;box-shadow:none}.stop-row.is-selected .stop-copy{flex:0 1 auto;max-width:calc(100% - 95px);padding:7px 9px;border:1px solid rgba(54,224,160,.5);border-radius:9px;background:rgba(54,224,160,.1)}
 body.light .detail-gps-panel{background:#e2e9ee;border-color:#8ea8bd}.light .detail-gps-panel.is-live{background:#dcefe5;border-color:#29945f}.light .detail-gps-panel small{color:#a51f2a}.light .detail-gps-panel button{background:#d9e5f0;color:#20344b}.light .stop-row.is-live{background:#d8eee1;border-color:#268b59}.light .stop-row.is-live .stop-state{color:#0b7045}.light .schedule-first,.light .schedule-last{color:#b3222b}
+.light .stop-row.is-selected{background:transparent!important;border-color:transparent!important;box-shadow:none!important}.light .stop-row.is-selected .stop-copy{background:rgba(8,115,77,.1);border-color:rgba(8,115,77,.45)}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
@@ -996,11 +999,12 @@ function nearestDetailStop(stops, coords) {
 }
 function detailGpsPanel(it, current) {
   const state = routeDetailState, target = getoff[uid(it)];
-  if (state.gpsStatus === 'error') return '<div class="detail-gps-panel is-error" role="status">GPS 暫時未能定位，請確認已允許定位。<button type="button" data-detail-gps>重新開啟 GPS</button></div>';
-  if (state.gpsStatus !== 'watching') return '<div class="detail-gps-panel" role="status"><span>想睇住巴士行到邊？開啟 GPS 後，時間軸會標示你而家接近嘅站。</span><button type="button" data-detail-gps>⌖ 開啟 GPS 跟車</button></div>';
+  const refresh = '<button class="detail-action" type="button" data-detail-refresh>立即更新全部車站 ETA</button>';
+  if (state.gpsStatus === 'error') return '<div class="detail-gps-panel is-error" role="status"><span>GPS 暫時未能定位，請確認已允許定位。</span><div class="detail-action-row"><button class="detail-action" type="button" data-detail-gps>重新開啟 GPS</button>' + refresh + '</div></div>';
+  if (state.gpsStatus !== 'watching') return '<div class="detail-gps-panel" role="status"><span>想睇住巴士行到邊？開啟 GPS 後，時間軸會標示你而家接近嘅站。</span><div class="detail-action-row"><button class="detail-action" type="button" data-detail-gps>⌖ 開啟 GPS 跟車</button>' + refresh + '</div></div>';
   const targetNote = target?.active ? (state.gpsSeq >= target.targetSeq ? '你就嚟到喇：' + target.targetName : state.gpsSeq != null && target.targetSeq - state.gpsSeq <= 1 ? '你就嚟到喇，下一個落車：' + target.targetName : '落車站：' + target.targetName) : '';
   const source = state.gpsSource === 'network' ? '網絡／基站定位' : state.gpsSource === 'eta' ? '巴士 API ETA 數據推算' : 'GPS 定位', stale = state.gpsSource === 'eta' ? ' · GPS 暫時中斷，使用巴士數據推算' : state.gpsErrorCount > 0 ? ' · 訊號暫時中斷，保留最後位置' : '';
-  return '<div class="detail-gps-panel is-live" role="status"><span><b>● GPS／網絡跟車中</b>　目前接近第 ' + esc(state.gpsSeq || current?.seq || '—') + ' 站「' + esc(current?.name || '讀取中') + '」<small>' + esc(source + stale) + (targetNote ? ' · ' + targetNote : '') + '</small></span><button type="button" data-detail-gps-stop>停止</button></div>';
+  return '<div class="detail-gps-panel is-live" role="status"><span><b>● GPS／網絡跟車中</b>　目前接近第 ' + esc(state.gpsSeq || current?.seq || '—') + ' 站「' + esc(current?.name || '讀取中') + '」<small>' + esc(source + stale) + (targetNote ? ' · ' + targetNote : '') + '</small></span><div class="detail-action-row"><button class="detail-action" type="button" data-detail-gps-stop>停止 GPS</button>' + refresh + '</div></div>';
 }
 function acceptDetailLocation(it, pos, source) {
   const accuracy = Number(pos.coords.accuracy), at = Number(pos.timestamp) || Date.now(), state = routeDetailState;
@@ -1061,7 +1065,7 @@ function detailStatusText(stop) {
 function detailStatusAction(stop) {
   const state = detailEtaStateFor(stop);
   const retry = state.status === 'stale' || state.status === 'error' ? '<button class="detail-retry" type="button" data-detail-retry="' + esc(stop.id) + '">重新載入本站 ETA</button>' : '';
-  return retry + '<button class="detail-refresh" type="button" data-detail-refresh>立即更新全部車站 ETA</button>';
+  return retry;
 }
 function detailEtaIsNear(eta) {
   const iso = eta?.iso && Date.parse(eta.iso);
