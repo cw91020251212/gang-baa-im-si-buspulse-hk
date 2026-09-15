@@ -153,13 +153,13 @@ test('ETA time-drop estimator counts monotonic waves and one-minute drops', asyn
   expect(result).toMatchObject({ count:2, drops:1, samples:4 });
 });
 
-test('scheduled ETA within five minutes still gets a near-arrival cue', async ({ page }) => {
+test('scheduled ETA within five minutes stays a timetable value, not a moving-bus cue', async ({ page }) => {
   await page.goto('./?smoke=route-detail-scheduled-cue', { waitUntil: 'domcontentloaded' });
   const result = await page.evaluate(() => ({
     near: detailEtaShouldShowBus({ sched:true, min:3 }),
     far: detailEtaShouldShowBus({ sched:true, min:8 })
   }));
-  expect(result).toEqual({ near:true, far:false });
+  expect(result).toEqual({ near:false, far:false });
 });
 
 test('ETA wave estimate places virtual buses between the correct stops', async ({ page }) => {

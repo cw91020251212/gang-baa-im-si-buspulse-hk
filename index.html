@@ -908,7 +908,7 @@ function detailVehicleStatus(stop) {
   if (!eta) return '';
   const min = eta.iso && Number.isFinite(Date.parse(eta.iso)) ? Math.round((Date.parse(eta.iso) - Date.now()) / 60000) : eta.min;
   if (!Number.isFinite(min)) return '';
-  return min <= 5 ? '<span class="detail-bus-status"><i class="near-arrival-dot" aria-hidden="true"></i><b aria-hidden="true">🚌</b> ' + (eta.sched ? '原定班次接近' : '巴士接近中') + '</span>' : '<span class="detail-bus-status"><b aria-hidden="true">🚌</b> 下一班巴士約 ' + esc(Math.max(0, min)) + ' 分鐘後</span>';
+  return min <= 5 && !eta.sched ? '<span class="detail-bus-status"><i class="near-arrival-dot" aria-hidden="true"></i><b aria-hidden="true">🚌</b> 巴士接近中</span>' : '<span class="detail-bus-status"><b aria-hidden="true">🚌</b> 下一班巴士約 ' + esc(Math.max(0, min)) + ' 分鐘後</span>';
 }
 function detailEtaPanel(stop) {
   const state = detailEtaStateFor(stop), labels = ['即將到達','下一班','第三班'];
@@ -935,10 +935,7 @@ function detailEtaIsNear(eta) {
   return !eta?.sched && Number.isFinite(iso) && (iso - Date.now()) <= 5 * 60000 && iso >= Date.now() - 2 * 60000;
 }
 function detailEtaShouldShowBus(eta) {
-  // A scheduled ETA can still provide a useful visual cue when it is close.
-  // It is deliberately labelled as an estimated/scheduled approach below;
-  // Keep the visual cue useful; the service section contains the single
-  // methodology note rather than repeating a disclaimer on every marker.
+  if (eta?.sched) return false;
   return detailEtaIsNear(eta) || (Number.isFinite(Number(eta?.min)) && Number(eta.min) >= 0 && Number(eta.min) <= 5);
 }
 function detailEtaIsApproaching(eta) {
@@ -1093,7 +1090,7 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
     const state = etaByStop.get(String(stop.id));
     (state?.etas || []).forEach(eta => {
       const time = eta.iso && Date.parse(eta.iso);
-      if (!Number.isFinite(time)) return;
+      if (!Number.isFinite(time) || eta.sched) return;
       const wave = eta.etaSeq == null ? 1 : Number(eta.etaSeq);
       if (!Number.isFinite(wave)) return;
       if (!byWave.has(wave)) byWave.set(wave, []);
@@ -1162,7 +1159,8 @@ function renderRouteDetail() {
   // The header and timeline use one synchronized, deduplicated ETA-segment
   // result.  The separate time-drop estimate remains available for diagnosis,
   // but is not allowed to disagree with what the user can see.
-  const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop);
+  const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop)
+    .slice(0, Math.max(0, Number(busEstimate.count) || 0));
   const markerAfter = new Map(virtualSegments.map(segment => [segment.fromSeq, '<div class="detail-inference virtual" role="status" aria-label="估計巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計巴士位置"></span><b>' + (segment.confidence === 'approaching' ? '即將到站' : '途中行駛中') + '</b><small>估計位置：第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間</small></div>']));
   const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
   const nearStation = null;
