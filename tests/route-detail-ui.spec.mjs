@@ -56,6 +56,10 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('.detail-live-dock')).toBeVisible();
   await expect(page.locator('.detail-live-dock')).toHaveCSS('z-index', '3');
   await expect(page.locator('.detail-live-dock .detail-eta')).toHaveCount(3);
+  await page.locator('#routeDetail').evaluate(el => { el.style.height = '200px'; el.style.overflow = 'auto'; el.scrollTop = 140; updateRouteDetailCompact(); });
+  await expect(page.locator('.detail-live-dock')).toHaveClass(/compact/);
+  await expect(page.locator('.detail-live-dock .detail-eta')).toHaveCount(3);
+  await expect(page.locator('.detail-live-dock .detail-current')).toBeHidden();
   await expect(page.locator('.detail-status')).toHaveAttribute('aria-live', 'polite');
   await expect(page.locator('[data-detail-refresh]')).toHaveText('立即更新全部車站 ETA');
   await expect(page.locator('.detail-inference')).toContainText('推算中');
