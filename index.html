@@ -313,6 +313,10 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
 .detail-inference.virtual .bus-front-marker:before{left:4px;right:4px;top:4px;height:6px;box-shadow:0 8px 0 -1px var(--bg-deep)}
 .detail-inference.virtual .bus-front-marker:after{bottom:-4px}
  .virtual-bus-copy{align-self:center;display:flex;flex:1;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;min-width:0;padding:0;border:0;border-radius:0;background:transparent;text-align:left}.virtual-bus-copy b{font-size:11px;line-height:1.15;color:var(--now);text-align:left}.virtual-bus-copy small{margin:0;color:var(--faint);font-size:10px;line-height:1.2;text-align:left}
+.stop-copy small{display:none;}
+.detail-inference.virtual .bus-front-marker{width:12px;height:9px;flex-basis:12px;border-radius:3px;box-shadow:0 0 0 2px rgba(128,148,255,.18);}
+.detail-inference.virtual .bus-front-marker:before{left:2px;right:2px;top:2px;height:3px;box-shadow:0 5px 0 -1px var(--bg-deep)}
+.detail-inference.virtual .bus-front-marker:after{bottom:-3px;}
 .near-arrival-dot{display:inline-block;width:8px;height:8px;margin-right:2px;border-radius:50%;background:#00e58a;box-shadow:0 0 0 3px rgba(0,229,138,.18),0 0 12px rgba(0,229,138,.72);animation:nearArrivalFlash .85s ease-in-out infinite;vertical-align:middle}.detail-eta:first-child .near-arrival-dot{margin-bottom:2px}.detail-eta.near-arrival{border-color:rgba(0,229,138,.62);box-shadow:0 0 0 2px rgba(0,229,138,.08),0 0 18px rgba(0,229,138,.14)}
 @keyframes nearArrivalFlash{0%,100%{opacity:.35;transform:scale(.78)}50%{opacity:1;transform:scale(1.18)}}
 @keyframes busBounce{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes virtualBusBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
@@ -1675,6 +1679,17 @@ async function notificationRegistration(timeoutMs = 1800) {
     return registration || null;
   } catch { return null; }
 }
+function scrollRouteDetailToAlarmStop(it) {
+  if (!document.body.classList.contains('detail-open') || !routeDetailState.item || uid(routeDetailState.item) !== uid(it)) return;
+  const wantedId = String(it.stopId || '');
+  const wantedName = String(it.stopName || '').trim();
+  const stop = routeDetailState.stops.find(s => wantedId && String(s.id) === wantedId) || routeDetailState.stops.find(s => wantedName && String(s.name).trim() === wantedName);
+  if (!stop) return;
+  routeDetailState.selectedSeq = stop.seq;
+  routeDetailState.selectedStopId = stop.id;
+  renderRouteDetail();
+  window.setTimeout(() => routeDetailBody.querySelector('[data-detail-stop="' + cssEscape(String(stop.seq)) + '"]')?.scrollIntoView({ behavior:'smooth', block:'center' }), 80);
+}
 async function notifyArrival(it, min, tripKey) {
   const id = uid(it);
   // Defensive guard: a queued timer or an in-flight API response must not
@@ -1693,6 +1708,7 @@ async function notifyArrival(it, min, tripKey) {
     note.classList.add('show');
     if (isCatchup) note.classList.add('catchup');
   }
+  scrollRouteDetailToAlarmStop(it);
   // Stop this one-time alarm only after the catch-up message has been placed
   // on the route card, so the user gets visible feedback even if audio is blocked.
   disableAlarmAfterArrival(id);
