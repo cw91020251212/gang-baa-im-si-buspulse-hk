@@ -1036,7 +1036,7 @@ function busSaverNextPath() {
   busSaverPoint(startX, lane, 250, reverse, scale);
   window.setTimeout(() => {
     if (!busSaverActive) return;
-    busSaverPoint(endX, lane, 18000, reverse, scale);
+    busSaverPoint(endX, lane, 13500, reverse, scale);
     window.setTimeout(() => {
       if (!busSaverActive) return;
       busSaverPoint(endX, nextLane, 1200, reverse, nextScale);
@@ -1044,12 +1044,13 @@ function busSaverNextPath() {
         busSaverPathIndex++;
         busSaverNextPath();
       }, 1400);
-    }, 18100);
+    }, 13600);
   }, 300);
 }
 function moveBusSaver() { busSaverNextPath(); }
 function openBusSaver() {
   if (busSaverActive) return;
+  if (routeDetailState.open) closeRouteDetail({ history:false });
   busSaverActive = true;
   clearTimeout(busSaverTimer);
   clearTimeout(busSaverPathTimer);
@@ -1088,6 +1089,11 @@ function closeBusSaver() {
 }
 function scheduleBusSaver() { clearTimeout(busSaverTimer); busSaverTimer = null; const delay = Number(prefs.screenSaverIdle); if (delay > 0 && items.length && !busSaverActive) busSaverTimer = setTimeout(openBusSaver, delay); }
 function registerBusActivity() { if (busSaverActive) closeBusSaver(); else scheduleBusSaver(); }
+document.addEventListener('visibilitychange', () => {
+  if (!busSaverActive) return;
+  if (document.visibilityState === 'visible') requestBusSaverWakeLock();
+});
+window.addEventListener('pageshow', () => { if (busSaverActive) requestBusSaverWakeLock(); });
 function saveAlarms() { try { localStorage.setItem(ALARM_KEY, JSON.stringify(alarms)); } catch {} }
 function backupFile() {
   const payload = { format:'BusPulse HK backup', version:1, exportedAt:new Date().toISOString(), items, userDefaults, alarms, getoff, prefs };
