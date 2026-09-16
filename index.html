@@ -1282,19 +1282,34 @@ async function loadDetailSchedule(it, generation) {
     if (isCurrentRouteDetailGeneration(generation)) { routeDetailState.scheduleLabel = parsed; renderRouteDetail(); }
   } catch { if (isCurrentRouteDetailGeneration(generation)) { routeDetailState.scheduleLabel = { error:true }; renderRouteDetail(); } }
 }
-function estimateActiveBusWaves(stops = routeDetailState.stops, etaByStop = routeDetailState.etaByStop) {
-  const rows = stops.map(stop => {
-    const state = etaByStop.get(String(stop.id));
-    const eta = (state?.etas || []).find(e => e.iso && !e.sched && (e.etaSeq == null || Number(e.etaSeq) === 1));
-    return eta && state.status === 'ready' && !state.stale ? { seq:Number(stop.seq), time:Date.parse(eta.iso) } : null;
-  }).filter(Boolean).sort((a,b) => a.seq - b.seq);
-  let count = 0, previous = null, drops = 0;
-  for (const row of rows) {
-    if (previous == null) count = 1;
-    else if (row.time < previous - 60000) { count += 1; drops += 1; }
+function countActiveBuses(etaData, { bufferMs = 60000 } = {}) {
+  const bySeq = new Map();
+  for (const row of Array.isArray(etaData) ? etaData : []) {
+    const seq = Number(row?.seq), time = Date.parse(row?.eta || row?.iso || '');
+    if (!Number.isFinite(seq) || !Number.isFinite(time)) continue;
+    // Only the first ETA for each stop represents the leading forecast wave.
+    if (row.etaSeq != null && Number(row.etaSeq) !== 1) continue;
+    if (row.sched || row.scheduled) continue;
+    const old = bySeq.get(seq);
+    if (!old || time < old.time) bySeq.set(seq, { seq, time });
+  }
+  const rows = [...bySeq.values()].sort((a,b) => a.seq - b.seq);
+  if (!rows.length) return { count:0, drops:0, samples:0 };
+  let count = 1, drops = 0, previous = rows[0].time;
+  for (const row of rows.slice(1)) {
+    if (row.time < previous - Math.max(0, Number(bufferMs) || 0)) { count++; drops++; }
     previous = row.time;
   }
   return { count, drops, samples:rows.length };
+}
+function estimateActiveBusWaves(stops = routeDetailState.stops, etaByStop = routeDetailState.etaByStop) {
+  const etaData = stops.map(stop => {
+    const state = etaByStop.get(String(stop.id));
+    if (!state || state.status !== 'ready' || state.stale) return null;
+    const eta = (state.etas || []).find(e => e.iso && !e.sched && (e.etaSeq == null || Number(e.etaSeq) === 1));
+    return eta ? { seq:Number(stop.seq), iso:eta.iso, etaSeq:eta.etaSeq, sched:eta.sched } : null;
+  }).filter(Boolean);
+  return countActiveBuses(etaData);
 }
 function detailOfficialServiceUrl(it) {
   const route = String(it?.route || '').toUpperCase().replace(/\s+/g, '');
@@ -1478,7 +1493,7 @@ function renderRouteDetail() {
     const html = '<div class="detail-inference virtual" role="status" aria-label="估計巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="virtual-bus-card"><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計巴士位置"></span></span><span class="virtual-bus-copy"><b>' + (segment.confidence === 'approaching' ? '估計巴士即將到站' : '估計巴士正在途中行駛') + '</b><small>ETA 波段推算位置：第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間</small></span></div>';
     markerAfter.set(segment.fromSeq, (markerAfter.get(segment.fromSeq) || '') + html);
   });
-  const visibleBusCount = virtualSegments.length;
+  const visibleBusCount = busEstimate.count;
   const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
   const nearStation = null;
   const nearStationEta = null;
