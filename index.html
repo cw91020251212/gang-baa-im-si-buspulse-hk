@@ -511,6 +511,27 @@ body.light .detail-live-dock,body.light .detail-live-dock.compact{background:rgb
 body.light .sheet,body.light .settings-group,body.light .diag-box,body.light .test-tools{background:#d9dee2!important;}
 body.light .pref-row{background:#e1e5e8!important;}
 body.light .wide{background:#cbd2d7!important;color:#26323d!important;}
+/* Final light-mode contrast pass: readable layered grays and explicit control borders. */
+body.light{--bg:#c9cfd4;--bg-deep:#b8c0c6;--card:#d7dce0;--card2:#c3cbd1;--line:#6d7983;--tx:#18232c;--dim:#34434e;--faint:#53626d;--now:#075f3d;--soon:#704b00;--late:#214f86;--glow:rgba(30,45,58,.18);background:#c9cfd4!important;color:#18232c!important;}
+body.light .top,body.light .sheet,body.light .route-detail-head{background:#c7cdd2!important;border-color:#66737d!important;}
+body.light .card,body.light .eta,body.light .settings-group,body.light .diag-box,body.light .test-tools,body.light .pref-row,body.light .backup-box,body.light .detail-summary,body.light .detail-eta,body.light .detail-status,body.light .detail-service,body.light .stop-timeline{background:#d7dce0!important;border:1px solid #687680!important;color:#18232c!important;}
+body.light .detail-service-item,body.light .detail-timetable-head,body.light .detail-timetable-row,body.light .detail-timetable-empty,body.light .li,body.light .sv{background:#c5ccd1!important;border:1px solid #71808a!important;color:#18232c!important;}
+body.light .li .d,body.light .sv .d,body.light .detail-service-item span,body.light .detail-service-note,body.light .detail-timetable-row small,body.light .msg,body.light .hint,body.light .pref-row small{color:#3d4d58!important;}
+body.light .wide,body.light .map-toggle,body.light .map-head-btn,body.light .locate-btn,body.light .detail-entry,body.light .getoff-btn,body.light .alarm-btn,body.light .alight-btn,body.light .toggle{border:2px solid #53636e!important;background:#c5ccd1!important;color:#18232c!important;box-shadow:none!important;}
+body.light .wide.p{border-color:#075f3d!important;background:#b9ddc9!important;color:#073e2b!important;}
+body.light .wide.danger{border-color:#8f2633!important;background:#e3c4c8!important;color:#651722!important;}
+body.light .pref-select,body.light .tin,body.light input,body.light select{background:#e1e5e8!important;border:2px solid #53636e!important;color:#18232c!important;}
+body.light input::placeholder,body.light .tin::placeholder{color:#53626d!important;opacity:1!important;}
+body.light .tag.KMB,body.light .co.KMB{background:#f0c2c8!important;color:#681522!important;border:2px solid #9b2938!important;}
+body.light .tag.CTB,body.light .co.CTB{background:#ead5ae!important;color:#604000!important;border:2px solid #986b16!important;}
+body.light .tag.GMB,body.light .co.GMB{background:#bfe0c9!important;color:#075331!important;border:2px solid #227546!important;}
+body.light .sv .n,body.light .li .n,body.light .li .a,body.light .sv .x,body.light .sv .mv{color:#18232c!important;}
+body.light .brandcopy small,body.light .clock,body.light .foot{color:#43525d!important;}
+body.light .detail-route-line,body.light .detail-meta,body.light .detail-section-title,body.light .lbl,body.light .settings-group summary{color:#18232c!important;}
+body.light .detail-status,body.light .detail-service,body.light .stop-timeline{box-shadow:0 2px 6px rgba(30,45,58,.16)!important;}
+body.light .info-bar{background:#d7dce0!important;border:1px solid #687680!important;color:#24333d!important;}
+body.light .stop-dot:after{background:#b8c0c6!important;border-color:#53636e!important;}
+body.light .detail-live-dock,body.light .detail-live-dock.compact{background:#bcc4ca!important;border:1px solid #687680!important;}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
