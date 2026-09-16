@@ -546,6 +546,14 @@ body.light button,body.light select,body.light input,body.light textarea{outline
 body.light .notification-toggle.notification-on{color:#075f3d!important;border-color:#075f3d!important;}
 body.light .notification-toggle.notification-off{color:#8f2633!important;border-color:#8f2633!important;}
 body.light .notification-toggle.notification-warn{color:#765300!important;border-color:#98701a!important;}
+/* All state switches: preserve the neutral gray surface; color only the state cue. */
+.notification-toggle,.alarm-btn,.getoff-btn,.toggle{background:var(--card2)!important;box-shadow:none!important;}
+.alarm-btn.on,.getoff-btn.on,.toggle.on{color:#08734d!important;border-color:#08734d!important;background:var(--card2)!important;}
+.alarm-btn:not(.on),.getoff-btn:not(.on),.toggle:not(.on){color:#a52b3c!important;border-color:#a52b3c!important;background:var(--card2)!important;}
+.notification-toggle.notification-on{color:#08734d!important;border-color:#08734d!important;background:var(--card2)!important;}
+.notification-toggle.notification-off{color:#a52b3c!important;border-color:#a52b3c!important;background:var(--card2)!important;}
+body.light .alarm-btn.on,body.light .getoff-btn.on,body.light .toggle.on{color:#075f3d!important;border-color:#075f3d!important;background:#c5ccd1!important;}
+body.light .alarm-btn:not(.on),body.light .getoff-btn:not(.on),body.light .toggle:not(.on){color:#8f2633!important;border-color:#8f2633!important;background:#c5ccd1!important;}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
