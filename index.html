@@ -116,12 +116,12 @@ body{
 .test-tools{margin:10px 0;border:1px solid var(--line);border-radius:12px;padding:0 10px;background:var(--card2)}.test-tools summary{cursor:pointer;padding:12px 2px;color:var(--muted);font-weight:800}.test-tools[open] summary{color:var(--now)}.test-tools .pref-row:first-of-type{margin-top:2px}.test-notify-row{display:flex;align-items:center;gap:8px}.test-notify-row .wide{flex:1}.test-countdown{display:inline-grid;place-items:center;min-width:54px;height:40px;padding:0 9px;border-radius:10px;background:#fff;color:#c62828;border:2px solid #ff6262;font:900 15px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:-.4px;box-shadow:0 0 0 2px rgba(255,98,98,.18);white-space:nowrap}.test-countdown.ready{color:var(--faint);border-color:var(--line);background:var(--card2);box-shadow:none;font-size:11px}
 body.font-large .card{font-size:17px}body.font-large .rt{font-size:29px}body.font-large .dest{font-size:14px}body.font-large .stop{font-size:13.5px}body.font-large .stop b{font-size:14px}body.font-large .fare{font-size:12px}body.font-large .eta .m{font-size:25px}body.font-large .eta .u,body.font-large .eta .t{font-size:11px}body.font-large .rmk,body.font-large .none{font-size:12.5px}body.font-large .map-head-btn,body.font-large .alarm-btn{transform:scale(1.08)}body.font-large .foot{font-size:12px}body.font-large .sbody{font-size:15px}body.font-large .sbody .lbl{font-size:12px}body.font-large .sbody .hint{font-size:12.5px}body.font-large .sbody .li .n{font-size:18px}body.font-large .sbody .li .d{font-size:13.5px}body.font-large .sbody .sv .n{font-size:16.5px}body.font-large .sbody .sv .d{font-size:13px}body.font-large .sbody .wide{font-size:15px}body.font-large .sbody .pref-row{font-size:14.5px}body.font-large .sbody .pref-row small{font-size:11.5px}body.font-large .sbody .pref-select{font-size:14px}
 body.font-large .clock{font-size:15px}body.font-large .brandcopy small{font-size:10.5px}body.font-large .iconbtn{font-size:17px}
-body.light{--bg:#e7ebef;--bg-deep:#d9e0e6;--card:#edf1f4;--card2:#dfe5ea;--line:#b8c3cd;--tx:#172235;--dim:#40516a;--faint:#63748a;--now:#08734d;--soon:#7b5200;--late:#2e5b91;--sched:#53657b;--glow:rgba(40,65,100,.16);background:linear-gradient(145deg,#e1e6eb,#edf0f3)}
+body.light{--bg:#f4f7fb;--bg-deep:#e9eef5;--card:#ffffff;--card2:#eef3f8;--line:#c5d0dd;--tx:#172235;--dim:#40516a;--faint:#63748a;--now:#08734d;--soon:#7b5200;--late:#2e5b91;--sched:#53657b;--glow:rgba(40,65,100,.16);background:linear-gradient(145deg,#eef3f8,#f8fafc)}
 body.light .top{background:rgba(244,247,251,.96);border-bottom-color:#b9c6d4}
 body.light .top h1{background:none;color:var(--tx)}
-body.light .card{background:linear-gradient(135deg,#eef2f5,#e3e8ed);border-color:#b7c4d2;box-shadow:0 8px 22px rgba(35,55,80,.10)}
-body.light .eta{background:linear-gradient(145deg,#edf1f4,#e1e7ec);border-color:#bcc9d6}
-body.light .iconbtn,body.light .map-toggle,body.light .map-head-btn{background:#e4e9ed;color:var(--tx);border-color:#aebdcd}
+body.light .card{background:linear-gradient(135deg,#ffffff,#f4f7fa);border-color:#b7c4d2;box-shadow:0 8px 22px rgba(35,55,80,.10)}
+body.light .eta{background:linear-gradient(145deg,#ffffff,#edf2f7);border-color:#bcc9d6}
+body.light .iconbtn,body.light .map-toggle,body.light .map-head-btn{background:#ffffff;color:var(--tx);border-color:#aebdcd}
 body.light .iconbtn:active,body.light .li:active{background:#e5ebf2}
 body.light .li,body.light .sv{border-color:#bcc9d6}
 body.light .map-tools{background:#e5ebf2}
@@ -130,9 +130,9 @@ body.light .locate-btn{color:#07583d;background:#e7f6ed;border-color:#91c9a8}
 body.light .map-live-note{background:#e7f6ed;color:#07583d;border-color:#a5d7b8}
 body.light .map-note{background:#f0f4f8;color:var(--dim)}
 body.light .map-loading{color:#526a86}
-body.light .leaflet-popup-content-wrapper,body.light .leaflet-popup-tip{background:#e8edf1;color:var(--tx)}
+body.light .leaflet-popup-content-wrapper,body.light .leaflet-popup-tip{background:#ffffff;color:var(--tx)}
 body.light .leaflet-control-zoom a{color:#23344e;background:#ffffff}
-body.light .sheet{background:linear-gradient(180deg,#e9edf1,#dfe5ea)}
+body.light .sheet{background:linear-gradient(180deg,#ffffff,#edf2f7)}
 body.light .grab{background:#aab8c7}
 body.light .fare{color:#704b00;background:#fff7df;border-color:#d5b86b}
 body.light .co.KMB{color:#a51f2a}body.light .co.CTB{color:#855000}body.light .co.GMB{color:#176b3d}
@@ -156,30 +156,25 @@ body.light .eta .m,body.light .fare,body.light .co,body.light .detail-route-icon
 	.detail-entry{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border:1px solid rgba(108,140,255,.35);background:rgba(108,140,255,.1);color:#bdcaff;border-radius:8px;padding:0;margin:0;font:800 15px/1 inherit;cursor:pointer}.detail-entry:active{transform:scale(.92)}
 .route-detail{position:fixed;inset:0;z-index:120;background:var(--bg);color:var(--tx);display:none;overflow:auto;overscroll-behavior:contain;padding-bottom:calc(24px + var(--safe-b))}.route-detail.on{display:block}.route-detail-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:calc(8px + var(--safe-t)) 13px 9px;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}.route-detail-head h2{font-size:16px;line-height:1.15;flex:1;min-width:0}.route-detail-head small{display:block;color:var(--faint);font-size:10px;margin-top:3px;font-weight:600}.detail-back{width:40px;height:40px;border:1px solid var(--line);background:var(--card);color:var(--tx);border-radius:11px;font:800 20px inherit;cursor:pointer}.route-detail-inner{max-width:680px;margin:0 auto;padding:12px 13px}.detail-summary{padding:14px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(135deg,var(--card),var(--card2));margin-bottom:10px}.detail-live-dock{position:sticky;top:57px;z-index:3;padding:4px 0 8px;background:color-mix(in srgb,var(--bg) 99%,transparent);backdrop-filter:blur(14px);margin:0 -2px 4px;isolation:isolate}.detail-live-dock .detail-current{margin:0 0 7px}.detail-live-dock .detail-eta-panel{margin:0 0 7px}.detail-live-dock .detail-status{box-shadow:0 4px 14px rgba(0,0,0,.12)}.detail-route-line{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:850}.detail-route-line .arrow{color:var(--dim)}.detail-meta{display:flex;flex-wrap:wrap;gap:6px 13px;margin-top:8px;color:var(--dim);font-size:11.5px}.detail-reverse{margin-top:10px;border:1px solid rgba(54,224,160,.36);border-radius:9px;background:rgba(54,224,160,.08);color:var(--now);padding:8px 11px;font:800 11px inherit;cursor:pointer}.detail-reverse:focus-visible{outline:3px solid var(--now);outline-offset:2px}.detail-current{padding:11px 13px;border:1px solid rgba(54,224,160,.36);border-radius:13px;background:rgba(54,224,160,.08);margin:10px 0}.detail-current-label{font-size:10px;color:var(--now);font-weight:800;letter-spacing:.04em}.detail-current-name{font-size:16px;font-weight:800;margin-top:4px}.detail-bus-status{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:4px 8px;border-radius:999px;background:rgba(54,224,160,.12);color:var(--now);font-size:10.5px;font-weight:800}.detail-bus-status b{font-size:14px}.detail-eta-panel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:10px 0}.detail-eta{min-width:0;min-height:84px;padding:9px 6px;border:1px solid var(--line);border-radius:12px;background:var(--card);text-align:center}.detail-eta strong{display:block;font-size:19px;line-height:1.1;font-variant-numeric:tabular-nums}.detail-eta span{display:block;color:var(--faint);font-size:10px;margin-top:5px}.detail-eta small{display:block;color:var(--dim);font-size:9.5px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.detail-eta:first-child{border-color:rgba(54,224,160,.45);background:rgba(54,224,160,.08)}.detail-status{padding:8px 10px;border-radius:9px;background:var(--card);color:var(--dim);font-size:11px;line-height:1.45}.detail-retry{display:block;margin-top:7px;border:1px solid var(--line);border-radius:8px;background:var(--card2);color:var(--tx);padding:6px 8px;font:700 10.5px inherit;cursor:pointer}.detail-refresh{display:block;margin-top:7px;border:1px solid rgba(108,140,255,.35);border-radius:8px;background:rgba(108,140,255,.08);color:var(--dim);padding:6px 8px;font:700 10.5px inherit;cursor:pointer}.detail-refresh:disabled{opacity:.55;cursor:wait}.detail-retry:focus-visible,.stop-row:focus-visible,.detail-back:focus-visible{outline:3px solid var(--now);outline-offset:2px}.detail-section-title{display:flex;justify-content:space-between;align-items:baseline;margin:17px 2px 8px;font-weight:850}.detail-section-title small{color:var(--faint);font-size:10px;font-weight:600}.stop-timeline{position:relative;z-index:0;padding:3px 0 10px}.stop-timeline:before{content:"";position:absolute;left:18px;top:18px;bottom:18px;width:2px;background:var(--line)}.stop-row{position:relative;display:flex;align-items:stretch;gap:11px;width:100%;min-height:66px;padding:7px 7px 7px 0;border:1px solid transparent;border-radius:13px;background:transparent;color:var(--tx);text-align:left;font:inherit;cursor:pointer}.stop-row:active{transform:scale(.995)}.stop-row.is-selected{border-color:rgba(54,224,160,.42);background:rgba(54,224,160,.08)}.stop-dot{position:relative;z-index:1;flex:0 0 38px;display:grid;place-items:center}.stop-dot:after{content:"";width:15px;height:15px;border:2px solid var(--faint);border-radius:50%;background:var(--bg)}.stop-row.is-selected .stop-dot:after{width:19px;height:19px;border-color:var(--now);background:var(--now);box-shadow:0 0 0 5px rgba(54,224,160,.14)}.stop-copy{min-width:0;flex:1;padding-top:1px}.stop-copy strong{display:block;font-size:14px;line-height:1.25}.stop-copy small{display:block;color:var(--faint);font-size:10.5px;margin-top:4px;line-height:1.3}.stop-state{align-self:center;color:var(--faint);font-size:10px;white-space:nowrap}.stop-row.is-selected .stop-state{color:var(--now);font-weight:800}.stop-bus-state{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;padding:4px 6px;border-radius:999px;background:rgba(54,224,160,.12);color:var(--now);font-size:10px;font-weight:800;white-space:nowrap}.stop-bus-state b{font-size:14px}.stop-bus-state.enroute{background:rgba(108,140,255,.14);color:#b9c6ff}.bus-front-marker{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:20px;height:15px;border-radius:4px 4px 3px 3px;background:var(--now);box-shadow:0 0 0 3px color-mix(in srgb,var(--now) 18%,transparent);z-index:3}.bus-front-marker:before{content:"";position:absolute;left:3px;right:3px;top:3px;height:5px;border-radius:2px;background:var(--bg-deep);box-shadow:0 7px 0 -1px var(--bg-deep)}.bus-front-marker:after{content:"";position:absolute;left:2px;right:2px;bottom:-3px;height:4px;border-radius:50%;background:linear-gradient(90deg,var(--bg-deep) 0 25%,transparent 25% 75%,var(--bg-deep) 75%)}.bus-front-marker.enroute{background:#8094ff;box-shadow:0 0 0 3px rgba(128,148,255,.18)}.stop-dot.has-bus:after{opacity:.25}.detail-inference{margin:4px 0 8px 42px;padding:6px 9px;display:flex;align-items:center;gap:6px}.detail-inference .bus-front-marker{position:relative;left:auto;top:auto;transform:none;display:inline-block;flex:0 0 20px}.detail-inference small{margin:0;color:var(--faint)}.stop-row{min-height:78px;padding-top:10px;padding-bottom:10px}.stop-dot{position:relative}.stop-row .stop-bus-state{display:none}.detail-loading{padding:35px 12px;text-align:center;color:var(--faint)}.detail-inference{position:relative;margin:0 0 2px 38px;padding:8px 10px;border:1px solid rgba(108,140,255,.35);border-radius:10px;background:rgba(108,140,255,.1);color:#c5d0ff;font-size:10.5px;line-height:1.4}.detail-inference:before{content:"🚌";display:inline-grid;place-items:center;width:22px;height:22px;margin-right:6px;border-radius:50%;background:var(--accent);font-size:12px;vertical-align:middle}.detail-inference b{color:#d7ddff}.detail-inference small{display:block;margin:3px 0 0 28px;color:var(--faint);font-size:9.5px}body.detail-open{overflow:hidden}@media(min-width:620px){.route-detail-inner{padding-left:18px;padding-right:18px}}@media(prefers-reduced-motion:reduce){.detail-entry,.stop-row{transition:none}}
 .rmk{
-  height:18px; max-height:18px; padding:0 13px 2px 15px; font-size:10px; line-height:16px; color:var(--faint);
-  display:flex; flex-wrap:nowrap; gap:4px 8px; overflow:hidden; white-space:nowrap;
+  padding:0 13px 11px 15px; font-size:10.5px; color:var(--faint);
+  display:flex; flex-wrap:wrap; gap:4px 8px;
 }
-.none{height:20px; max-height:20px; padding:1px 13px 3px 15px; font-size:11px; line-height:16px; color:var(--faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.alarm-note{display:none;margin:0 13px 10px 15px;padding:8px 10px;border-radius:9px;background:rgba(255,209,102,.14);border:1px solid rgba(255,209,102,.42);color:#ffd166;font-size:11.5px;font-weight:700;line-height:1.45}.alarm-note.show{display:block}.alarm-note.catchup{background:rgba(255,98,92,.13);border-color:rgba(255,98,92,.45);color:#ffb1ab}
+.none{padding:2px 13px 13px 15px; font-size:12px; color:var(--faint)}
 /* ---------- empty / footer ---------- */
 .empty{padding:64px 26px; text-align:center; color:var(--faint)}
 .empty .big{width:76px;height:76px;object-fit:cover;display:block;margin:0 auto 12px;border-radius:22px;opacity:.9;box-shadow:0 8px 22px #05091466}
 .empty p{font-size:13.5px; line-height:1.75}
 .foot{padding:20px 15px calc(20px + var(--safe-b)); text-align:center;
   font-size:10.5px; color:#3f4757; line-height:1.7}
-.info-bar{position:relative;left:auto;right:auto;bottom:auto;z-index:2;margin:10px 10px calc(12px + var(--safe-b));min-height:30px;padding:0 10px;border:1px solid #40516f;border-radius:9px;background:#17233aee;box-shadow:0 4px 16px rgba(0,0,0,.28);backdrop-filter:blur(12px);color:#d8e2f2;font-size:10.5px;line-height:30px;cursor:pointer;user-select:none}.info-bar-main{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.info-bar-main:before{content:'ⓘ';margin-right:5px;color:#9fb4ff}.info-bar.expanded{padding:8px 10px;line-height:1.45;cursor:default}.info-bar.expanded .info-bar-main{white-space:normal;overflow:visible;text-overflow:clip}.info-bar-details{display:none;margin-top:5px;color:#aebbd0;font-size:10.5px;line-height:1.5}.info-bar.expanded .info-bar-details{display:block}.info-bar-actions{display:none;flex-wrap:wrap;gap:6px;margin-top:7px}.info-bar.expanded .info-bar-actions{display:flex}.info-bar-actions button{border:1px solid #718cff;border-radius:7px;padding:4px 8px;background:#293b68;color:#f1f5ff;font:700 10px inherit;cursor:pointer}.info-bar-hint{margin-left:5px;color:#8fa0ba;font-size:9px}.light .info-bar{background:#edf1f3f5;color:#263b51;border-color:#9aabba;box-shadow:0 3px 13px rgba(31,55,78,.18)}.light .info-bar-main:before{color:#185d96}.light .info-bar-details{color:#52677b}.light .info-bar-actions button{background:#dce8f1;border-color:#4b78a1;color:#173853}.light .info-bar-hint{color:#667b8d}
-.info-bar.collapsed{width:42px;height:4px;min-height:4px;margin:8px auto calc(12px + var(--safe-b));padding:0;border:0;border-radius:99px;background:#718cff;box-shadow:none;opacity:.58;overflow:hidden}.info-bar.collapsed .info-bar-main,.info-bar.collapsed .info-bar-details,.info-bar.collapsed .info-bar-actions,.info-bar.collapsed .info-bar-hint{display:none}.light .info-bar.collapsed{background:#4b78a1;opacity:.65}
 /* ---------- fab ---------- */
 .fab{
-  position:fixed; right:12px; bottom:calc(12px + var(--safe-b)); z-index:60;
-  background:linear-gradient(180deg,#72f0bc 0%,#16c887 54%,#0aa66f 100%); color:#042217;
-  border:1px solid #a5ffda; border-radius:999px; height:40px; padding:0 15px;
-  font-size:18px; font-weight:900; letter-spacing:.1px; cursor:pointer; font-family:inherit;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.62), inset 0 -2px 0 rgba(0,78,51,.28), 0 3px 0 #087951, 0 8px 20px rgba(0,170,111,.34);
-  text-shadow:0 1px 0 rgba(255,255,255,.28); transition:transform .12s,box-shadow .12s,filter .12s;
+  position:fixed; right:16px; bottom:calc(18px + var(--safe-b)); z-index:60;
+  background:linear-gradient(135deg,var(--now),#8af0c5); color:#071a14; border:none; border-radius:15px;
+  height:50px; padding:0 20px; font-size:14.5px; font-weight:800; cursor:pointer;
+  box-shadow:0 7px 24px rgba(0,229,138,.32); font-family:inherit;
 }
-.fab:hover{filter:saturate(1.08) brightness(1.04)}
-.fab:active{transform:translateY(2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,78,51,.28),0 1px 0 #087951,0 4px 12px rgba(0,170,111,.28)}
-.fab:focus-visible{outline:3px solid rgba(115,178,255,.75);outline-offset:3px}
+.fab:active{transform:scale(.96)}
 /* ---------- sheet ---------- */
 .mask{position:fixed;inset:0;background:rgba(0,0,0,.68);z-index:99;
   opacity:0;pointer-events:none;transition:opacity .22s}
@@ -222,7 +217,7 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
   text-align:left; color:var(--tx); font-family:inherit; width:100%;
 }
 .li:active{background:var(--card2); transform:scale(.99)}
-.li{transition:transform .15s ease, background .15s ease}.place-route-group{margin:12px 0 16px}.place-route-group>.lbl{display:flex;align-items:baseline;gap:7px;margin-bottom:6px}.place-route-group>.lbl b{font-size:18px;color:var(--now)}.place-route-group>.lbl small{font-size:11px;color:var(--faint);font-weight:500}.place-route-group em{color:var(--faint);font-style:normal}.route-unavailable{display:none}.reverse-missing{display:block!important;margin-top:4px;color:#c6283e!important;font-size:13px!important;font-weight:700}
+.li{transition:transform .15s ease, background .15s ease}.place-route-group{margin:12px 0 16px}.place-route-group>.lbl{display:flex;align-items:baseline;gap:7px;margin-bottom:6px}.place-route-group>.lbl b{font-size:18px;color:var(--now)}.place-route-group>.lbl small{font-size:11px;color:var(--faint);font-weight:500}.place-route-group em{color:var(--faint);font-style:normal}.route-unavailable{display:none}.reverse-missing{display:block!important;margin-top:4px;color:#ff6b6b!important;font-size:13px!important;font-weight:700}
 .li .n{font-size:16px;font-weight:800;min-width:44px;flex:none}
 .li .d{font-size:11.5px;color:var(--dim);flex:1;min-width:0;line-height:1.5}
 .li .d s{display:block;color:var(--faint);text-decoration:none;font-size:10.5px;margin-top:1px}
@@ -292,7 +287,6 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
 .detail-live-dock .detail-status{margin-top:6px;padding:7px 9px;font-size:10px;}
 .detail-live-dock.compact{top:57px;padding:5px 4px 7px;background:color-mix(in srgb,var(--bg-deep) 99%,transparent);box-shadow:0 5px 14px rgba(0,0,0,.12);}
 .detail-live-dock.compact .detail-current,.detail-live-dock.compact .detail-status{display:none;}
-.detail-live-dock.compact .detail-gps-panel{display:none;}
 .detail-live-dock.compact .detail-eta{min-height:62px;padding:7px 4px;}
 .detail-live-dock.compact .detail-eta strong{font-size:18px;}
 .detail-live-dock.compact .detail-eta-panel{gap:5px;margin:0;}
@@ -378,107 +372,6 @@ body.light .stop-row.is-selected{background:rgba(8,115,77,.12)!important;border-
 .detail-route-line .tag.CTB{background:#f1a51a;color:#17233a;border:0;}
 .detail-route-line .tag.GMB{background:#1bb978;color:#fff;border:0;}
 .detail-meta{font-variant-numeric:tabular-nums;}
-.detail-gps-panel{display:flex;flex-direction:column;align-items:stretch;gap:9px;margin:9px 0;padding:9px 11px;border:1px solid rgba(108,140,255,.36);border-radius:11px;background:rgba(108,140,255,.10);color:var(--dim);font-size:11px;line-height:1.4}.detail-gps-panel span{min-width:0}.detail-gps-panel small{display:block;color:var(--soon);font-weight:800;margin-top:3px}.detail-gps-panel button{border:1px solid var(--accent);border-radius:7px;padding:5px 8px;background:rgba(108,140,255,.18);color:var(--tx);font:800 10px inherit;cursor:pointer;white-space:nowrap}.detail-gps-panel.is-live{border-color:rgba(54,224,160,.56);background:rgba(54,224,160,.12);color:var(--tx)}.detail-gps-panel.is-live b{color:var(--now)}.detail-gps-panel.is-error{border-color:rgba(255,98,92,.6);background:rgba(255,98,92,.1);color:var(--tx)}.detail-gps-panel.is-error button{border-color:var(--kmb);background:rgba(255,98,92,.15)}
-.detail-action-row{display:flex;align-items:stretch;justify-content:center;gap:7px;width:100%;flex:0 0 auto;margin-top:7px}.detail-action-row .detail-action{width:106px;min-height:30px;padding:5px 6px;display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.15}
-.stop-row.is-live{background:rgba(54,224,160,.16);border-color:var(--now);box-shadow:0 0 0 2px rgba(54,224,160,.16)}.stop-row.is-live .stop-dot:after{width:18px;height:18px;background:var(--now);border-color:var(--now);box-shadow:0 0 0 5px rgba(54,224,160,.2)}.stop-row.is-live .stop-state{color:var(--now);font-weight:900}.stop-row.is-getoff-target .stop-state{color:var(--soon);font-weight:900}.schedule-first,.schedule-last{font-weight:900;color:var(--soon)}
-.stop-row.is-selected{background:transparent;border-color:transparent;box-shadow:none}.stop-row.is-selected .stop-copy{flex:0 1 auto;max-width:calc(100% - 95px);padding:7px 9px;border:1px solid rgba(54,224,160,.5);border-radius:9px;background:rgba(54,224,160,.1)}
-body.light .detail-gps-panel{background:#e2e9ee;border-color:#8ea8bd}.light .detail-gps-panel.is-live{background:#dcefe5;border-color:#29945f}.light .detail-gps-panel small{color:#a51f2a}.light .detail-gps-panel button{background:#d9e5f0;color:#20344b}.light .stop-row.is-live{background:#d8eee1;border-color:#268b59}.light .stop-row.is-live .stop-state{color:#0b7045}.light .schedule-first,.light .schedule-last{color:#b3222b}
-.light .stop-row.is-selected{background:transparent!important;border-color:transparent!important;box-shadow:none!important}.light .stop-row.is-selected .stop-copy{background:rgba(8,115,77,.1);border-color:rgba(8,115,77,.45)}
-
-/* Selected station: frame the complete station content, not the timeline dot. */
-.stop-row.is-selected,
-.stop-row.is-live.is-selected{background:transparent!important;border-color:transparent!important;box-shadow:none!important;outline:none!important;}
-.stop-content{min-width:0;flex:1;display:flex;align-items:center;gap:9px;padding:7px 9px;border:1px solid transparent;border-radius:12px;}
-.stop-row.is-selected .stop-content{background:rgba(54,224,160,.1);border-color:rgba(54,224,160,.5);}
-.stop-row.is-selected .stop-copy{min-width:0;flex:1;max-width:none;padding:0;border:0;border-radius:0;background:transparent;}
-.stop-row.is-selected .stop-state{flex:0 0 auto;align-self:center;}
-.light .stop-row.is-selected,
-.light .stop-row.is-live.is-selected{background:transparent!important;border-color:transparent!important;box-shadow:none!important;}
-.light .stop-row.is-selected .stop-content{background:rgba(8,115,77,.1);border-color:rgba(8,115,77,.45);}
-
-/* Final visual override: one station content frame only. */
-.stop-row.is-selected,
-.stop-row.is-live.is-selected,
-.light .stop-row.is-selected,
-.light .stop-row.is-live.is-selected {
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  outline: 0 !important;
-}
-.stop-row.is-selected .stop-copy,
-.stop-row.is-live.is-selected .stop-copy,
-.light .stop-row.is-selected .stop-copy,
-.light .stop-row.is-live.is-selected .stop-copy {
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-.stop-row.is-selected .stop-content,
-.stop-row.is-live.is-selected .stop-content {
-  background: rgba(54,224,160,.1) !important;
-  border: 1px solid rgba(54,224,160,.5) !important;
-  box-shadow: none !important;
-}
-.light .stop-row.is-selected .stop-content,
-.light .stop-row.is-live.is-selected .stop-content {
-  background: rgba(8,115,77,.1) !important;
-  border-color: rgba(8,115,77,.45) !important;
-}
-.detail-action-row .detail-action {
-  width: auto;
-  flex: 1 1 0;
-  min-width: 0;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-/* Final placement: the information bar is always reachable at the viewport bottom. */
-.info-bar{position:fixed!important;left:10px;right:10px;bottom:calc(8px + var(--safe-b));z-index:80;margin:0!important;}
-.info-bar.no-info{display:flex!important;}
-.detail-info-bar{display:none;}
-body.detail-open #infoBar{display:none;}
-body.detail-open .detail-info-bar{display:block;}
-.info-bar.collapsed{left:0;right:0;bottom:var(--safe-b);width:auto;height:4px;min-height:4px;margin:0!important;border:0;border-radius:0;background:#718cff;opacity:.72;}
-.light .info-bar.collapsed{background:#4b78a1;}
-.info-bar.compact{left:0;right:0;bottom:var(--safe-b);min-height:34px;height:34px;padding:0 12px;border-radius:0;}
-.info-bar.compact .info-bar-details,.info-bar.compact .info-bar-actions,.info-bar.compact .info-bar-hint{display:none;}
-.info-bar.compact .info-bar-collapse{display:block;}
-.info-bar.compact .info-bar-main{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:0;}
-.info-bar.compact .info-bar-collapse{position:static;border:0;padding:3px 2px;opacity:.78;}
-.info-bar.compact .info-bar-main{flex:1;}
-.info-bar.compact .info-bar-collapse:after{content:' ⋯';margin-left:3px;}
-.info-bar:not(.expanded){display:flex;align-items:center;gap:8px;}
-.info-bar:not(.expanded) .info-bar-main{flex:1;min-width:0;}
-.info-bar-collapse{flex:0 0 auto;border:0;background:transparent;color:inherit;font:700 10px inherit;cursor:pointer;white-space:nowrap;padding:3px 2px;}
-.info-bar.expanded .info-bar-collapse{position:absolute;right:10px;top:8px;padding:3px 6px;border:1px solid currentColor;border-radius:6px;opacity:.78;}
-.info-bar.expanded .info-bar-main{padding-right:58px;}
-.info-bar.collapsed .info-bar-collapse{display:none;}
-.info-bar.collapsed .info-bar-hint{display:none;}
-.light .info-bar-collapse{color:#36556d;}
-.light .schedule-first,.light .schedule-last{color:#982b38!important;}
-.light .wide.danger{color:#8f1d2c;border:1px solid #b54b5e;background:#f3d5da;font-weight:850;}
-body.text-large .card .rt{font-size:1.18em}
-body.text-large .card .dest{font-size:1.12em}
-body.text-large .card .stop-edit{font-size:1.12em}
-body.text-large .card .fare{font-size:1.08em}
-body.text-large .card .eta .m{font-size:1.18em}
-body.text-large .card .eta .u{font-size:1.12em}
-body.text-large .card .rmk,body.text-large .card .none{font-size:10px;line-height:16px}
-body.text-large .detail-route-line{font-size:1.14em}
-body.text-large .detail-meta,body.text-large .detail-info-bar{font-size:1.12em}
-body.text-large .stop-copy strong{font-size:1.14em}
-body.text-large .stop-copy small,body.text-large .stop-state{font-size:1.12em}
-body.text-large .info-bar{font-size:12px}
-body.text-large .sbody .hint,body.text-large .sbody .settings-intro,body.text-large .sbody .lbl{font-size:1.12em}
-body.text-large .sbody .wide,body.text-large .sbody .seg{font-size:1.12em}
-body.text-large .sbody .sv .n{font-size:1.12em}
-body.text-large .sbody .sv .d{font-size:1.1em}
-/* A live station keeps only the inner station-content frame; the row itself is transparent. */
-.stop-row.is-live,
-.light .stop-row.is-live{background:transparent!important;border-color:transparent!important;box-shadow:none!important;}
-.stop-row.is-live .stop-content{background:rgba(54,224,160,.1);border:1px solid rgba(54,224,160,.5);}
-.light .stop-row.is-live .stop-content{background:rgba(216,242,227,.72);border-color:rgba(41,148,95,.45);}
-.detail-back{font-size:29px!important;line-height:1!important;}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
@@ -497,11 +390,6 @@ body.text-large .sbody .sv .d{font-size:1.1em}
   資料來源：data.gov.hk 實時到站 API<br>
   到站時間僅供參考，實際班次可能有變
 </div>
-<aside class="info-bar" id="infoBar" role="status" tabindex="0" aria-label="補充資訊，撳一下查看完整內容">
-  <span class="info-bar-main" id="infoBarMain">正在整理補充資訊…</span><button class="info-bar-collapse" type="button" data-info-action="collapse" aria-label="收起資訊欄">收起</button><span class="info-bar-hint">撳開</span>
-  <div class="info-bar-details" id="infoBarDetails"></div>
-  <div class="info-bar-actions" id="infoBarActions"></div>
-</aside>
 
 <section class="route-detail" id="routeDetail" aria-hidden="true" aria-labelledby="routeDetailTitle">
   <div class="route-detail-head">
@@ -510,15 +398,10 @@ body.text-large .sbody .sv .d{font-size:1.1em}
   </div>
   <div class="route-detail-inner">
     <div id="routeDetailBody" class="detail-loading">載入路線站點…</div>
-    <aside class="info-bar detail-info-bar" id="detailInfoBar" role="status" tabindex="0" aria-label="補充資訊，撳一下查看完整內容">
-      <span class="info-bar-main" id="detailInfoBarMain">正在整理補充資訊…</span><button class="info-bar-collapse" type="button" data-info-action="collapse" aria-label="收起資訊欄">收起</button><span class="info-bar-hint">撳開</span>
-      <div class="info-bar-details" id="detailInfoBarDetails"></div>
-      <div class="info-bar-actions" id="detailInfoBarActions"></div>
-    </aside>
   </div>
 </section>
 
-<button class="fab" id="fab" aria-label="加入巴士路線">＋ 路線</button>
+<button class="fab" id="fab">＋ 設定路線</button>
 
 <div class="mask" id="mask"></div>
 <div class="sheet" id="sheet">
@@ -987,8 +870,6 @@ cleanupOrphanAlarms();
    =================================================================== */
 const $ = s => document.querySelector(s);
 const board = $('#board'), dot = $('#dot'), clock = $('#clock'), refreshBtn = $('#refreshBtn');
-const infoBar = $('#infoBar'), infoBarMain = $('#infoBarMain'), infoBarDetails = $('#infoBarDetails'), infoBarActions = $('#infoBarActions');
-const detailInfoBar = $('#detailInfoBar'), detailInfoBarMain = $('#detailInfoBarMain'), detailInfoBarDetails = $('#detailInfoBarDetails'), detailInfoBarActions = $('#detailInfoBarActions');
 const routeDetail = $('#routeDetail'), routeDetailBody = $('#routeDetailBody'), routeDetailTitle = $('#routeDetailTitle'), routeDetailOperator = $('#routeDetailOperator'), routeDetailRoute = $('#routeDetailRoute'), routeDetailSubTitle = $('#routeDetailSubTitle');
 let routeDetailReturnFocus = null;
 const esc = s => String(s == null ? '' : s)
@@ -996,59 +877,6 @@ const esc = s => String(s == null ? '' : s)
 const cssEscape = s => (globalThis.CSS && typeof CSS.escape === 'function') ? CSS.escape(String(s)) : String(s).replace(/[^a-zA-Z0-9_-]/g, ch => '\\' + ch.charCodeAt(0).toString(16) + ' ');
 let lastOK = 0, inFlight = false;
 const latestResults = new Map();
-let infoFocusId = null;
-document.body.classList.toggle('text-large', localStorage.getItem('buspulse.text-large') === '1');
-function textSizeLabel() { return document.body.classList.contains('text-large') ? 'A− 還原文字大小' : 'A＋ 文字放大'; }
-function toggleTextSize() { const large = !document.body.classList.contains('text-large'); document.body.classList.toggle('text-large', large); localStorage.setItem('buspulse.text-large', large ? '1' : '0'); updateInfoBar(); }
-function updateInfoBar() {
-  if (!infoBar) return;
-  const lines = [];
-  let important = false;
-  let stoppedCount = 0;
-  items.forEach(it => {
-    const result = latestResults.get(uid(it));
-    if (!result) { return; }
-    if (result.err && !result.stale) { important = true; lines.push(it.route + '：資料暫時讀取失敗'); return; }
-    if (!result.etas?.length) { stoppedCount++; if (infoFocusId === uid(it)) { important = true; lines.push(it.route + '：此站暫時冇班次資料，可能已收車'); } return; }
-    const remarks = [...new Set(result.etas.map(e => e.rmk).filter(Boolean))];
-    if (result.stale) { important = true; lines.push(it.route + '：網絡暫時中斷，顯示上次資料'); }
-    if (infoFocusId === uid(it)) {
-      const first = result.etas[0];
-      const etaText = Number.isFinite(Number(first?.min)) ? ('下一班約 ' + Math.max(0, Number(first.min)) + ' 分鐘到站') : '';
-      if (etaText) { important = true; lines.push(it.route + '：' + etaText); }
-      if (remarks.length) { important = true; lines.push(it.route + '：' + remarks.join('、')); }
-    }
-    if (alarms[uid(it)]) { important = true; lines.push(it.route + '：到站提醒已開啟'); }
-    if (getoff[uid(it)]?.active) { important = true; lines.push(it.route + '：已設定落車站「' + getoff[uid(it)].targetName + '」'); }
-  });
-  if (items.length && stoppedCount === items.length) { important = true; lines.unshift('你揀嘅巴士線而家全部暫時冇班次，可能已收車；可以考慮其他交通工具。'); }
-  if (routeDetailState.open && routeDetailState.item) {
-    const gps = routeDetailState.gpsSource === 'eta' ? '巴士 API ETA 數據推算中' : routeDetailState.gpsSource === 'network' ? '網絡／基站定位中' : routeDetailState.gpsStatus === 'watching' ? 'GPS 定位中' : 'GPS 未開啟';
-    lines.push(routeDetailState.item.route + ' 詳情：' + gps);
-  }
-  const unique = [...new Set(lines)];
-  const paint = (bar, main, details, actions, list, isImportant, allowGps, allowSetup) => {
-    if (!bar) return;
-    const hasInfo = list.length > 0;
-    bar.classList.toggle('no-info', !hasInfo);
-    if (!hasInfo) { main.textContent = ''; details.innerHTML = ''; actions.innerHTML = ''; bar.classList.remove('expanded','compact'); bar.classList.add('collapsed'); return; }
-    main.textContent = list[0];
-    details.innerHTML = list.slice(0, 8).map(line => '<div>' + esc(line) + '</div>').join('');
-    actions.innerHTML = '';
-    if (allowGps) { const b = document.createElement('button'); b.type = 'button'; b.textContent = '開啟 GPS 跟車'; b.dataset.infoAction = 'gps'; actions.appendChild(b); }
-    if (allowSetup) { const b = document.createElement('button'); b.type = 'button'; b.textContent = '設定路線'; b.dataset.infoAction = 'setup'; actions.appendChild(b); }
-    const textSize = document.createElement('button'); textSize.type = 'button'; textSize.textContent = textSizeLabel(); textSize.dataset.infoAction = 'text-size'; actions.appendChild(textSize);
-    const pinned = localStorage.getItem('buspulse.info.pinned') === '1';
-    bar.classList.toggle('pinned', pinned);
-    const pin = document.createElement('button'); pin.type = 'button'; pin.textContent = pinned ? '取消長駐' : '長駐'; pin.dataset.infoAction = 'pin'; actions.appendChild(pin);
-    if (pinned) { bar.classList.remove('collapsed'); if (!bar.classList.contains('expanded')) bar.classList.add('compact'); }
-    else if (isImportant && !bar.classList.contains('expanded') && !bar.classList.contains('user-collapsed')) { bar.classList.remove('collapsed'); bar.classList.add('compact'); }
-  };
-  paint(infoBar, infoBarMain, infoBarDetails, infoBarActions, unique, important, routeDetailState.open && routeDetailState.item && routeDetailState.gpsStatus !== 'watching', !items.length);
-  const detailLines = routeDetailState.open && routeDetailState.item && (routeDetailState.gpsSource || routeDetailState.gpsStatus === 'watching') ? [routeDetailState.item.route + ' 詳情：' + (routeDetailState.gpsSource === 'eta' ? '巴士 API ETA 數據推算中' : routeDetailState.gpsSource === 'network' ? '網絡／基站定位中' : 'GPS 定位中')] : [];
-  if (routeDetailState.sweepStatus === 'error') { detailLines.unshift('詳細頁部分資料暫時讀取失敗'); }
-  paint(detailInfoBar, detailInfoBarMain, detailInfoBarDetails, detailInfoBarActions, detailLines, routeDetailState.sweepStatus === 'error', !!(routeDetailState.item && routeDetailState.gpsStatus !== 'watching'), false);
-}
 // Keep a short-lived ETA snapshot so a temporary API/network failure does not
 // erase the user's countdown or cancel an alarm that was already knowable.
 const ETA_CACHE_KEY = 'busboard.eta-snapshot.v1';
@@ -1073,8 +901,7 @@ const routeDetailState = {
   open:false, routeId:null, variantKey:null, stops:[], stopsStatus:'idle',
   stopsError:null, selectedSeq:null, selectedStopId:null, etaByStop:new Map(),
   vehicleInference:{ status:'hidden', fromStopId:null, toStopId:null, reason:null, observedAt:null },
-  generation:0, abortController:null, etaRequest:null, fareLabel:null, scheduleLabel:null, detailTicker:null, detailLastOK:null, sweepStatus:'idle',
-  gpsWatch:null, gpsNetworkWatch:null, gpsSeq:null, gpsPosition:null, gpsPositionAccuracy:null, gpsSource:null, gpsPositionTime:0, gpsStatus:'idle', gpsError:null, gpsErrorCount:0
+  generation:0, abortController:null, etaRequest:null, fareLabel:null, scheduleLabel:null, detailTicker:null, detailLastOK:null, sweepStatus:'idle'
 };
 function beginRouteDetailGeneration() {
   routeDetailState.generation += 1;
@@ -1093,17 +920,12 @@ function closeRouteDetailState() {
   routeDetailState.etaRequest = null;
   clearInterval(routeDetailState.detailTicker);
   routeDetailState.detailTicker = null;
-  if (navigator.geolocation) {
-    if (routeDetailState.gpsWatch != null) navigator.geolocation.clearWatch(routeDetailState.gpsWatch);
-    if (routeDetailState.gpsNetworkWatch != null) navigator.geolocation.clearWatch(routeDetailState.gpsNetworkWatch);
-  }
-  routeDetailState.gpsWatch = null; routeDetailState.gpsNetworkWatch = null; routeDetailState.gpsSeq = null; routeDetailState.gpsPosition = null; routeDetailState.gpsPositionAccuracy = null; routeDetailState.gpsSource = null; routeDetailState.gpsPositionTime = 0; routeDetailState.gpsStatus = 'idle'; routeDetailState.gpsError = null; routeDetailState.gpsErrorCount = 0;
 }
 function startRouteDetailTicker() {
   clearInterval(routeDetailState.detailTicker);
   routeDetailState.detailTicker = setInterval(() => {
     if (routeDetailState.open && routeDetailState.stopsStatus === 'ready') renderRouteDetail();
-  }, 15000);
+  }, 30000);
 }
 async function fareData() {
   if (!fareMemo.has('all')) fareMemo.set('all', getJSON('./fare-index.json', 12000).catch(() => ({})));
@@ -1151,60 +973,6 @@ function detailEtaClock(eta) { return eta?.iso && Number.isFinite(Date.parse(eta
 function detailEtaRemark(eta) { return eta?.rmk || (eta?.sched ? '原定班次' : ''); }
 function detailStopSubline(stop) { return (stop.name_en ? stop.name_en + ' ' : '') + '(' + stop.id + ')'; }
 function detailEtaStateFor(stop) { return routeDetailState.etaByStop.get(String(stop.id)) || { status:'loading', etas:[] }; }
-function gpsDistanceMeters(a, b) {
-  const dy = (Number(a.lat) - Number(b.latitude ?? b.lat)) * 111000;
-  const dx = (Number(a.lng) - Number(b.longitude ?? b.lng)) * 111000 * Math.cos(Number(a.lat) * Math.PI / 180);
-  return Math.hypot(dx, dy);
-}
-function nearestDetailStop(stops, coords) {
-  return stops.filter(st => Number.isFinite(st.lat) && Number.isFinite(st.lng)).reduce((best, st) => {
-    const distance = gpsDistanceMeters(st, coords);
-    return !best || distance < best.distance ? { stop:st, distance } : best;
-  }, null);
-}
-function detailGpsPanel(it, current) {
-  const state = routeDetailState, target = getoff[uid(it)];
-  const refresh = '<button class="detail-action" type="button" data-detail-refresh>立即更新全部車站 ETA</button>';
-  if (state.gpsStatus === 'error') return '<div class="detail-gps-panel is-error" role="status"><span>GPS 暫時未能定位，請確認已允許定位。</span><div class="detail-action-row"><button class="detail-action" type="button" data-detail-gps>重新開啟 GPS</button>' + refresh + '</div></div>';
-  if (state.gpsStatus !== 'watching') return '<div class="detail-gps-panel" role="status"><span>想睇住巴士行到邊？開啟 GPS 後，時間軸會標示你而家接近嘅站。</span><div class="detail-action-row"><button class="detail-action" type="button" data-detail-gps>⌖ 開啟 GPS 跟車</button>' + refresh + '</div></div>';
-  const targetNote = target?.active ? (state.gpsSeq >= target.targetSeq ? '你就嚟到喇：' + target.targetName : state.gpsSeq != null && target.targetSeq - state.gpsSeq <= 1 ? '你就嚟到喇，下一個落車：' + target.targetName : '落車站：' + target.targetName) : '';
-  const source = state.gpsSource === 'network' ? '網絡／基站定位' : state.gpsSource === 'eta' ? '巴士 API ETA 數據推算' : 'GPS 定位', stale = state.gpsSource === 'eta' ? ' · GPS 暫時中斷，使用巴士數據推算' : state.gpsErrorCount > 0 ? ' · 訊號暫時中斷，保留最後位置' : '';
-  return '<div class="detail-gps-panel is-live" role="status"><span><b>● GPS／網絡跟車中</b>　目前接近第 ' + esc(state.gpsSeq || current?.seq || '—') + ' 站「' + esc(current?.name || '讀取中') + '」<small>' + esc(source + stale) + (targetNote ? ' · ' + targetNote : '') + '</small></span><div class="detail-action-row"><button class="detail-action" type="button" data-detail-gps-stop>停止 GPS</button>' + refresh + '</div></div>';
-}
-function acceptDetailLocation(it, pos, source) {
-  const accuracy = Number(pos.coords.accuracy), at = Number(pos.timestamp) || Date.now(), state = routeDetailState;
-  const currentAccuracy = Number(state.gpsPositionAccuracy), currentAt = Number(state.gpsPositionTime) || 0;
-  // Prefer a more accurate fix, but allow a newer network fix to replace a
-  // stale GPS fix when the bus is indoors or has entered a tunnel.
-  if (state.gpsPosition && Number.isFinite(currentAccuracy) && Number.isFinite(accuracy) && accuracy > currentAccuracy + 35 && at < currentAt + 15000) return;
-  const nearest = nearestDetailStop(state.stops, pos.coords);
-  state.gpsPosition = pos.coords; state.gpsPositionAccuracy = Number.isFinite(accuracy) ? accuracy : null; state.gpsSource = source; state.gpsPositionTime = at; state.gpsErrorCount = 0;
-  state.gpsSeq = nearest?.stop?.seq || state.gpsSeq;
-  if (nearest?.stop) { state.selectedSeq = nearest.stop.seq; state.selectedStopId = nearest.stop.id; }
-  if (getoff[uid(it)]?.active) updateGetoff(it, pos.coords);
-  renderRouteDetail();
-}
-function detailLocationError() {
-  // Do not erase the last station when a bus enters a tunnel. Keep both
-  // watchers alive and let a later GPS/network fix update the timeline.
-  routeDetailState.gpsErrorCount = Math.min(9, routeDetailState.gpsErrorCount + 1);
-  routeDetailState.gpsStatus = 'watching'; routeDetailState.gpsError = '定位訊號未能取得';
-  renderRouteDetail();
-}
-function startRouteDetailGps(it) {
-  if (routeDetailState.gpsWatch != null || routeDetailState.gpsNetworkWatch != null) return;
-  if (!navigator.geolocation) { routeDetailState.gpsStatus = 'error'; routeDetailState.gpsError = 'unsupported'; renderRouteDetail(); return; }
-  routeDetailState.gpsStatus = 'watching'; routeDetailState.gpsError = null; routeDetailState.gpsErrorCount = 0; renderRouteDetail();
-  routeDetailState.gpsWatch = navigator.geolocation.watchPosition(pos => acceptDetailLocation(it, pos, 'gps'), detailLocationError, { enableHighAccuracy:true, maximumAge:10000, timeout:20000 });
-  // Low-accuracy mode lets the browser use Wi‑Fi/cell-tower positioning when
-  // satellite GPS is blocked by the bus roof or tunnel.
-  routeDetailState.gpsNetworkWatch = navigator.geolocation.watchPosition(pos => acceptDetailLocation(it, pos, 'network'), detailLocationError, { enableHighAccuracy:false, maximumAge:15000, timeout:30000 });
-}
-function stopRouteDetailGps() {
-  if (routeDetailState.gpsWatch != null && navigator.geolocation) navigator.geolocation.clearWatch(routeDetailState.gpsWatch);
-  if (routeDetailState.gpsNetworkWatch != null && navigator.geolocation) navigator.geolocation.clearWatch(routeDetailState.gpsNetworkWatch);
-  routeDetailState.gpsWatch = null; routeDetailState.gpsNetworkWatch = null; routeDetailState.gpsStatus = 'idle'; routeDetailState.gpsSeq = null; routeDetailState.gpsPosition = null; routeDetailState.gpsPositionAccuracy = null; routeDetailState.gpsSource = null; routeDetailState.gpsPositionTime = 0; routeDetailState.gpsErrorCount = 0; renderRouteDetail();
-}
 function detailVehicleStatus(stop) {
   const eta = detailEtaStateFor(stop).etas?.[0];
   if (!eta) return '';
@@ -1230,7 +998,7 @@ function detailStatusText(stop) {
 function detailStatusAction(stop) {
   const state = detailEtaStateFor(stop);
   const retry = state.status === 'stale' || state.status === 'error' ? '<button class="detail-retry" type="button" data-detail-retry="' + esc(stop.id) + '">重新載入本站 ETA</button>' : '';
-  return retry;
+  return retry + '<button class="detail-refresh" type="button" data-detail-refresh>立即更新全部車站 ETA</button>';
 }
 function detailEtaIsNear(eta) {
   const iso = eta?.iso && Date.parse(eta.iso);
@@ -1310,15 +1078,15 @@ function detailServiceBlock(it) {
   const stop = routeDetailState.stops.find(s => s.seq === routeDetailState.selectedSeq) || routeDetailState.stops[0];
   const etas = (stop ? (detailEtaStateFor(stop).etas || []) : []).filter(e => e.iso && !e.sched).slice(0, 3);
   const now = detailClock(new Date().toISOString()), schedule = routeDetailState.scheduleLabel;
-  const scheduleText = schedule?.error ? '<span class="schedule-first">首班車：官方時間表暫時失敗</span> · <span class="schedule-last">尾班車：官方時間表暫時失敗</span>' : schedule ? ('<span class="schedule-first">首班車 ' + scheduleClock(schedule.first) + '</span> · <span class="schedule-last">尾班車 ' + scheduleClock(schedule.last) + '</span>' + (schedule.current?.freq ? ' · 當前時段 ' + esc(schedule.current.freq) + ' 分鐘／班' : '')) : '<span class="schedule-first">首班車／尾班車讀取中</span>';
+  const scheduleText = schedule?.error ? '官方時間表暫時讀取失敗' : schedule ? ('首班車 ' + scheduleClock(schedule.first) + ' · 尾班車 ' + scheduleClock(schedule.last) + (schedule.current?.freq ? ' · 當前時段 ' + esc(schedule.current.freq) + ' 分鐘／班' : '')) : '首班車／尾班車讀取中';
   const rows = etas.length ? etas.map((e, i) => '<div class="detail-timetable-row ' + (!i ? 'current' : '') + '"><b>' + (i === 0 ? '即將一班' : '之後一班 ' + i) + '</b><span>' + esc(detailClock(e.iso)) + '</span><small>' + esc(detailEtaLabel(e)) + '</small></div>').join('') : '<div class="detail-timetable-empty">此站暫未收到即時班次</div>';
-  return '<details class="detail-service"><summary>營運時間表及服務資料 <small>官方來源 · 按目前時間更新</small></summary><div class="detail-service-body"><div class="detail-timetable-head">目前時間 <b>' + esc(now) + '</b> · ' + esc(stop?.name || '所選車站') + '</div><div class="detail-timetable-head detail-schedule-head"><b>' + scheduleText + '</b></div><div class="detail-timetable" aria-live="polite">' + rows + '</div><p class="detail-service-note"><strong>即時資料：</strong>以上係此站目前收到嘅官方 ETA，畫面會隨時間及更新結果改變；首班／尾班請以官方時間表為準。</p><p class="detail-service-note"><strong>巴士位置估計：</strong>系統會用沿線 ETA 時間斷層及各班 ETA 順序，估計現時有幾多個行駛波段，以及每個波段大約位於邊兩個站之間；板頭數字與下方已顯示嘅估計位置同步更新。</p><a class="detail-service-link" href="' + esc(url) + '" target="_blank" rel="noopener">開啟 ' + esc(provider) + ' ↗</a></div></details>';
+  return '<details class="detail-service"><summary>營運時間表及服務資料 <small>官方來源 · 按目前時間更新</small></summary><div class="detail-service-body"><div class="detail-timetable-head">目前時間 <b>' + esc(now) + '</b> · ' + esc(stop?.name || '所選車站') + '</div><div class="detail-timetable-head"><b>' + scheduleText + '</b></div><div class="detail-timetable" aria-live="polite">' + rows + '</div><p class="detail-service-note"><strong>即時資料：</strong>以上係此站目前收到嘅官方 ETA，畫面會隨時間及更新結果改變；首班／尾班請以官方時間表為準。</p><p class="detail-service-note"><strong>巴士位置估計：</strong>系統會用沿線 ETA 時間斷層及各班 ETA 順序，估計現時有幾多個行駛波段，以及每個波段大約位於邊兩個站之間；板頭數字與下方已顯示嘅估計位置同步更新。</p><a class="detail-service-link" href="' + esc(url) + '" target="_blank" rel="noopener">開啟 ' + esc(provider) + ' ↗</a></div></details>';
 }
 function detailScheduleSummary() {
   const s = routeDetailState.scheduleLabel;
-  if (!s) return '<span class="schedule-first">首班車：讀取中</span><span class="schedule-last">尾班車：讀取中</span>';
-  if (s.error) return '<span class="schedule-first">首班車：官方時間表暫時失敗</span><span class="schedule-last">尾班車：官方時間表暫時失敗</span>';
-  return '<span class="schedule-first">首班車：' + esc(scheduleClock(s.first)) + '</span><span class="schedule-last">尾班車：' + esc(scheduleClock(s.last)) + '</span>';
+  if (!s) return '<span>首班車：讀取中</span><span>尾班車：讀取中</span>';
+  if (s.error) return '<span>首班車：官方時間表暫時失敗</span><span>尾班車：官方時間表暫時失敗</span>';
+  return '<span>首班車：' + esc(scheduleClock(s.first)) + '</span><span>尾班車：' + esc(scheduleClock(s.last)) + '</span>';
 }
 function detailFareValue(it, fares) {
   const routeSeq = it.co === 'GMB' ? (+it.route_seq || 1) : (it.dir === 'I' ? 2 : 1);
@@ -1415,16 +1183,6 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
   }
   return result.sort((a,b) => a.fromSeq - b.fromSeq);
 }
-function applyEtaPositionFallback(segments) {
-  const state = routeDetailState;
-  if (state.gpsStatus !== 'watching' || !segments.length) return;
-  const age = Date.now() - (Number(state.gpsPositionTime) || 0);
-  if (state.gpsSource === 'eta' || state.gpsErrorCount > 0 || age > 45000) {
-    const segment = segments[0];
-    state.gpsSeq = segment.fromSeq;
-    state.gpsSource = 'eta';
-  }
-}
 async function loadRouteDetailEtas(it, request, priorityStopId = routeDetailState.selectedStopId, onlyStopId = null) {
   const ordered = [...routeDetailState.stops].sort((a,b) => String(a.id) === String(priorityStopId) ? -1 : String(b.id) === String(priorityStopId) ? 1 : 0);
   const stops = onlyStopId == null ? ordered : ordered.filter(stop => String(stop.id) === String(onlyStopId));
@@ -1455,7 +1213,7 @@ routeDetail.addEventListener('scroll', updateRouteDetailCompact, { passive:true 
 function renderRouteDetail() {
   const it = routeDetailState.item;
   if (!it || !routeDetailBody) return;
-  const selected = routeDetailState.gpsSeq || routeDetailState.selectedSeq;
+  const selected = routeDetailState.selectedSeq;
   const selectedStop = routeDetailState.stops.find(s => s.seq === selected) || routeDetailState.stops[0];
   if (selectedStop) { routeDetailState.selectedSeq = selectedStop.seq; routeDetailState.selectedStopId = selectedStop.id; }
   routeDetailOperator.textContent = it.co;
@@ -1472,7 +1230,6 @@ function renderRouteDetail() {
   // result.  The separate time-drop estimate remains available for diagnosis,
   // but is not allowed to disagree with what the user can see.
   const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop);
-  applyEtaPositionFallback(virtualSegments);
   const markerAfter = new Map(virtualSegments.map(segment => [segment.fromSeq, '<div class="detail-inference virtual" role="status" aria-label="估計巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="virtual-bus-card"><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計巴士位置"></span></span><span class="virtual-bus-copy"><b>' + (segment.confidence === 'approaching' ? '估計巴士即將到站' : '估計巴士正在途中行駛') + '</b><small>估計位置（獨立推算）：第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間</small></span></div>']));
   const visibleBusCount = markerAfter.size;
   const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
@@ -1487,16 +1244,11 @@ function renderRouteDetail() {
   routeDetailBody.innerHTML =
     '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><span>共 ' + routeDetailState.stops.length + ' 個站</span><span title="按同一輪 ETA 逐段推算">ETA 推算行駛中：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 部' : '讀取中') + '</span><span>' + detailEtaCoverageText() + '</span>' + detailScheduleSummary() + '<span>全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
     '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
-    detailGpsPanel(it, current) +
     detailEtaPanel(current) +
     '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +
     '<div class="detail-section-title"><span>沿途車站列表</span><small>共 ' + routeDetailState.stops.length + ' 個站</small></div>' +
-    '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const isLive = routeDetailState.gpsSeq === st.seq;
-    const isTarget = getoff[uid(it)]?.active && getoff[uid(it)].targetSeq === st.seq;
-    const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected ' : '') + (isLive ? 'is-live ' : '') + (isTarget ? 'is-getoff-target' : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (isLive ? '，你而家接近呢度' : st.seq === selected ? '，已選' : '，按兩下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-content"><span class="stop-copy"><strong>' + esc(st.seq) + '　' + esc(st.name) + '</strong><small>' + (isLive ? '你而家接近呢度' : esc(st.name_en || st.id)) + '</small></span>' + '<span class="stop-state">' + (isLive ? '你而家喺呢度' : isTarget ? '落車站' : state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></span></button>'; const near = nearStation === st.seq ? '<div class="detail-between-bus" role="img" aria-label="巴士即將到站" title="巴士即將到站"><span class="bus-front-marker"></span><span class="bus-status-label">' + (nearStationEta?.sched ? '原定班次接近' : '巴士接近中') + '</span></div>' : ''; return row + near + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it);
+    '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected' : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (st.seq === selected ? '，已選' : '，按兩下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-copy"><strong>' + esc(st.seq) + '　' + esc(st.name) + '</strong><small>' + esc(st.name_en || st.id) + '</small></span>' + '<span class="stop-state">' + (state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></button>'; const near = nearStation === st.seq ? '<div class="detail-between-bus" role="img" aria-label="巴士即將到站" title="巴士即將到站"><span class="bus-front-marker"></span><span class="bus-status-label">' + (nearStationEta?.sched ? '原定班次接近' : '巴士接近中') + '</span></div>' : ''; return row + near + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it);
   updateRouteDetailCompact();
-  routeDetailBody.querySelector('[data-detail-gps]')?.addEventListener('click', () => startRouteDetailGps(it));
-  routeDetailBody.querySelector('[data-detail-gps-stop]')?.addEventListener('click', stopRouteDetailGps);
   routeDetailBody.querySelectorAll('[data-detail-stop]').forEach(button => button.addEventListener('click', () => {
     const stop = routeDetailState.stops.find(s => String(s.seq) === button.dataset.detailStop);
     if (!stop) return;
@@ -1523,7 +1275,6 @@ function renderRouteDetail() {
     loadRouteDetailEtas(routeDetailState.item, request, routeDetailState.selectedStopId).catch(() => {}).finally(() => { if (button.isConnected) { button.disabled = false; button.textContent = '立即更新全部車站 ETA'; } });
   });
   routeDetailBody.querySelector('[data-detail-reverse]')?.addEventListener('click', switchRouteDetailDirection);
-  updateInfoBar();
 }
 async function openRouteDetail(it, trigger) {
   routeDetailReturnFocus = trigger || document.activeElement;
@@ -1535,7 +1286,7 @@ async function openRouteDetail(it, trigger) {
   try {
     const stops = await getRouteStopsCached(it, { signal:request.signal });
     if (!isCurrentRouteDetailGeneration(request.generation)) return;
-    routeDetailState.stops = stops; routeDetailState.stopsStatus = 'ready'; routeDetailState.etaRequest = request; renderRouteDetail(); if (getoff[uid(it)]?.active) startRouteDetailGps(it); loadDetailFare(it, request.generation); loadDetailSchedule(it, request.generation); loadRouteDetailEtas(it, request, routeDetailState.selectedStopId).then(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'ready'; }).catch(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'error'; });
+    routeDetailState.stops = stops; routeDetailState.stopsStatus = 'ready'; routeDetailState.etaRequest = request; renderRouteDetail(); loadDetailFare(it, request.generation); loadDetailSchedule(it, request.generation); loadRouteDetailEtas(it, request, routeDetailState.selectedStopId).then(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'ready'; }).catch(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'error'; });
   } catch (e) {
     if (!isCurrentRouteDetailGeneration(request.generation)) return;
     routeDetailState.stopsStatus = 'error'; renderRouteDetail();
@@ -1545,7 +1296,6 @@ function closeRouteDetail(options = {}) {
   if (!routeDetailState.open) return;
   const useHistory = options.history !== false;
   closeRouteDetailState(); routeDetailState.item = null; routeDetail.classList.remove('on'); routeDetail.setAttribute('aria-hidden', 'true'); document.body.classList.remove('detail-open');
-  updateInfoBar();
   routeDetailReturnFocus?.focus?.();
   if (useHistory && history.state?.buspulseRouteDetail) history.back();
 }
@@ -1555,8 +1305,7 @@ function shell() {
   if (!items.length) {
     board.innerHTML =
       '<div class="empty"><img class="big" src="icon-192.png" alt="BusPulse HK 巴士圖標">' +
-      '<p>仲未揀路線<br>揿右下角<b>＋ 路線</b>加你嘅巴士</p></div>';
-    updateInfoBar();
+      '<p>仲未揀路線<br>揿右下角<b>＋ 設定路線</b>加你嘅巴士</p></div>';
     return;
   }
   board.innerHTML = items.map(it => {
@@ -1574,6 +1323,7 @@ function shell() {
 	      '<div class="etas" data-slot="' + id + '">' +
         '<div class="eta"><div class="m pulse">··</div><div class="u">載入中</div></div>' +
       '</div>' +
+      '<div class="alarm-note" data-alarm-note="' + id + '" aria-live="polite"></div>' +
       '<div class="map-wrap" data-map-wrap="' + id + '"><div class="map-tools"><button class="locate-btn" data-locate-id="' + id + '">⌖ 開啟 GPS</button></div><div class="route-map"></div></div>' +
     '</div>';
   }).join('');
@@ -1598,15 +1348,7 @@ function shell() {
     const item = items.find(x => uid(x) === button.dataset.detailId);
     if (item) button.addEventListener('click', () => openRouteDetail(item, button));
   });
-  board.querySelectorAll('.card').forEach(card => {
-    card.addEventListener('click', event => {
-      if (event.target.closest('button,a')) return;
-      const item = items.find(x => uid(x) === card.dataset.id);
-      if (item) { infoFocusId = uid(item); updateInfoBar(); }
-    });
-  });
   updateFares().catch(() => {});
-  updateInfoBar();
 }
 
 async function toggleAlarm(id, button) {
@@ -1703,8 +1445,14 @@ async function notifyArrival(it, min, tripKey) {
     ? it.route + ' 往 ' + (it.dest || '') + '，提醒補發：原定約 ' + lateMinutes + ' 分鐘前到達 ' + (it.stopName || '')
     : it.route + ' 往 ' + (it.dest || '') + '，約 ' + (Math.max(0,min)) + ' 分鐘到 ' + (it.stopName || '');
   const card = board.querySelector('[data-id="' + cssEscape(id) + '"]');
-  // The route card stays compact; arrival feedback uses the bell, system notification,
-  // and the existing card flash instead of inserting another message panel.
+  const note = board.querySelector('[data-alarm-note="' + cssEscape(id) + '"]');
+  if (note) {
+    note.textContent = isCatchup ? '⚠ 頁面暫停期間已錯過提醒：' + it.route + ' 約 ' + lateMinutes + ' 分鐘前到站時間（恢復頁面後補發）' : '🔔 ' + it.route + ' 約 ' + Math.max(0, min) + ' 分鐘到站';
+    note.classList.add('show');
+    if (isCatchup) note.classList.add('catchup');
+  }
+  // Stop this one-time alarm only after the catch-up message has been placed
+  // on the route card, so the user gets visible feedback even if audio is blocked.
   disableAlarmAfterArrival(id);
   const webPlayed = await ringBell({ alarmAuthorized });
   const alert = {card,notification:null}; activeAlarmAlerts.set(id, alert);
@@ -2047,16 +1795,7 @@ async function roadPath(stops) {
       try {
         const q=await getJSON('https://router.project-osrm.org/route/v1/driving/' + a.lng + ',' + a.lat + ';' + b.lng + ',' + b.lat + '?overview=full&geometries=geojson&steps=false', 12000);
         const line=q.routes?.[0]?.geometry?.coordinates || [];
-        if (line.length > 1) {
-          const lats=line.map(x=>x[1]), lngs=line.map(x=>x[0]);
-          const outside=line.some(x => Math.abs(x[1]-((a.lat+b.lat)/2)) > .18 || Math.abs(x[0]-((a.lng+b.lng)/2)) > .25);
-          const directKm=gapKm(a,b), routeKm=Number(q.routes?.[0]?.distance || 0)/1000;
-          // OSRM may choose a ferry/跨境 detour between nearby airport stops.
-          // Reject implausible segments before drawing them.
-          if (!outside && routeKm > 0 && routeKm <= Math.max(25, directKm * 6)) {
-            if (i > 1) line.shift(); segmented.push(...line.map(x => [x[1],x[0]])); continue;
-          }
-        }
+        if (line.length > 1) { if (i > 1) line.shift(); segmented.push(...line.map(x => [x[1],x[0]])); continue; }
       } catch {}
       if (i > 1) segmented.pop();
       segmented.push([a.lat,a.lng],[b.lat,b.lng]);
@@ -2290,7 +2029,6 @@ async function refresh(options = {}) {
     console.warn('BusPulse refresh failed', e);
   } finally {
     inFlight = false;
-    updateInfoBar();
     if (manual && refreshBtn) {
       refreshBtn.disabled = false;
       refreshBtn.classList.remove('loading');
@@ -2348,57 +2086,6 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pageshow', () => { wakeAlarmPlans(); refresh(); });
 window.addEventListener('online', () => { wakeAlarmPlans(); refresh(); });
 refreshBtn.addEventListener('click', () => { refresh({ manual:true }); });
-function bindInfoBar(bar) {
-  if (!bar) return;
-  if (localStorage.getItem('buspulse.info.pinned') !== '1') bar.classList.add('collapsed');
-  let longPress = null, suppressClick = false;
-  bar.addEventListener('click', event => {
-    if (suppressClick) { suppressClick = false; return; }
-    const action = event.target.closest('[data-info-action]');
-    if (action) {
-      event.stopPropagation();
-      if (action.dataset.infoAction === 'setup') { viewHome(); openSheet(); }
-      if (action.dataset.infoAction === 'gps' && routeDetailState.item) startRouteDetailGps(routeDetailState.item);
-      if (action.dataset.infoAction === 'text-size') { toggleTextSize(); }
-      if (action.dataset.infoAction === 'collapse') { bar.classList.remove('expanded','compact'); bar.classList.add('collapsed','user-collapsed'); }
-      if (action.dataset.infoAction === 'pin') { const next = localStorage.getItem('buspulse.info.pinned') === '1' ? '0' : '1'; localStorage.setItem('buspulse.info.pinned', next); updateInfoBar(); }
-      return;
-    }
-    if (bar.classList.contains('collapsed')) { bar.classList.remove('collapsed','user-collapsed'); bar.classList.add('compact'); }
-    else if (bar.classList.contains('compact')) { bar.classList.remove('compact'); bar.classList.add('expanded'); }
-    else { bar.classList.remove('expanded'); bar.classList.add('compact'); }
-    bar.setAttribute('aria-label', bar.classList.contains('expanded') ? '完整補充資訊，撳一下收合成一行' : '補充資訊，撳一下查看');
-  });
-  bar.addEventListener('pointerdown', () => { longPress = setTimeout(() => { suppressClick = true; bar.classList.remove('expanded','compact'); bar.classList.add('collapsed','user-collapsed'); }, 650); });
-  ['pointerup','pointercancel','pointerleave'].forEach(type => bar.addEventListener(type, () => { if (longPress) { clearTimeout(longPress); longPress = null; } }));
-  bar.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); bar.click(); } });
-}
-bindInfoBar(infoBar); bindInfoBar(detailInfoBar);
-document.addEventListener('pointerdown', event => {
-  [infoBar, detailInfoBar].forEach(bar => {
-    if (bar && bar.classList.contains('expanded') && !bar.contains(event.target)) {
-      bar.classList.remove('expanded');
-      bar.classList.add('compact');
-    }
-  });
-});
-const fab = document.querySelector('#fab');
-const moveFabForInfo = () => {
-  if (!fab) return;
-  const bar = document.body.classList.contains('detail-open') ? detailInfoBar : infoBar;
-  const visible = bar && getComputedStyle(bar).display !== 'none' && getComputedStyle(bar).visibility !== 'hidden';
-  const height = visible ? bar.getBoundingClientRect().height : 0;
-  const gap = visible && height > 4 ? 8 : 12;
-  fab.style.setProperty('bottom', `calc(${Math.max(12, Math.ceil(height) + gap)}px + var(--safe-b))`, 'important');
-};
-new ResizeObserver(moveFabForInfo).observe(infoBar); new ResizeObserver(moveFabForInfo).observe(detailInfoBar); window.addEventListener('resize', moveFabForInfo);
-new MutationObserver(moveFabForInfo).observe(document.body, { attributes:true, attributeFilter:['class'] });
-new MutationObserver(moveFabForInfo).observe(infoBar, { attributes:true, attributeFilter:['class','style'] });
-new MutationObserver(moveFabForInfo).observe(detailInfoBar, { attributes:true, attributeFilter:['class','style'] });
-moveFabForInfo();
-const collapseInfoOnScroll = () => { [infoBar, detailInfoBar].forEach(bar => { if (bar) { bar.classList.remove('expanded'); if (bar.classList.contains('pinned')) { bar.classList.remove('collapsed'); bar.classList.add('compact'); } else if (window.scrollY > 12 || routeDetail?.scrollTop > 52) { bar.classList.remove('compact'); bar.classList.add('collapsed'); } } }); };
-window.addEventListener('scroll', collapseInfoOnScroll, { passive:true });
-routeDetail.addEventListener('scroll', collapseInfoOnScroll, { passive:true });
 /* ===================================================================
    SETTINGS SHEET
    =================================================================== */
@@ -2441,7 +2128,6 @@ function viewPrefs() {
     '<div class="pref-row"><div>時間顯示<small>ETA 卡片時間及頂部時鐘</small></div><select class="pref-select" id="timeSel"><option value="false">24 小時制</option><option value="true">12 小時制</option></select></div>' +
     '<div class="pref-row"><div>顏色模式<small>可以選擇黑暗或光明版</small></div><select class="pref-select" id="themeSel"><option value="dark">黑暗模式</option><option value="light">光明模式</option></select></div></div></details>' +
     '<details class="settings-group"><summary>本地鬧鐘診斷</summary><div class="group-body"><div class="hint">本地鬧鐘依賴瀏覽器通知權限；請保持網站或已安裝的 App 可正常運作。</div><div class="diag-box" id="diagBox"></div></div></details>' +
-    '<button class="wide" data-text-size-toggle>' + textSizeLabel() + '</button>' +
     '<button class="wide" id="prefsBack">← 返回路線設定</button>';
   $('#leadSel').value = String(prefs.lead); $('#soundSel').value = prefs.sound; $('#soundLenSel').value = prefs.soundLen; $('#webSoundSel').value = String(prefs.webSound !== false); $('#busSaverDelay').value = String(prefs.screenSaverIdle); $('#fontSel').value = prefs.font; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
   updateNotificationButton();
@@ -2458,7 +2144,6 @@ function viewPrefs() {
   $('#notifyBtn').addEventListener('click', toggleNotificationSetting);
   renderDiagnostics();
   $('#prefsBack').addEventListener('click', viewHome);
-  sBody.querySelector('[data-text-size-toggle]')?.addEventListener('click', () => { toggleTextSize(); viewPrefs(); });
 }
 
 /* ---------- view 1: home (saved list + add) ---------- */
@@ -2479,7 +2164,6 @@ function viewHome() {
       '</div>').join('') + '</div>';
   }
   h += '<button class="wide p" id="addBtn">＋ 加新路線</button>';
-  h += '<button class="wide" data-text-size-toggle>' + textSizeLabel() + '</button>';
   h += '<div class="lbl">其他</div>';
   h += '<div class="backup-box"><b>資料備份</b><br><span id="backupNote">' + backupReminder() + '</span><div class="backup-actions"><button class="wide" id="exportBtn">⬇ 下載備份</button><button class="wide" id="shareBtn">↗ 分享備份</button></div><button class="wide" id="importBtn">⬆ 還原備份</button><input type="file" id="backupFile" accept="application/json,.json" style="display:none"></div>';
   h += '<div class="backup-box"><b>到站提醒管理</b><br><span id="alarmClearNote">刪除路線後，該路線嘅鬧鐘會自動清理。</span><button class="wide danger" id="clearAlarmsBtn">關閉所有到站鬧鐘</button></div>';
@@ -2491,7 +2175,6 @@ function viewHome() {
   h += '<div class="hint">設定會存喺呢部機嘅瀏覽器，下次開返一樣。</div>';
   sBody.innerHTML = h;
   sBody.scrollTop = 0;
-  sBody.querySelector('[data-text-size-toggle]')?.addEventListener('click', () => { toggleTextSize(); viewHome(); });
 
   sBody.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
     const removed = items[+b.dataset.del], id = removed && uid(removed);
