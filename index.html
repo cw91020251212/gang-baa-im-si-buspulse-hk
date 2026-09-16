@@ -894,6 +894,35 @@ function forgetAlarmPlan(id, key) {
 function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:45000 }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:45000 }; } }
 function loadAlarms() { try { return JSON.parse(localStorage.getItem(ALARM_KEY) || '{}') || {}; } catch { return {}; } }
 function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} }
+let batteryState = { level:null, charging:null };
+function batteryPathLabel() {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    ? 'iPhone：設定 → 電池 → 關閉「低耗電模式」'
+    : 'Android：設定 → 電池 → 省電模式／電池節省模式 → 關閉';
+}
+function renderBatteryGuidance() {
+  const box = document.getElementById('batteryGuidance');
+  if (!box) return;
+  const low = batteryState.level != null && batteryState.level <= .2 && !batteryState.charging;
+  const percent = batteryState.level == null ? '暫時讀唔到電量' : Math.round(batteryState.level * 100) + '%';
+  box.innerHTML = '<b>電量與省電</b><br><span class="battery-status">目前電量：' + percent + (batteryState.charging ? '（充電中）' : '') + '</span><br><span class="battery-path">' + (low ? '電量偏低，省電模式可能令背景提醒受限制。' : '如發現提醒停止，請檢查手機省電模式。') + '<br>' + batteryPathLabel() + '</span><button class="wide" id="batterySettingsBtn">開啟電池設定路徑</button></div>';
+  const btn = document.getElementById('batterySettingsBtn');
+  if (btn) btn.addEventListener('click', () => {
+    const isApple = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (!isApple) { try { window.location.href = 'intent:#Intent;action=android.settings.BATTERY_SAVER_SETTINGS;end'; } catch {} }
+    alert(batteryPathLabel() + '\n請在系統設定內關閉省電模式，再返回本程式。');
+  });
+}
+async function monitorBattery() {
+  if (!navigator.getBattery) { renderBatteryGuidance(); return; }
+  try {
+    const battery = await navigator.getBattery();
+    const update = () => { batteryState.level = battery.level; batteryState.charging = battery.charging; renderBatteryGuidance(); };
+    ['levelchange','chargingchange'].forEach(event => battery.addEventListener(event, update));
+    update();
+  } catch { renderBatteryGuidance(); }
+}
+monitorBattery();
 const busSaver = document.getElementById('busSaver'), busSaverVehicle = document.getElementById('busSaverVehicle'), busSaverTime = document.getElementById('busSaverTime');
 let busSaverTimer = null, busSaverMoveTimer = null, busSaverActive = false, busSaverWakeLock = null;
 function busSaverLabel(ms) { return ms === 0 ? '只限手動' : ms < 60000 ? (ms / 1000) + ' 秒' : (ms / 60000) + ' 分鐘'; }
@@ -2546,7 +2575,8 @@ function viewPrefs() {
     '<div class="pref-row"><div>提示聲長度<small>只影響網站前景播放嘅聲效</small></div><select class="pref-select" id="soundLenSel"><option value="short">較短</option><option value="normal">標準</option><option value="long">較長</option></select></div>' +
     '<div class="pref-row"><div>聲音來源<small>測試網站聲效或手機系統通知聲</small></div><select class="pref-select" id="webSoundSel"><option value="true">網站聲效＋系統聲</option><option value="false">只用系統通知聲</option></select></div>' +
     '<button class="wide" id="previewSoundBtn">🔔 試聽目前提示聲</button></div></details>' +
-    '<details class="settings-group"><summary>螢幕保護</summary><div class="group-body">' +
+    '<details class="settings-group"><summary>電量與省電</summary><div class="group-body"><div class="hint">網頁可以讀取低電量提示，但不能代替你關閉系統省電模式；按下面捷徑後，請在手機設定確認關閉。</div><div class="backup-box" id="batteryGuidance">讀取電量中…</div></div></details>' +
+        '<details class="settings-group"><summary>螢幕保護</summary><div class="group-body">' +
     '<div class="hint">螢幕保護啟動後會嘗試保持手機螢幕喚醒，避免程式停止提醒；離開螢幕保護即刻釋放，減少耗電。輕觸或操作即可返回。</div>' +
     '<div class="pref-row"><div>幾耐無操作後開始<small>只要已設定至少一條路線，就會在閒置後自動開啟</small></div><select class="pref-select" id="busSaverDelay"><option value="15000">15 秒</option><option value="30000">30 秒</option><option value="45000">45 秒</option><option value="60000">1 分鐘</option><option value="120000">2 分鐘</option><option value="300000">5 分鐘</option><option value="0">只限手動</option></select></div>' +
     '<button class="wide" id="openBusSaverBtn">🚌 立即開啟螢幕保護</button></div></details>' +
