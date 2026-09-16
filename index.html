@@ -895,8 +895,20 @@ function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:
 function loadAlarms() { try { return JSON.parse(localStorage.getItem(ALARM_KEY) || '{}') || {}; } catch { return {}; } }
 function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} }
 const busSaver = document.getElementById('busSaver'), busSaverVehicle = document.getElementById('busSaverVehicle'), busSaverTime = document.getElementById('busSaverTime');
-let busSaverTimer = null, busSaverMoveTimer = null, busSaverActive = false;
+let busSaverTimer = null, busSaverMoveTimer = null, busSaverActive = false, busSaverWakeLock = null;
 function busSaverLabel(ms) { return ms === 0 ? '只限手動' : ms < 60000 ? (ms / 1000) + ' 秒' : (ms / 60000) + ' 分鐘'; }
+async function requestBusSaverWakeLock() {
+  if (!busSaverActive || !('wakeLock' in navigator)) return;
+  try {
+    if (!busSaverWakeLock) busSaverWakeLock = await navigator.wakeLock.request('screen');
+    busSaverWakeLock.addEventListener('release', () => { busSaverWakeLock = null; });
+  } catch { busSaverWakeLock = null; }
+}
+async function releaseBusSaverWakeLock() {
+  if (!busSaverWakeLock) return;
+  try { await busSaverWakeLock.release(); } catch {}
+  busSaverWakeLock = null;
+}
 let busSaverPathTimer = null;
 let busSaverPathIndex = 0;
 let busSaverConvoy = [];
@@ -944,6 +956,7 @@ function openBusSaver() {
   clearTimeout(busSaverTimer);
   clearTimeout(busSaverPathTimer);
   busSaver.classList.add('on');
+  requestBusSaverWakeLock();
   busSaverPathIndex = Math.floor(Math.random() * 6);
   busSaverConvoy = [busSaverVehicle];
   const convoyCount = 2;
@@ -966,6 +979,7 @@ function closeBusSaver() {
   if (!busSaverActive) return;
   busSaverActive = false;
   busSaver.classList.remove('on');
+  releaseBusSaverWakeLock();
   busSaverConvoy.slice(1).forEach(vehicle => vehicle.remove());
   busSaverConvoy = [];
   clearInterval(busSaverMoveTimer);
@@ -2516,6 +2530,9 @@ document.addEventListener('wheel', registerBusActivity, { passive:true });
 document.addEventListener('touchstart', registerBusActivity, { passive:true });
 document.addEventListener('keydown', e => { if (busSaverActive && e.key !== 'Tab') closeBusSaver(); else registerBusActivity(); });
 window.addEventListener('resize', moveBusSaver);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && busSaverActive) requestBusSaverWakeLock();
+});
 
 function viewPrefs() {
   sTitle.textContent = '顯示與提醒設定';
@@ -2530,7 +2547,7 @@ function viewPrefs() {
     '<div class="pref-row"><div>聲音來源<small>測試網站聲效或手機系統通知聲</small></div><select class="pref-select" id="webSoundSel"><option value="true">網站聲效＋系統聲</option><option value="false">只用系統通知聲</option></select></div>' +
     '<button class="wide" id="previewSoundBtn">🔔 試聽目前提示聲</button></div></details>' +
     '<details class="settings-group"><summary>螢幕保護</summary><div class="group-body">' +
-    '<div class="hint">黑色畫面只保留一架側面紅色巴士移動，適合長開報時器；輕觸畫面即可返回。</div>' +
+    '<div class="hint">螢幕保護啟動後會嘗試保持手機螢幕喚醒，避免程式停止提醒；離開螢幕保護即刻釋放，減少耗電。輕觸或操作即可返回。</div>' +
     '<div class="pref-row"><div>幾耐無操作後開始<small>只要已設定至少一條路線，就會在閒置後自動開啟</small></div><select class="pref-select" id="busSaverDelay"><option value="15000">15 秒</option><option value="30000">30 秒</option><option value="45000">45 秒</option><option value="60000">1 分鐘</option><option value="120000">2 分鐘</option><option value="300000">5 分鐘</option><option value="0">只限手動</option></select></div>' +
     '<button class="wide" id="openBusSaverBtn">🚌 立即開啟螢幕保護</button></div></details>' +
     '<details class="settings-group"><summary>外觀</summary><div class="group-body">' +
