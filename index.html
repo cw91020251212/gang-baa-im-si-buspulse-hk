@@ -8,11 +8,12 @@
 <title>港巴即時｜BusPulse HK</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#101827; --bg-deep:#0b1120; --card:rgba(26,36,55,.88); --card2:#22304a; --line:rgba(151,173,207,.16);
+  --bg:#101827; --bg-deep:#0b1120; --card:rgba(26,36,55,.88); --card2:#22304a; --line:rgba(205,222,245,.28);
   --tx:#f4f7fb; --dim:#aab7cc; --faint:#71809a;
   --now:#36e0a0; --soon:#ffd166; --late:#85a9ff; --sched:#9aa8bd;
   --kmb:#ff625c; --ctb:#ffbe55; --gmb:#63d889;
@@ -34,11 +35,9 @@ body{
   display:flex; align-items:center; gap:10px;
 }
 .top h1{font-size:17px; font-weight:800; letter-spacing:.3px; flex:1; background:linear-gradient(100deg,#fff 20%,#a9baff); -webkit-background-clip:text; background-clip:text; color:transparent}
-.brandmark{width:31px;height:31px;border-radius:10px;display:grid;place-items:center;flex:none;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;font-size:10px;font-weight:900;letter-spacing:-.4px;box-shadow:0 5px 16px var(--glow)}
+.brandmark{width:31px;height:31px;border-radius:10px;display:block;flex:none;background:url('icon-192.png') center/cover no-repeat;box-shadow:0 5px 16px var(--glow)}
 .brandcopy{flex:1;min-width:0}.brandcopy h1{line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brandcopy small{display:block;color:var(--faint);font-size:9px;font-weight:700;letter-spacing:.45px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .clock{font-variant-numeric:tabular-nums; font-size:13px; color:var(--dim); font-weight:600}
-.push-state{border:1px solid rgba(54,224,160,.35);background:rgba(54,224,160,.1);color:#8af0c5;border-radius:8px;padding:5px 7px;font:700 10px/1.1 inherit;cursor:pointer;white-space:nowrap}
-.push-state.off{border-color:rgba(170,183,204,.3);background:rgba(170,183,204,.08);color:var(--dim)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--now);flex:none}
 .dot.stale{background:var(--soon)}
 .dot.err{background:var(--kmb)}
@@ -47,15 +46,17 @@ body{
   width:34px;height:34px;border-radius:10px; font-size:15px; cursor:pointer;
   display:grid;place-items:center; flex:none;
 }
-.iconbtn:active{background:#2a3240}
+.iconbtn:active{background:#2a3240}.iconbtn.loading{animation:sp .7s linear infinite;opacity:.7}.iconbtn.no-data{animation:sp .45s ease-in-out 2}
 @media(max-width:500px){
-  .top{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:6px;padding-left:10px;padding-right:10px}
-  .push-state{grid-column:2 / -1;grid-row:2;justify-self:start;margin-top:1px;margin-bottom:1px}
+  .top{display:flex;align-items:center;gap:6px;padding-left:10px;padding-right:10px;min-height:52px}
+  .top .brandcopy{flex:1;min-width:0}
+  .top .clock{font-size:12px}
+  .top .iconbtn{width:32px;height:32px;flex:none}
 }
 /* ---------- board ---------- */
 .board{padding:12px 12px 0; display:flex; flex-direction:column; gap:10px}
 .card{
-  background:linear-gradient(135deg,rgba(29,41,63,.94),rgba(20,29,46,.94)); border:1px solid var(--line); border-radius:18px; box-shadow:0 10px 28px rgba(3,8,20,.18);
+  background:linear-gradient(135deg,rgba(29,41,63,.94),rgba(20,29,46,.94)); border:1px solid rgba(205,222,245,.52); border-radius:18px; box-shadow:0 10px 28px rgba(3,8,20,.18);
   overflow:hidden; position:relative;
 }
 .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--dim)}
@@ -114,8 +115,36 @@ body{
 .diag-log{font-size:11px;color:var(--faint);padding:4px 0;font-variant-numeric:tabular-nums}
 .test-tools{margin:10px 0;border:1px solid var(--line);border-radius:12px;padding:0 10px;background:var(--card2)}.test-tools summary{cursor:pointer;padding:12px 2px;color:var(--muted);font-weight:800}.test-tools[open] summary{color:var(--now)}.test-tools .pref-row:first-of-type{margin-top:2px}.test-notify-row{display:flex;align-items:center;gap:8px}.test-notify-row .wide{flex:1}.test-countdown{display:inline-grid;place-items:center;min-width:54px;height:40px;padding:0 9px;border-radius:10px;background:#fff;color:#c62828;border:2px solid #ff6262;font:900 15px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:-.4px;box-shadow:0 0 0 2px rgba(255,98,98,.18);white-space:nowrap}.test-countdown.ready{color:var(--faint);border-color:var(--line);background:var(--card2);box-shadow:none;font-size:11px}
 body.font-large .card{font-size:17px}body.font-large .rt{font-size:29px}body.font-large .dest{font-size:14px}body.font-large .stop{font-size:13.5px}body.font-large .stop b{font-size:14px}body.font-large .fare{font-size:12px}body.font-large .eta .m{font-size:25px}body.font-large .eta .u,body.font-large .eta .t{font-size:11px}body.font-large .rmk,body.font-large .none{font-size:12.5px}body.font-large .map-head-btn,body.font-large .alarm-btn{transform:scale(1.08)}body.font-large .foot{font-size:12px}body.font-large .sbody{font-size:15px}body.font-large .sbody .lbl{font-size:12px}body.font-large .sbody .hint{font-size:12.5px}body.font-large .sbody .li .n{font-size:18px}body.font-large .sbody .li .d{font-size:13.5px}body.font-large .sbody .sv .n{font-size:16.5px}body.font-large .sbody .sv .d{font-size:13px}body.font-large .sbody .wide{font-size:15px}body.font-large .sbody .pref-row{font-size:14.5px}body.font-large .sbody .pref-row small{font-size:11.5px}body.font-large .sbody .pref-select{font-size:14px}
-body.font-large .clock{font-size:15px}body.font-large .brandcopy small{font-size:10.5px}body.font-large .iconbtn{font-size:17px}
-body.light{--bg:#eef3fa;--bg-deep:#e1e9f4;--card:rgba(255,255,255,.92);--card2:#e4ebf5;--line:rgba(57,78,110,.18);--tx:#162238;--dim:#40516b;--faint:#6d7c91;--glow:rgba(70,100,180,.16);background:linear-gradient(145deg,#eef4ff,#f8fbff)}body.light .top{background:rgba(238,243,250,.88)}body.light .card{background:linear-gradient(135deg,#fff,#edf3fb)}body.light .sheet{background:linear-gradient(180deg,#f7faff,#e9f0f8)}
+body.font-small{font-size:14px}body.font-small .rt{font-size:22px}body.font-small .eta .m{font-size:18px}body.font-small .eta .u,body.font-small .eta .t{font-size:9px}body.font-small .clock{font-size:12px}body.font-small .brandcopy small{font-size:8.5px}body.font-small .iconbtn{font-size:14px}body.font-medium .clock{font-size:13px}body.font-medium .brandcopy small{font-size:9px}body.font-medium .iconbtn{font-size:15px}body.font-large .clock{font-size:15px}body.font-large .brandcopy small{font-size:10.5px}body.font-large .iconbtn{font-size:17px}body.font-small .board,body.font-small .foot{zoom:.92}body.font-medium .board,body.font-medium .foot{zoom:1}body.font-large .board,body.font-large .foot{zoom:1.16}body.font-large .top{zoom:1.08}
+body.light{--bg:#e7ebef;--bg-deep:#d9e0e6;--card:#edf1f4;--card2:#dfe5ea;--line:#b8c3cd;--tx:#172235;--dim:#40516a;--faint:#63748a;--now:#08734d;--soon:#7b5200;--late:#2e5b91;--sched:#53657b;--glow:rgba(40,65,100,.16);background:linear-gradient(145deg,#e1e6eb,#edf0f3)}
+body.light .top{background:rgba(244,247,251,.96);border-bottom-color:#b9c6d4}
+body.light .top h1{background:none;color:var(--tx)}
+body.light .card{background:linear-gradient(135deg,#eef2f5,#e3e8ed);border-color:#b7c4d2;box-shadow:0 8px 22px rgba(35,55,80,.10)}
+body.light .eta{background:linear-gradient(145deg,#edf1f4,#e1e7ec);border-color:#bcc9d6}
+body.light .iconbtn,body.light .map-toggle,body.light .map-head-btn{background:#e4e9ed;color:var(--tx);border-color:#aebdcd}
+body.light .iconbtn:active,body.light .li:active{background:#e5ebf2}
+body.light .li,body.light .sv{border-color:#bcc9d6}
+body.light .map-tools{background:#e5ebf2}
+body.light .map-toggle,body.light .map-head-btn,body.light .detail-entry,body.light .detail-refresh{color:#244f91;background:#edf3ff;border-color:#9bb5dc}
+body.light .locate-btn{color:#07583d;background:#e7f6ed;border-color:#91c9a8}
+body.light .map-live-note{background:#e7f6ed;color:#07583d;border-color:#a5d7b8}
+body.light .map-note{background:#f0f4f8;color:var(--dim)}
+body.light .map-loading{color:#526a86}
+body.light .leaflet-popup-content-wrapper,body.light .leaflet-popup-tip{background:#e8edf1;color:var(--tx)}
+body.light .leaflet-control-zoom a{color:#23344e;background:#ffffff}
+body.light .sheet{background:linear-gradient(180deg,#e9edf1,#dfe5ea)}
+body.light .grab{background:#aab8c7}
+body.light .fare{color:#704b00;background:#fff7df;border-color:#d5b86b}
+body.light .co.KMB{color:#a51f2a}body.light .co.CTB{color:#855000}body.light .co.GMB{color:#176b3d}
+body.light .alarm-btn.on{color:#704b00;border-color:#d5b86b;background:#fff7df}
+body.light .getoff-btn,body.light .alight-btn{color:#07583d;background:#e7f6ed;border-color:#91c9a8}
+body.light .alarm-btn:not(.on){color:#40516a;background:#eef2f6;border-color:#aebdcd;filter:none}
+body.light .alarm-btn:not(.on)::after{background:#40516a}
+body.light .map-wrap{background:#e7edf3}
+body.light .settings-group{background:#f5f8fb}
+body.light .foot{color:#63748a}
+body.light .test-countdown{background:#fff;color:#a51f2a}
+body.light .eta .m,body.light .fare,body.light .co,body.light .detail-route-icon,.light .bus-front-marker{-webkit-text-stroke:0;text-shadow:none}
 .map-actions{padding:0 13px 12px 15px}
 .map-toggle{width:100%;border:1px solid rgba(133,169,255,.28);background:rgba(108,140,255,.1);color:#b9c9ff;border-radius:10px;padding:9px 11px;font:700 11.5px inherit;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between}.map-head-btn{width:28px;height:28px;border:1px solid rgba(133,169,255,.28);background:rgba(108,140,255,.1);color:#b9c9ff;border-radius:8px;font:700 14px inherit;cursor:pointer;flex:none}.map-head-btn:active{transform:scale(.94)}
 .map-toggle:active{transform:scale(.99);background:rgba(108,140,255,.18)}
@@ -124,6 +153,8 @@ body.light{--bg:#eef3fa;--bg-deep:#e1e9f4;--card:rgba(255,255,255,.92);--card2:#
 .map-wrap.open{display:block}.map-tools{display:flex;gap:7px;padding:8px;background:rgba(16,24,39,.95)}.locate-btn{border:1px solid rgba(99,216,137,.35);background:rgba(99,216,137,.12);color:#a7f1bf;border-radius:9px;padding:8px 10px;font:700 11px inherit;cursor:pointer}.locate-btn:active{transform:scale(.98)}.route-map{height:250px;width:100%;z-index:1}.map-live-note{padding:7px 10px;background:rgba(0,229,138,.08);color:#a7f1bf;font-size:10.5px;line-height:1.45;border-top:1px solid rgba(99,216,137,.2)}.map-note{padding:7px 10px;background:rgba(16,24,39,.94);color:var(--faint);font-size:10px;line-height:1.4}
 .map-loading{height:250px;display:grid;place-items:center;color:#53657e;font-size:12px}
 .leaflet-container{font-family:inherit}.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#17233a;color:#f4f7fb}.leaflet-popup-content{font-size:12px;line-height:1.5}.leaflet-control-zoom a{color:#23344e}.popup-select{margin-top:5px;border:0;border-radius:7px;padding:6px 9px;background:var(--now);color:#071a14;font:700 11px inherit;cursor:pointer}
+	.detail-entry{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border:1px solid rgba(108,140,255,.35);background:rgba(108,140,255,.1);color:#bdcaff;border-radius:8px;padding:0;margin:0;font:800 15px/1 inherit;cursor:pointer}.detail-entry:active{transform:scale(.92)}
+.route-detail{position:fixed;inset:0;z-index:120;background:var(--bg);color:var(--tx);display:none;overflow:auto;overscroll-behavior:contain;padding-bottom:calc(24px + var(--safe-b))}.route-detail.on{display:block}.route-detail-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:calc(8px + var(--safe-t)) 13px 9px;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}.route-detail-head h2{font-size:16px;line-height:1.15;flex:1;min-width:0}.route-detail-head small{display:block;color:var(--faint);font-size:10px;margin-top:3px;font-weight:600}.detail-back{width:40px;height:40px;border:1px solid var(--line);background:var(--card);color:var(--tx);border-radius:11px;font:800 20px inherit;cursor:pointer}.route-detail-inner{max-width:680px;margin:0 auto;padding:0 13px}.detail-summary{padding:14px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(135deg,var(--card),var(--card2));margin-bottom:10px}.detail-live-dock{position:sticky;top:57px;z-index:3;padding:4px 0 8px;background:color-mix(in srgb,var(--bg) 99%,transparent);backdrop-filter:blur(14px);margin:0 -2px 4px;isolation:isolate}.detail-live-dock .detail-current{margin:0 0 7px}.detail-live-dock .detail-eta-panel{margin:0 0 7px}.detail-live-dock .detail-status{box-shadow:0 4px 14px rgba(0,0,0,.12)}.detail-route-line{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:850}.detail-route-line .arrow{color:var(--dim)}.detail-meta{display:flex;flex-wrap:wrap;gap:6px 13px;margin-top:8px;color:var(--dim);font-size:11.5px}.detail-reverse{margin-top:10px;border:1px solid rgba(54,224,160,.36);border-radius:9px;background:rgba(54,224,160,.08);color:var(--now);padding:8px 11px;font:800 11px inherit;cursor:pointer}.detail-reverse:focus-visible{outline:3px solid var(--now);outline-offset:2px}.detail-current{padding:11px 13px;border:1px solid rgba(54,224,160,.36);border-radius:13px;background:rgba(54,224,160,.08);margin:10px 0}.detail-current-label{font-size:10px;color:var(--now);font-weight:800;letter-spacing:.04em}.detail-current-name{font-size:16px;font-weight:800;margin-top:4px}.detail-bus-status{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:4px 8px;border-radius:999px;background:rgba(54,224,160,.12);color:var(--now);font-size:10.5px;font-weight:800}.detail-bus-status b{font-size:14px}.detail-eta-panel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:10px 0}.detail-eta{min-width:0;min-height:84px;padding:9px 6px;border:1px solid var(--line);border-radius:12px;background:var(--card);text-align:center}.detail-eta strong{display:block;font-size:19px;line-height:1.1;font-variant-numeric:tabular-nums}.detail-eta span{display:block;color:var(--faint);font-size:10px;margin-top:5px}.detail-eta small{display:block;color:var(--dim);font-size:9.5px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.detail-eta:first-child{border-color:rgba(54,224,160,.45);background:rgba(54,224,160,.08)}.detail-status{padding:8px 10px;border-radius:9px;background:var(--card);color:var(--dim);font-size:11px;line-height:1.45}.detail-retry{display:block;margin-top:7px;border:1px solid var(--line);border-radius:8px;background:var(--card2);color:var(--tx);padding:6px 8px;font:700 10.5px inherit;cursor:pointer}.detail-refresh{display:block;margin-top:7px;border:1px solid rgba(108,140,255,.35);border-radius:8px;background:rgba(108,140,255,.08);color:var(--dim);padding:6px 8px;font:700 10.5px inherit;cursor:pointer}.detail-refresh:disabled{opacity:.55;cursor:wait}.detail-retry:focus-visible,.stop-row:focus-visible,.detail-back:focus-visible{outline:3px solid var(--now);outline-offset:2px}.detail-section-title{display:flex;justify-content:space-between;align-items:baseline;margin:17px 2px 8px;font-weight:850}.detail-section-title small{color:var(--faint);font-size:10px;font-weight:600}.stop-timeline{position:relative;z-index:0;padding:3px 0 10px}.stop-timeline:before{content:"";position:absolute;left:18px;top:18px;bottom:18px;width:2px;background:var(--line)}.stop-row{position:relative;display:flex;align-items:stretch;gap:11px;width:100%;min-height:66px;padding:7px 7px 7px 0;border:1px solid transparent;border-radius:13px;background:transparent;color:var(--tx);text-align:left;font:inherit;cursor:pointer}.stop-row:active{transform:scale(.995)}.stop-row.is-selected{border-color:rgba(54,224,160,.42);background:rgba(54,224,160,.08)}.stop-dot{position:relative;z-index:1;flex:0 0 38px;display:grid;place-items:center}.stop-dot:after{content:"";width:15px;height:15px;border:2px solid var(--faint);border-radius:50%;background:var(--bg)}.stop-row.is-selected .stop-dot:after{width:19px;height:19px;border-color:var(--now);background:var(--now);box-shadow:0 0 0 5px rgba(54,224,160,.14)}.stop-copy{min-width:0;flex:1;padding-top:1px}.stop-copy strong{display:block;font-size:14px;line-height:1.25}.stop-copy small{display:block;color:var(--faint);font-size:10.5px;margin-top:4px;line-height:1.3}.stop-state{align-self:center;color:var(--faint);font-size:10px;white-space:nowrap}.stop-row.is-selected .stop-state{color:var(--now);font-weight:800}.stop-bus-state{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;padding:4px 6px;border-radius:999px;background:rgba(54,224,160,.12);color:var(--now);font-size:10px;font-weight:800;white-space:nowrap}.stop-bus-state b{font-size:14px}.stop-bus-state.enroute{background:rgba(108,140,255,.14);color:#b9c6ff}.bus-front-marker{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:20px;height:15px;border-radius:4px 4px 3px 3px;background:var(--now);box-shadow:0 0 0 3px color-mix(in srgb,var(--now) 18%,transparent);z-index:3}.bus-front-marker:before{content:"";position:absolute;left:3px;right:3px;top:3px;height:5px;border-radius:2px;background:var(--bg-deep);box-shadow:0 7px 0 -1px var(--bg-deep)}.bus-front-marker:after{content:"";position:absolute;left:2px;right:2px;bottom:-3px;height:4px;border-radius:50%;background:linear-gradient(90deg,var(--bg-deep) 0 25%,transparent 25% 75%,var(--bg-deep) 75%)}.bus-front-marker.enroute{background:#8094ff;box-shadow:0 0 0 3px rgba(128,148,255,.18)}.stop-dot.has-bus:after{opacity:.25}.detail-inference{margin:4px 0 8px 42px;padding:6px 9px;display:flex;align-items:center;gap:6px}.detail-inference .bus-front-marker{position:relative;left:auto;top:auto;transform:none;display:inline-block;flex:0 0 20px}.detail-inference small{margin:0;color:var(--faint)}.stop-row{min-height:78px;padding-top:10px;padding-bottom:10px}.stop-dot{position:relative}.stop-row .stop-bus-state{display:none}.detail-loading{padding:35px 12px;text-align:center;color:var(--faint)}.detail-inference{position:relative;margin:0 0 2px 38px;padding:8px 10px;border:1px solid rgba(108,140,255,.35);border-radius:10px;background:rgba(108,140,255,.1);color:#c5d0ff;font-size:10.5px;line-height:1.4}.detail-inference:before{content:"🚌";display:inline-grid;place-items:center;width:22px;height:22px;margin-right:6px;border-radius:50%;background:var(--accent);font-size:12px;vertical-align:middle}.detail-inference b{color:#d7ddff}.detail-inference small{display:block;margin:3px 0 0 28px;color:var(--faint);font-size:9.5px}body.detail-open{overflow:hidden}@media(min-width:620px){.route-detail-inner{padding-left:18px;padding-right:18px}}@media(prefers-reduced-motion:reduce){.detail-entry,.stop-row{transition:none}}
 .rmk{
   padding:0 13px 11px 15px; font-size:10.5px; color:var(--faint);
   display:flex; flex-wrap:wrap; gap:4px 8px;
@@ -132,18 +163,24 @@ body.light{--bg:#eef3fa;--bg-deep:#e1e9f4;--card:rgba(255,255,255,.92);--card2:#
 .none{padding:2px 13px 13px 15px; font-size:12px; color:var(--faint)}
 /* ---------- empty / footer ---------- */
 .empty{padding:64px 26px; text-align:center; color:var(--faint)}
-.empty .big{font-size:40px; margin-bottom:12px; opacity:.5}
+.empty .big{width:76px;height:76px;object-fit:cover;display:block;margin:0 auto 12px;border-radius:22px;opacity:.9;box-shadow:0 8px 22px #05091466}
 .empty p{font-size:13.5px; line-height:1.75}
 .foot{padding:20px 15px calc(20px + var(--safe-b)); text-align:center;
   font-size:10.5px; color:#3f4757; line-height:1.7}
+.info-bar{position:relative;left:auto;right:auto;bottom:auto;z-index:2;margin:10px 10px calc(12px + var(--safe-b));min-height:30px;padding:0 10px;border:1px solid #40516f;border-radius:9px;background:#17233aee;box-shadow:0 4px 16px rgba(0,0,0,.28);backdrop-filter:blur(12px);color:#d8e2f2;font-size:10.5px;line-height:30px;cursor:pointer;user-select:none}.info-bar-main{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.info-bar-main:before{content:'ⓘ';margin-right:5px;color:#9fb4ff}.info-bar.expanded{padding:8px 10px;line-height:1.45;cursor:default}.info-bar.expanded .info-bar-main{white-space:normal;overflow:visible;text-overflow:clip}.info-bar-details{display:none;margin-top:5px;color:#aebbd0;font-size:10.5px;line-height:1.5}.info-bar.expanded .info-bar-details{display:block}.info-bar-actions{display:none;flex-wrap:wrap;gap:6px;margin-top:7px}.info-bar.expanded .info-bar-actions{display:flex}.info-bar-actions button{border:1px solid #718cff;border-radius:7px;padding:4px 8px;background:#293b68;color:#f1f5ff;font:700 10px inherit;cursor:pointer}.info-bar-hint{margin-left:5px;color:#8fa0ba;font-size:9px}.light .info-bar{background:#edf1f3f5;color:#263b51;border-color:#9aabba;box-shadow:0 3px 13px rgba(31,55,78,.18)}.light .info-bar-main:before{color:#185d96}.light .info-bar-details{color:#52677b}.light .info-bar-actions button{background:#dce8f1;border-color:#4b78a1;color:#173853}.light .info-bar-hint{color:#667b8d}
+.info-bar.collapsed{width:42px;height:4px;min-height:4px;margin:8px auto calc(12px + var(--safe-b));padding:0;border:0;border-radius:99px;background:#718cff;box-shadow:none;opacity:.58;overflow:hidden}.info-bar.collapsed .info-bar-main,.info-bar.collapsed .info-bar-details,.info-bar.collapsed .info-bar-actions,.info-bar.collapsed .info-bar-hint{display:none}.light .info-bar.collapsed{background:#4b78a1;opacity:.65}
 /* ---------- fab ---------- */
 .fab{
-  position:fixed; right:16px; bottom:calc(18px + var(--safe-b)); z-index:60;
-  background:linear-gradient(135deg,var(--now),#8af0c5); color:#071a14; border:none; border-radius:15px;
-  height:50px; padding:0 20px; font-size:14.5px; font-weight:800; cursor:pointer;
-  box-shadow:0 7px 24px rgba(0,229,138,.32); font-family:inherit;
+  position:fixed; right:12px; bottom:calc(12px + var(--safe-b)); z-index:60;
+  background:linear-gradient(180deg,#72f0bc 0%,#16c887 54%,#0aa66f 100%); color:#042217;
+  border:1px solid #a5ffda; border-radius:999px; height:40px; padding:0 15px;
+  font-size:12px; font-weight:900; letter-spacing:.1px; cursor:pointer; font-family:inherit;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.62), inset 0 -2px 0 rgba(0,78,51,.28), 0 3px 0 #087951, 0 8px 20px rgba(0,170,111,.34);
+  text-shadow:0 1px 0 rgba(255,255,255,.28); transition:transform .12s,box-shadow .12s,filter .12s;
 }
-.fab:active{transform:scale(.96)}
+.fab:hover{filter:saturate(1.08) brightness(1.04)}
+.fab:active{transform:translateY(2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,78,51,.28),0 1px 0 #087951,0 4px 12px rgba(0,170,111,.28)}
+.fab:focus-visible{outline:3px solid rgba(115,178,255,.75);outline-offset:3px}
 /* ---------- sheet ---------- */
 .mask{position:fixed;inset:0;background:rgba(0,0,0,.68);z-index:99;
   opacity:0;pointer-events:none;transition:opacity .22s}
@@ -186,7 +223,7 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
   text-align:left; color:var(--tx); font-family:inherit; width:100%;
 }
 .li:active{background:var(--card2); transform:scale(.99)}
-.li{transition:transform .15s ease, background .15s ease}.place-route-group{margin:12px 0 16px}.place-route-group>.lbl{display:flex;align-items:baseline;gap:7px;margin-bottom:6px}.place-route-group>.lbl b{font-size:18px;color:var(--now)}.place-route-group>.lbl small{font-size:11px;color:var(--faint);font-weight:500}.place-route-group em{color:var(--faint);font-style:normal}.route-unavailable{display:none}.reverse-missing{display:block!important;margin-top:4px;color:#ff6b6b!important;font-size:13px!important;font-weight:700}
+.li{transition:transform .15s ease, background .15s ease}.place-route-group{margin:12px 0 16px}.place-route-group>.lbl{display:flex;align-items:baseline;gap:7px;margin-bottom:6px}.place-route-group>.lbl b{font-size:18px;color:var(--now)}.place-route-group>.lbl small{font-size:11px;color:var(--faint);font-weight:500}.place-route-group em{color:var(--faint);font-style:normal}.route-unavailable{display:none}.reverse-missing{display:block!important;margin-top:4px;color:#c6283e!important;font-size:13px!important;font-weight:700}
 .li .n{font-size:16px;font-weight:800;min-width:44px;flex:none}
 .li .d{font-size:11.5px;color:var(--dim);flex:1;min-width:0;line-height:1.5}
 .li .d s{display:block;color:var(--faint);text-decoration:none;font-size:10.5px;margin-top:1px}
@@ -216,8 +253,6 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
 }
 .backup-box{margin-top:12px;padding:10px;border:1px solid rgba(255,209,102,.28);border-radius:10px;background:rgba(255,209,102,.07);color:var(--dim);font-size:11px;line-height:1.45}.backup-box .wide{margin-top:7px}.backup-actions{display:flex;gap:7px}.backup-actions .wide{flex:1}.wide.danger{color:#ffaaa5;border-color:rgba(255,98,92,.3);background:rgba(255,98,92,.06)}
 .wide.p{background:linear-gradient(135deg,var(--now),#8af0c5);color:#071a14;border-color:var(--now); box-shadow:0 7px 18px rgba(54,224,160,.18)}
-.wide.notify-on{background:rgba(16,128,82,.22);border-color:#18b978;color:#63e6ae;box-shadow:0 0 0 1px rgba(24,185,120,.14)}
-.wide.notify-off{background:rgba(150,42,48,.18);border-color:#d45a61;color:#ff9da2;box-shadow:0 0 0 1px rgba(212,90,97,.12)}
 .tag{
   display:inline-block; font-size:9.5px; font-weight:800; padding:2px 5px;
   border-radius:4px; letter-spacing:.4px; flex:none;
@@ -230,16 +265,310 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
   .top{max-width:600px;margin:0 auto}
   .sheet{max-width:600px;margin:0 auto;border-radius:20px 20px 0 0}
 }
+.bus-saver{position:fixed;inset:0;z-index:1000;background:#000;color:#777;display:none;cursor:pointer;touch-action:manipulation;user-select:none}.bus-saver.on{display:block}.bus-saver-road{position:absolute;left:0;right:0;bottom:27%;height:2px;background:#282828;box-shadow:0 16px 0 #111}.bus-saver-vehicle{position:absolute;left:0;top:0;width:132px;height:56px;will-change:transform;transition:transform 5s linear;filter:drop-shadow(0 3px 8px #ff443533)}.bus-saver-body{position:absolute;left:4px;right:0;bottom:9px;height:35px;border-radius:7px 12px 5px 5px;background:linear-gradient(180deg,#ff5a52,#c51f2b 68%,#8f1724);border:2px solid #ff928b}.bus-saver-body:before{content:"";position:absolute;left:11px;right:12px;top:6px;height:13px;border-radius:3px;background:linear-gradient(90deg,#7fd8ec 0 22%,#142c49 22% 27%,#83dceb 27% 51%,#142c49 51% 56%,#8ee2ed 56% 80%,#142c49 80% 85%,#7ed8e8 85%);border:1px solid #ffaaa3}.bus-saver-body:after{content:"";position:absolute;left:0;top:0;width:9px;height:29px;border-radius:5px 0 0 4px;background:#ff8177}.bus-saver-wheel{position:absolute;bottom:1px;width:15px;height:15px;border-radius:50%;background:#161616;border:3px solid #777;box-shadow:inset 0 0 0 2px #292929}.bus-saver-wheel.a{left:22px}.bus-saver-wheel.b{right:17px}.bus-saver-hint{position:absolute;left:50%;bottom:calc(18px + var(--safe-b));transform:translateX(-50%);font-size:11px;letter-spacing:.04em;color:#777;white-space:nowrap}.bus-saver-time{position:absolute;top:calc(18px + var(--safe-t));right:18px;color:#444;font:600 12px ui-monospace,monospace}@media(prefers-reduced-motion:reduce){.bus-saver-vehicle{transition-duration:10s}}
+.bus-saver-vehicle{width:190px;height:82px;filter:drop-shadow(0 5px 8px #0009)}.bus-saver-body{left:4px;right:0;bottom:13px;height:51px;border:2px solid #f7d58a;border-radius:10px 18px 7px 7px;background:linear-gradient(180deg,#f6b44b 0 12%,#d92d36 13% 68%,#92243d 69% 100%);box-shadow:inset 0 -7px 0 #243c67}.bus-saver-body:before{content:none}.bus-saver-body:after{content:none}.bus-saver-roof{position:absolute;left:16px;right:17px;top:-7px;height:8px;border-radius:10px 14px 0 0;background:#f5d28b;border:2px solid #f7d58a;border-bottom:0}.bus-saver-window{position:absolute;top:8px;height:19px;background:linear-gradient(145deg,#b9e6f0 0 22%,#315778 23% 72%,#8fd3df 73%);border:2px solid #f9d98f;border-radius:3px 5px 2px 2px;box-shadow:inset 0 0 0 1px #183452}.bus-saver-window.w1{left:14px;width:35px}.bus-saver-window.w2{left:54px;width:35px}.bus-saver-window.w3{left:94px;width:35px}.bus-saver-door{position:absolute;right:13px;top:8px;width:25px;height:35px;border:2px solid #f9d98f;border-radius:3px 3px 1px 1px;background:linear-gradient(90deg,#8fd3df 0 45%,#284967 46% 53%,#8fd3df 54%)}.bus-saver-destination{position:absolute;right:16px;top:-4px;padding:1px 5px;border-radius:2px;background:#202a42;color:#ffe8a6;font:bold 7px ui-monospace,monospace;letter-spacing:.05em;z-index:2}.bus-saver-lower-stripe{position:absolute;left:0;right:0;bottom:13px;height:5px;background:#54c6b2;box-shadow:0 5px 0 #e8c24b}.bus-saver-logo{position:absolute;left:12px;bottom:20px;color:#fff4bd;font:bold 10px ui-monospace,monospace;letter-spacing:.08em}.bus-saver-lamp{position:absolute;left:6px;top:31px;width:6px;height:7px;border-radius:50%;background:#fff0ad;box-shadow:0 0 7px #fff0ad}.bus-saver-wheel{bottom:-10px;width:19px;height:19px;border:3px solid #b8c3d2;background:#151a27;box-shadow:inset 0 0 0 4px #4f6076;z-index:3}.bus-saver-wheel.a{left:25px}.bus-saver-wheel.b{right:21px}.bus-saver-wheel:after{content:"";position:absolute;inset:5px;border-radius:50%;background:#e7b54d}.bus-saver-wheel:before{content:"";position:absolute;left:8px;top:2px;width:2px;height:14px;border-radius:2px;background:#fff0ad;transform-origin:50% 50%;animation:bus-wheel-spin 1.8s linear infinite}@keyframes bus-wheel-spin{to{transform:rotate(360deg)}}.bus-saver-vehicle.convoy-follow{position:absolute}.bus-saver-hint{font-size:11px}
+
+/* Moovey-first route detail reconstruction: compact summary + three-card live dock */
+.route-detail{background:var(--bg-deep);}
+.route-detail-head{background:var(--bg);border-bottom:1px solid var(--line);}
+.route-detail-inner{max-width:720px;padding:0 12px 32px;}
+.detail-summary{position:relative;padding:12px 14px 11px;border:0;border-radius:18px;background:var(--card);box-shadow:0 3px 16px rgba(0,0,0,.08);margin-bottom:8px;}
+.detail-route-line{display:flex;align-items:center;gap:9px;min-width:0;font-size:18px;line-height:1.2;white-space:nowrap;}
+.detail-route-line > span:last-child{overflow:hidden;text-overflow:ellipsis;}
+.detail-route-line .tag{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;padding:7px 10px;border-radius:10px;font-size:16px;line-height:1;}
+.detail-route-icon{font-size:15px;line-height:1;filter:saturate(1.15);}
+.detail-meta{gap:4px 10px;margin-top:8px;padding-right:48px;font-size:11px;line-height:1.25;}
+.detail-meta span{white-space:nowrap;}
+.detail-reverse{position:absolute;right:12px;bottom:11px;width:34px;height:28px;margin:0;padding:0;border-radius:999px;font-size:0;line-height:1;}
+.detail-reverse:before{content:'↔';font-size:16px;}
+.detail-live-dock{top:57px;margin:0 -4px 7px;padding:5px 4px 8px;background:color-mix(in srgb,var(--bg-deep) 98%,transparent);}
+.detail-live-dock .detail-current{padding:9px 12px;margin:0 0 6px;border-radius:12px;background:var(--card);border-color:var(--line);}
+.detail-current-label{font-size:10px;}
+.detail-current-name{font-size:15px;margin-top:3px;}
+.detail-eta-panel{gap:6px;margin:0;}
+.detail-eta{min-height:78px;padding:8px 5px;border-radius:14px;background:var(--card);box-shadow:0 2px 8px rgba(0,0,0,.05);}
+.detail-eta strong{font-size:20px;}
+.detail-eta span{font-size:10px;margin-top:4px;}
+.detail-eta small{font-size:9px;margin-top:3px;}
+.detail-live-dock .detail-status{margin-top:6px;padding:7px 9px;font-size:10px;}
+.detail-live-dock.compact{top:57px;padding:5px 4px 7px;background:color-mix(in srgb,var(--bg-deep) 99%,transparent);box-shadow:0 5px 14px rgba(0,0,0,.12);}
+.detail-live-dock.compact .detail-current,.detail-live-dock.compact .detail-status{display:none;}
+.detail-live-dock.compact .detail-gps-panel{display:none;}
+.detail-live-dock.compact .detail-eta{min-height:62px;padding:7px 4px;}
+.detail-live-dock.compact .detail-eta strong{font-size:18px;}
+.detail-live-dock.compact .detail-eta-panel{gap:5px;margin:0;}
+.detail-live-dock.compact .detail-eta span{font-size:9px;margin-top:3px;}
+.detail-live-dock.compact .detail-eta small{font-size:8.5px;margin-top:3px;}
+.detail-live-dock.compact{padding-top:3px;padding-bottom:5px;}
+.detail-service{margin:16px 0 10px;border:1px solid var(--line);border-radius:14px;background:var(--card);overflow:hidden;}
+.detail-service summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 13px;cursor:pointer;font-size:13px;font-weight:850;list-style:none;}
+.detail-service summary::-webkit-details-marker{display:none}.detail-service summary:after{content:'＋';color:var(--faint);font-size:17px}.detail-service[open] summary:after{content:'－'}.detail-service-body{padding:0 13px 12px;border-top:1px solid var(--line)}
+.detail-service-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}.detail-service-item{padding:9px 10px;border-radius:10px;background:var(--card2);font-size:11px}.detail-service-item b{display:block;color:var(--tx);font-size:12px}.detail-service-item span{display:block;color:var(--faint);margin-top:3px;line-height:1.35}.detail-service-note{margin:9px 0 0;color:var(--faint);font-size:10.5px;line-height:1.45}.detail-service-note strong{color:var(--dim)}
+.detail-timetable-head{margin-top:10px;padding:9px 10px;border-radius:10px;background:var(--card2);font-size:11px;color:var(--dim)}.detail-timetable-head b{color:var(--now)}.detail-timetable{display:grid;gap:6px;margin-top:7px}.detail-timetable-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;background:var(--card2);font-size:11px}.detail-timetable-row.current{outline:1px solid var(--now);background:rgba(54,224,160,.1)}.detail-timetable-row b{color:var(--tx)}.detail-timetable-row span{font-size:15px;font-weight:900;color:var(--tx)}.detail-timetable-row small{color:var(--faint)}.detail-timetable-empty{padding:10px;color:var(--faint);font-size:11px;background:var(--card2);border-radius:10px;margin-top:7px}
+.detail-service-link{display:inline-block;margin-top:9px;color:var(--now);font-size:11px;font-weight:800;text-decoration:none}.detail-service-link:hover{text-decoration:underline}
+.detail-between-bus{position:relative;height:26px;margin:0 0 0 0;z-index:2}.detail-between-bus .bus-front-marker{left:25px;top:50%;}.detail-between-bus .bus-status-label{position:absolute;left:43px;top:50%;transform:translateY(-50%);padding:4px 9px;border-radius:999px;background:rgba(54,224,160,.12);color:var(--now);font-size:10px;font-weight:800;white-space:nowrap}.detail-inference .bus-front-marker{width:18px;height:13px}.detail-between-bus .bus-front-marker{animation:busBounce 1.15s ease-in-out infinite;transform:translate(-50%,-50%)}
+ .detail-inference.virtual{position:relative;display:flex;align-items:center;gap:8px;margin:2px 5px 4px 0;padding:3px 0 3px 52px;min-height:34px;border:0;background:transparent;color:var(--tx);box-shadow:none}
+ .virtual-bus-card{position:absolute;left:6px;top:50%;transform:translateY(-50%);flex:0 0 30px;width:30px;height:30px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;overflow:visible}
+ .detail-inference.virtual .bus-front-marker{position:relative;left:auto;top:auto;transform:none;flex:0 0 24px;width:24px;height:17px;border-radius:4px;animation:virtualBusBounce 1.1s ease-in-out infinite}
+.detail-inference.virtual .bus-front-marker:before{left:4px;right:4px;top:4px;height:6px;box-shadow:0 8px 0 -1px var(--bg-deep)}
+.detail-inference.virtual .bus-front-marker:after{bottom:-4px}
+ .virtual-bus-copy{align-self:center;display:flex;flex:1;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;min-width:0;padding:0;border:0;border-radius:0;background:transparent;text-align:left}.virtual-bus-copy b{font-size:11px;line-height:1.15;color:var(--now);text-align:left}.virtual-bus-copy small{margin:0;color:var(--faint);font-size:10px;line-height:1.2;text-align:left}
+.stop-copy small{display:none;}
+.detail-inference.virtual .bus-front-marker{width:12px;height:9px;flex-basis:12px;border-radius:3px;box-shadow:0 0 0 2px rgba(128,148,255,.18);}
+.detail-inference.virtual .bus-front-marker:before{left:2px;right:2px;top:2px;height:3px;box-shadow:0 5px 0 -1px var(--bg-deep)}
+.detail-inference.virtual .bus-front-marker:after{bottom:-3px;}
+.near-arrival-dot{display:inline-block;width:8px;height:8px;margin-right:2px;border-radius:50%;background:#00e58a;box-shadow:0 0 0 3px rgba(0,229,138,.18),0 0 12px rgba(0,229,138,.72);animation:nearArrivalFlash .85s ease-in-out infinite;vertical-align:middle}.detail-eta:first-child .near-arrival-dot{margin-bottom:2px}.detail-eta.near-arrival{border-color:rgba(0,229,138,.62);box-shadow:0 0 0 2px rgba(0,229,138,.08),0 0 18px rgba(0,229,138,.14)}
+@keyframes nearArrivalFlash{0%,100%{opacity:.35;transform:scale(.78)}50%{opacity:1;transform:scale(1.18)}}
+@keyframes busBounce{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes virtualBusBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.detail-section-title{margin:13px 3px 6px;font-size:13px;}
+.stop-timeline{padding-top:0;background:var(--card);border-radius:16px;padding:5px 7px 12px;box-shadow:0 3px 14px rgba(0,0,0,.06);}
+.stop-timeline:before{left:28px;top:24px;bottom:25px;}
+.stop-row{min-height:92px;padding:15px 5px 15px 0;gap:10px;border-radius:10px;}
+.stop-copy strong{line-height:1.2;}
+.stop-copy small{margin-top:3px;line-height:1.2;}
+.stop-dot{flex-basis:42px;}
+.stop-dot:after{width:14px;height:14px;background:var(--card);}
+.stop-dot .bus-front-marker{display:none;}
+.stop-row.is-selected .stop-dot:after{width:18px;height:18px;}
+.stop-copy strong{font-size:14px;}
+.stop-copy small{font-size:10px;margin-top:3px;}
+.stop-state{font-size:10px;}
+.detail-inference{margin-left:42px;margin-right:5px;border-radius:9px;padding:7px 9px;font-size:10px;}
+@media(max-width:380px){.detail-route-line{font-size:16px}.detail-route-line .tag{font-size:14px;padding:6px 8px}.detail-meta{font-size:10px}.detail-eta strong{font-size:18px}.detail-eta{min-height:74px}}
+@media(prefers-reduced-motion:reduce){.near-arrival-dot,.detail-between-bus .bus-front-marker,.detail-inference .bus-front-marker{animation:none!important}}
+body.light{--bg:#d8dde2;--bg-deep:#c7cdd3;--card:#e1e5e8;--card2:#cfd5da;--line:#aab3bc;--tx:#26323d;--dim:#53616d;--faint:#71808b;--glow:rgba(48,64,80,.12);background:linear-gradient(145deg,#d5dade,#e4e7e9)}
+body.light .top{background:rgba(216,221,226,.96);border-bottom-color:#aab3bc}
+body.light .card{background:linear-gradient(135deg,#e2e6e9,#d4dade);border-color:#aab3bc}
+body.light .eta{background:linear-gradient(145deg,#e0e4e7,#cfd5da);border-color:#aab3bc}
+body.light .iconbtn,body.light .map-toggle,body.light .map-head-btn{background:#d0d6db;color:#26323d;border-color:#aab3bc}
+body.light .sheet{background:linear-gradient(180deg,#dfe3e6,#cbd1d6)}
+body.light .route-detail{background:#d2d8dd}
+body.light .route-detail-head{background:rgba(210,216,221,.96);border-bottom-color:#aab3bc}
+body.light .detail-summary,body.light .detail-eta,body.light .detail-status,body.light .detail-service,body.light .stop-timeline{background:#dfe3e6}
+body.light .detail-service-item,body.light .detail-timetable-head,body.light .detail-timetable-row,body.light .detail-timetable-empty{background:#d1d8dd}
+body.light .stop-dot:after{background:#c3cbd1}
+body.light .detail-current{background:#cfe2d6}
+body.light .detail-bus-status{background:#c5ddce}
+body.light .detail-eta:first-child{background:#cfe2d6}
+body.light .stop-row.is-selected{background:rgba(8,115,77,.12)!important}
+body.light .route-detail{background:#eef2f7}
+body.light .route-detail-head{background:rgba(238,242,247,.96);border-bottom-color:#b7c5d4}
+body.light .detail-summary{background:#ffffff;border-color:#aebed0;box-shadow:0 5px 16px rgba(38,63,91,.08)}
+body.light .detail-live-dock{background:color-mix(in srgb,#eef2f7 97%,transparent)}
+body.light .detail-current{background:#e6f6ed;border-color:#82c59e}
+body.light .detail-current-label,body.light .detail-bus-status{color:#07583d}
+body.light .detail-bus-status{background:#d5efdf}
+body.light .detail-eta{background:#ffffff;border-color:#aebed0;box-shadow:0 2px 8px rgba(38,63,91,.06)}
+body.light .detail-eta:first-child{background:#e2f5e9;border-color:#67b889}
+body.light .detail-eta.near-arrival{background:#d8f2e3;border-color:#29945f;box-shadow:0 0 0 2px rgba(41,148,95,.16)}
+body.light .detail-status{background:#ffffff;border:1px solid #c1cedb;color:#40516a}
+body.light .detail-reverse{background:#edf3ff;border-color:#9bb5dc;color:#244f91}
+body.light .detail-service{background:#ffffff;border-color:#aebed0;box-shadow:0 4px 12px rgba(38,63,91,.06)}
+body.light .detail-service-body{border-top-color:#c5d0dd}
+body.light .detail-service-item,body.light .detail-timetable-head,body.light .detail-timetable-row,body.light .detail-timetable-empty{background:#eef3f8}
+body.light .detail-timetable-row.current{background:#e2f5e9;outline-color:#67b889}
+body.light .stop-timeline{background:#ffffff;border:1px solid #aebed0;box-shadow:0 4px 14px rgba(38,63,91,.08)}
+body.light .stop-timeline:before{background:#9aabba}
+body.light .stop-row{color:var(--tx)}
+body.light .stop-row:hover,body.light .stop-row:focus-visible{background:#edf3ff}
+body.light .stop-row.is-selected{background:#dceeff;border-color:#7ea8d5}
+body.light .stop-dot:after{background:#ffffff;border-color:#71869d}
+body.light .stop-row.is-selected .stop-dot:after{background:#08734d;border-color:#07583d;box-shadow:0 0 0 5px rgba(8,115,77,.18)}
+body.light .stop-row.is-selected .stop-state{color:#07583d}
+body.light .detail-between-bus .bus-status-label{background:#fff3cf;color:#704b00;border:1px solid #d8bb69}
+body.light .detail-inference{background:#e8f0ff;border-color:#9bb5dc;color:#244f91}
+body.light .detail-inference.virtual{background:transparent;border:0;box-shadow:none}
+body.light .virtual-bus-card{background:transparent;border:0;box-shadow:none}
+body.light .virtual-bus-copy{background:transparent;border:0}
+body.light .detail-inference b{color:#193e76}
+body.light .detail-inference:before{background:#d2e2ff}
+body.light .stop-bus-state{background:#d5efdf;color:#07583d}
+body.light .stop-bus-state.enroute{background:#e1ebff;color:#244f91}
+.detail-live-dock,.detail-live-dock.compact{background:color-mix(in srgb,var(--bg) 76%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+body.light .detail-live-dock,body.light .detail-live-dock.compact{background:color-mix(in srgb,var(--bg) 76%,transparent)!important}
+body.light .stop-timeline{background:transparent!important;border-color:transparent!important;box-shadow:none!important}
+body.light .stop-row.is-selected{background:rgba(8,115,77,.12)!important;border-color:rgba(8,115,77,.38)!important}
+.detail-title-operator{font-weight:900}.detail-title-operator.KMB{color:#e7192d}.detail-title-route{color:var(--tx)}
+.eta.sch{opacity:1}.eta.sch .m{font-size:21px}.eta.eta-near .m,.detail-eta.eta-near strong{color:var(--now)}.eta.eta-soon .m,.detail-eta.eta-soon strong{color:var(--soon)}.eta.eta-later .m,.detail-eta.eta-later strong{color:var(--late)}.detail-eta.scheduled small{color:var(--dim)}
+.detail-inference.virtual:before{content:none;display:none}
+
+/* Moovey bilingual station rhythm */
+.stop-copy small{letter-spacing:.045em;text-transform:uppercase;color:var(--faint);}
+.detail-route-line .tag.KMB{background:#e7192d;color:#fff;border:0;}
+.detail-route-line .tag.CTB{background:#f1a51a;color:#17233a;border:0;}
+.detail-route-line .tag.GMB{background:#1bb978;color:#fff;border:0;}
+.detail-meta{font-variant-numeric:tabular-nums;}
+.detail-route-line{flex-wrap:wrap;align-items:center;font-size:22px;line-height:1.18;white-space:normal;}
+.detail-route-line > span:last-child{flex:1 1 100%;min-width:0;overflow:visible;text-overflow:clip;white-space:normal;font-weight:750;text-align:center;}
+.detail-route-line .tag{font-size:19px;padding:9px 12px;max-width:100%;}
+.detail-meta{display:flex;flex-direction:column;align-items:stretch;gap:7px;margin-top:11px;padding-right:50px;font-size:13px;line-height:1.4;}
+.detail-meta-row{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:flex-start;gap:4px 16px;min-width:0;}
+.detail-meta-row > span{display:inline-block;white-space:nowrap;min-width:0;}
+.detail-meta .summary-coverage,.detail-meta .summary-fare{white-space:normal;}
+.detail-meta .summary-schedule{display:flex;flex-wrap:wrap;gap:4px 16px;}
+.detail-meta .summary-schedule span{display:inline-block;white-space:nowrap;}
+.detail-meta .summary-fare{font-weight:750;}
+.detail-meta{display:flex;flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:7px 16px;}
+.detail-meta-row{display:contents;}
+.detail-meta .summary-schedule{display:contents;}
+.detail-meta > span,.detail-meta-row > span,.detail-meta .summary-schedule span{flex:0 0 auto;white-space:nowrap;overflow-wrap:normal;}
+.stop-copy strong{font-size:17px;line-height:1.25;color:var(--tx);}
+.stop-copy small{display:block;margin-top:4px;font-size:10.5px;line-height:1.25;color:var(--faint);letter-spacing:.035em;text-transform:uppercase;}
+.detail-route-line{font-size:25px;line-height:1.2;}
+.detail-route-line .tag{font-size:21px;padding:10px 13px;}
+.detail-meta{font-size:15px;line-height:1.45;gap:8px 18px;}
+.detail-meta .summary-fare{font-size:15px;}
+.route-detail-inner #routeDetailBody:not(.detail-loading){padding-top:17px;}
+@media(max-width:380px){.detail-route-line{font-size:21px}.detail-route-line .tag{font-size:18px;padding:8px 10px}.detail-meta{font-size:13px;gap:7px 12px}.detail-meta .summary-fare{font-size:13px}}
+.detail-gps-panel{display:flex;flex-direction:column;align-items:stretch;gap:9px;margin:9px 0;padding:9px 11px;border:1px solid rgba(108,140,255,.36);border-radius:11px;background:rgba(108,140,255,.10);color:var(--dim);font-size:11px;line-height:1.4}.detail-gps-panel span{min-width:0}.detail-gps-panel small{display:block;color:var(--soon);font-weight:800;margin-top:3px}.detail-gps-panel button{border:1px solid var(--accent);border-radius:7px;padding:5px 8px;background:rgba(108,140,255,.18);color:var(--tx);font:800 10px inherit;cursor:pointer;white-space:nowrap}.detail-gps-panel.is-live{border-color:rgba(54,224,160,.56);background:rgba(54,224,160,.12);color:var(--tx)}.detail-gps-panel.is-live b{color:var(--now)}.detail-gps-panel.is-error{border-color:rgba(255,98,92,.6);background:rgba(255,98,92,.1);color:var(--tx)}.detail-gps-panel.is-error button{border-color:var(--kmb);background:rgba(255,98,92,.15)}
+.detail-action-row{display:flex;align-items:stretch;justify-content:center;gap:7px;width:100%;flex:0 0 auto;margin-top:7px}.detail-action-row .detail-action{width:106px;min-height:30px;padding:5px 6px;display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.15}
+.stop-row.is-live{background:rgba(54,224,160,.16);border-color:var(--now);box-shadow:0 0 0 2px rgba(54,224,160,.16)}.stop-row.is-live .stop-dot:after{width:18px;height:18px;background:var(--now);border-color:var(--now);box-shadow:0 0 0 5px rgba(54,224,160,.2)}.stop-row.is-live .stop-state{color:var(--now);font-weight:900}.stop-row.is-getoff-target .stop-state{color:var(--soon);font-weight:900}.schedule-first,.schedule-last{font-weight:900;color:var(--soon)}
+.stop-row.is-selected{background:transparent;border-color:transparent;box-shadow:none}.stop-row.is-selected .stop-copy{flex:0 1 auto;max-width:calc(100% - 95px);padding:7px 9px;border:1px solid rgba(54,224,160,.5);border-radius:9px;background:rgba(54,224,160,.1)}
+body.light .detail-gps-panel{background:#e2e9ee;border-color:#8ea8bd}.light .detail-gps-panel.is-live{background:#dcefe5;border-color:#29945f}.light .detail-gps-panel small{color:#a51f2a}.light .detail-gps-panel button{background:#d9e5f0;color:#20344b}.light .stop-row.is-live{background:#d8eee1;border-color:#268b59}.light .stop-row.is-live .stop-state{color:#0b7045}.light .schedule-first,.light .schedule-last{color:#b3222b}
+.light .stop-row.is-selected{background:transparent!important;border-color:transparent!important;box-shadow:none!important}.light .stop-row.is-selected .stop-copy{background:rgba(8,115,77,.1);border-color:rgba(8,115,77,.45)}
+
+/* Selected station: frame the complete station content, not the timeline dot. */
+.stop-row.is-selected,
+.stop-row.is-live.is-selected{background:transparent!important;border-color:transparent!important;box-shadow:none!important;outline:none!important;}
+.stop-content{min-width:0;flex:1;display:flex;align-items:center;gap:9px;padding:7px 9px;border:1px solid transparent;border-radius:12px;}
+.stop-row.is-selected .stop-content{background:rgba(54,224,160,.1);border-color:rgba(54,224,160,.5);}
+.stop-row.is-selected .stop-copy{min-width:0;flex:1;max-width:none;padding:0;border:0;border-radius:0;background:transparent;}
+.stop-row.is-selected .stop-state{flex:0 0 auto;align-self:center;}
+.light .stop-row.is-selected,
+.light .stop-row.is-live.is-selected{background:transparent!important;border-color:transparent!important;box-shadow:none!important;}
+.light .stop-row.is-selected .stop-content{background:rgba(8,115,77,.1);border-color:rgba(8,115,77,.45);}
+
+/* Final visual override: one station content frame only. */
+.stop-row.is-selected,
+.stop-row.is-live.is-selected,
+.light .stop-row.is-selected,
+.light .stop-row.is-live.is-selected {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+}
+.stop-row.is-selected .stop-copy,
+.stop-row.is-live.is-selected .stop-copy,
+.light .stop-row.is-selected .stop-copy,
+.light .stop-row.is-live.is-selected .stop-copy {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.stop-row.is-selected .stop-content,
+.stop-row.is-live.is-selected .stop-content {
+  background: rgba(54,224,160,.1) !important;
+  border: 1px solid rgba(54,224,160,.5) !important;
+  box-shadow: none !important;
+}
+.light .stop-row.is-selected .stop-content,
+.light .stop-row.is-live.is-selected .stop-content {
+  background: rgba(8,115,77,.1) !important;
+  border-color: rgba(8,115,77,.45) !important;
+}
+.detail-action-row .detail-action {
+  width: auto;
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+/* Final placement: the information bar is always reachable at the viewport bottom. */
+.info-bar{position:fixed!important;left:10px;right:10px;bottom:var(--safe-b);z-index:80;margin:0!important;}
+.detail-info-bar{display:none;}
+body.detail-open #infoBar{display:none;}
+body.detail-open .detail-info-bar{display:block;}
+.info-bar.collapsed{left:0;right:0;bottom:var(--safe-b);width:auto;height:4px;min-height:4px;margin:0!important;border:0;border-radius:0;background:#718cff;opacity:.72;}
+.light .info-bar.collapsed{background:#4b78a1;}
+.info-bar.compact{left:10px;right:10px;bottom:var(--safe-b);min-height:30px;height:30px;padding:0 10px;border-radius:9px;}
+.info-bar.compact .info-bar-details,.info-bar.compact .info-bar-actions,.info-bar.compact .info-bar-hint{display:none;}
+.info-bar.compact .info-bar-collapse{display:block;}
+.info-bar.compact .info-bar-main{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:0;}
+.info-bar.compact .info-bar-collapse{position:static;border:0;padding:3px 2px;opacity:.78;}
+.info-bar.compact .info-bar-main{flex:1;}
+.info-bar.compact .info-bar-collapse:after{content:' ⋯';margin-left:3px;}
+.info-bar:not(.expanded){display:flex;align-items:center;gap:8px;}
+.info-bar:not(.expanded) .info-bar-main{flex:1;min-width:0;}
+.info-bar-collapse{flex:0 0 auto;border:0;background:transparent;color:inherit;font:700 10px inherit;cursor:pointer;white-space:nowrap;padding:3px 2px;}
+.info-bar.expanded .info-bar-collapse{position:absolute;right:10px;top:8px;padding:3px 6px;border:1px solid currentColor;border-radius:6px;opacity:.78;}
+.info-bar.expanded .info-bar-main{padding-right:58px;}
+.info-bar.collapsed .info-bar-collapse{display:none;}
+.info-bar.collapsed .info-bar-hint{display:none;}
+.light .info-bar-collapse{color:#36556d;}
+.light .schedule-first,.light .schedule-last{color:#982b38!important;}
+.light .wide.danger{color:#982b38;border-color:#d78d99;background:#f7e1e4;}
+/* A live station keeps only the inner station-content frame; the row itself is transparent. */
+.stop-row.is-live,
+.light .stop-row.is-live{background:transparent!important;border-color:transparent!important;box-shadow:none!important;}
+.stop-row.is-live .stop-content{background:rgba(54,224,160,.1);border:1px solid rgba(54,224,160,.5);}
+.light .stop-row.is-live .stop-content{background:rgba(216,242,227,.72);border-color:rgba(41,148,95,.45);}
+.detail-back{font-size:29px!important;line-height:1!important}
+/* Final light theme guard: layered neutral grays, never glaring pure white. */
+body.light .detail-summary,body.light .detail-eta,body.light .detail-status,body.light .detail-service,body.light .stop-timeline{background:#dfe3e6!important;}
+body.light .detail-service-item,body.light .detail-timetable-head,body.light .detail-timetable-row,body.light .detail-timetable-empty{background:#d1d8dd!important;}
+body.light .detail-live-dock,body.light .detail-live-dock.compact{background:rgba(207,214,219,.92)!important;}
+body.light .sheet,body.light .settings-group,body.light .diag-box,body.light .test-tools{background:#d9dee2!important;}
+body.light .pref-row{background:#e1e5e8!important;}
+body.light .wide{background:#cbd2d7!important;color:#26323d!important;}
+/* Final light-mode contrast pass: readable layered grays and explicit control borders. */
+body.light{--bg:#c9cfd4;--bg-deep:#b8c0c6;--card:#d7dce0;--card2:#c3cbd1;--line:#6d7983;--tx:#18232c;--dim:#34434e;--faint:#53626d;--now:#075f3d;--soon:#704b00;--late:#214f86;--glow:rgba(30,45,58,.18);background:#c9cfd4!important;color:#18232c!important;}
+body.light .top,body.light .sheet,body.light .route-detail-head{background:#c7cdd2!important;border-color:#66737d!important;}
+body.light .card,body.light .eta,body.light .settings-group,body.light .diag-box,body.light .test-tools,body.light .pref-row,body.light .backup-box,body.light .detail-summary,body.light .detail-eta,body.light .detail-status,body.light .detail-service,body.light .stop-timeline{background:#d7dce0!important;border:1px solid #687680!important;color:#18232c!important;}
+body.light .detail-service-item,body.light .detail-timetable-head,body.light .detail-timetable-row,body.light .detail-timetable-empty,body.light .li,body.light .sv{background:#c5ccd1!important;border:1px solid #71808a!important;color:#18232c!important;}
+body.light .li .d,body.light .sv .d,body.light .detail-service-item span,body.light .detail-service-note,body.light .detail-timetable-row small,body.light .msg,body.light .hint,body.light .pref-row small{color:#3d4d58!important;}
+body.light .wide,body.light .map-toggle,body.light .map-head-btn,body.light .locate-btn,body.light .detail-entry,body.light .getoff-btn,body.light .alarm-btn,body.light .alight-btn,body.light .toggle{border:2px solid #53636e!important;background:#c5ccd1!important;color:#18232c!important;box-shadow:none!important;}
+body.light .wide.p{border-color:#075f3d!important;background:#b9ddc9!important;color:#073e2b!important;}
+body.light .wide.danger{border-color:#8f2633!important;background:#e3c4c8!important;color:#651722!important;}
+body.light .pref-select,body.light .tin,body.light input,body.light select{background:#e1e5e8!important;border:2px solid #53636e!important;color:#18232c!important;}
+body.light input::placeholder,body.light .tin::placeholder{color:#53626d!important;opacity:1!important;}
+body.light .tag.KMB,body.light .co.KMB{background:#f0c2c8!important;color:#681522!important;border:2px solid #9b2938!important;}
+body.light .tag.CTB,body.light .co.CTB{background:#ead5ae!important;color:#604000!important;border:2px solid #986b16!important;}
+body.light .tag.GMB,body.light .co.GMB{background:#bfe0c9!important;color:#075331!important;border:2px solid #227546!important;}
+body.light .sv .n,body.light .li .n,body.light .li .a,body.light .sv .x,body.light .sv .mv{color:#18232c!important;}
+body.light .brandcopy small,body.light .clock,body.light .foot{color:#43525d!important;}
+body.light .detail-route-line,body.light .detail-meta,body.light .detail-section-title,body.light .lbl,body.light .settings-group summary{color:#18232c!important;}
+body.light .detail-status,body.light .detail-service,body.light .stop-timeline{box-shadow:0 2px 6px rgba(30,45,58,.16)!important;}
+body.light .info-bar{background:#d7dce0!important;border:1px solid #687680!important;color:#24333d!important;}
+body.light .stop-dot:after{background:#b8c0c6!important;border-color:#53636e!important;}
+body.light .detail-live-dock,body.light .detail-live-dock.compact{background:#bcc4ca!important;border:1px solid #687680!important;}
+/* Company labels: dark text on muted tint with a strong identity border. */
+body.light .tag.KMB,body.light .co.KMB{background:#e0c2c7!important;color:#111b22!important;border:2px solid #9b2938!important;text-shadow:none!important;}
+body.light .tag.CTB,body.light .co.CTB{background:#ded0ac!important;color:#111b22!important;border:2px solid #8a6418!important;text-shadow:none!important;}
+body.light .tag.GMB,body.light .co.GMB{background:#bcd6c4!important;color:#111b22!important;border:2px solid #227546!important;text-shadow:none!important;}
+body.light .co{font-weight:900!important;}
+body.light button,body.light select,body.light input,body.light textarea{outline-color:#53636e;}
+/* Notification toggle: neutral gray surface, colored outline and text communicate state. */
+.notification-toggle{font-weight:900!important;letter-spacing:.01em;background:var(--card2)!important;box-shadow:none!important;}
+.notification-toggle.notification-on{background:var(--card2)!important;color:#08734d!important;border:2px solid #08734d!important;}
+.notification-toggle.notification-off{background:var(--card2)!important;color:#a52b3c!important;border:2px solid #a52b3c!important;}
+.notification-toggle.notification-warn{background:var(--card2)!important;color:#765300!important;border:2px solid #98701a!important;}
+body.light .notification-toggle.notification-on{color:#075f3d!important;border-color:#075f3d!important;}
+body.light .notification-toggle.notification-off{color:#8f2633!important;border-color:#8f2633!important;}
+body.light .notification-toggle.notification-warn{color:#765300!important;border-color:#98701a!important;}
+/* All state switches: preserve the neutral gray surface; color only the state cue. */
+.notification-toggle,.alarm-btn,.getoff-btn,.toggle{background:var(--card2)!important;box-shadow:none!important;}
+.alarm-btn.on,.getoff-btn.on,.toggle.on{color:#08734d!important;border-color:#08734d!important;background:var(--card2)!important;}
+.alarm-btn:not(.on),.getoff-btn:not(.on),.toggle:not(.on){color:#a52b3c!important;border-color:#a52b3c!important;background:var(--card2)!important;}
+.notification-toggle.notification-on{color:#08734d!important;border-color:#08734d!important;background:var(--card2)!important;}
+.notification-toggle.notification-off{color:#a52b3c!important;border-color:#a52b3c!important;background:var(--card2)!important;}
+body.light .alarm-btn.on,body.light .getoff-btn.on,body.light .toggle.on{color:#075f3d!important;border-color:#075f3d!important;background:#c5ccd1!important;}
+body.light .alarm-btn:not(.on),body.light .getoff-btn:not(.on),body.light .toggle:not(.on){color:#8f2633!important;border-color:#8f2633!important;background:#c5ccd1!important;}
+/* Enabled switches use a clearly visible medium green, not near-black green. */
+.notification-toggle.notification-on,.alarm-btn.on,.getoff-btn.on,.toggle.on{color:#08734d!important;border-color:#08734d!important;background:var(--card2)!important;}
+body.light .notification-toggle.notification-on,body.light .alarm-btn.on,body.light .getoff-btn.on,body.light .toggle.on{color:#075f3d!important;border-color:#075f3d!important;background:#c5ccd1!important;}
+/* Enabled state: brighter clear green for quick recognition at a glance. */
+.notification-toggle.notification-on,.alarm-btn.on,.getoff-btn.on,.toggle.on{color:#08734d!important;border-color:#08734d!important;background:var(--card2)!important;}
+body.light .notification-toggle.notification-on,body.light .alarm-btn.on,body.light .getoff-btn.on,body.light .toggle.on{color:#075f3d!important;border-color:#075f3d!important;background:#c5ccd1!important;}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
 <body>
 <div class="top">
-  <span class="brandmark">BP</span>
+  <span class="brandmark" role="img" aria-label="BusPulse HK"></span>
   <div class="brandcopy"><h1>港巴即時</h1><small>BusPulse HK · 香港實時到站</small></div>
   <span class="dot" id="dot"></span>
   <span class="clock" id="clock">--:--:--</span>
-  <button class="push-state" id="pushStateBtn" title="背景提醒運行中；撳此開關">背景提醒：運行中</button>
   <button class="iconbtn" id="prefsBtn" title="顯示設定" aria-label="顯示設定">⚙</button>
   <button class="iconbtn" id="refreshBtn" title="即刻更新" aria-label="即刻更新">&#8635;</button>
 </div>
@@ -249,8 +578,28 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
   資料來源：data.gov.hk 實時到站 API<br>
   到站時間僅供參考，實際班次可能有變
 </div>
+<aside class="info-bar" id="infoBar" role="status" tabindex="0" aria-label="補充資訊，撳一下查看完整內容">
+  <span class="info-bar-main" id="infoBarMain">正在整理補充資訊…</span><button class="info-bar-collapse" type="button" data-info-action="collapse" aria-label="收起資訊欄">收起</button><span class="info-bar-hint">撳開</span>
+  <div class="info-bar-details" id="infoBarDetails"></div>
+  <div class="info-bar-actions" id="infoBarActions"></div>
+</aside>
 
-<button class="fab" id="fab">＋ 設定路線</button>
+<section class="route-detail" id="routeDetail" aria-hidden="true" aria-labelledby="routeDetailTitle">
+  <div class="route-detail-head">
+    <button class="detail-back" id="routeDetailBack" type="button" aria-label="返回路線列表">‹</button>
+    <h2 id="routeDetailTitle"><span id="routeDetailOperator" class="detail-title-operator">路線</span> <span id="routeDetailRoute" class="detail-title-route">詳情</span><small id="routeDetailSubTitle">讀取中</small></h2>
+  </div>
+  <div class="route-detail-inner">
+    <div id="routeDetailBody" class="detail-loading">載入路線站點…</div>
+    <aside class="info-bar detail-info-bar" id="detailInfoBar" role="status" tabindex="0" aria-label="補充資訊，撳一下查看完整內容">
+      <span class="info-bar-main" id="detailInfoBarMain">正在整理補充資訊…</span><button class="info-bar-collapse" type="button" data-info-action="collapse" aria-label="收起資訊欄">收起</button><span class="info-bar-hint">撳開</span>
+      <div class="info-bar-details" id="detailInfoBarDetails"></div>
+      <div class="info-bar-actions" id="detailInfoBarActions"></div>
+    </aside>
+  </div>
+</section>
+
+<button class="fab" id="fab" aria-label="加入巴士路線">＋ 路線</button>
 
 <div class="mask" id="mask"></div>
 <div class="sheet" id="sheet">
@@ -260,6 +609,12 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
     <button class="iconbtn" id="closeBtn" aria-label="關閉設定">✕</button>
   </div>
   <div class="sbody" id="sBody"></div>
+</div>
+<div class="bus-saver" id="busSaver" role="button" tabindex="0" aria-label="巴士螢幕保護，輕觸返回報時器">
+  <div class="bus-saver-time" id="busSaverTime">--:--</div>
+  <div class="bus-saver-road"></div>
+  <div class="bus-saver-vehicle" id="busSaverVehicle" aria-hidden="true"><div class="bus-saver-body"><span class="bus-saver-roof"></span><span class="bus-saver-destination">BUS</span><span class="bus-saver-window w1"></span><span class="bus-saver-window w2"></span><span class="bus-saver-window w3"></span><span class="bus-saver-door"></span><span class="bus-saver-lower-stripe"></span><span class="bus-saver-logo">BP</span><span class="bus-saver-lamp"></span><i class="bus-saver-wheel a"></i><i class="bus-saver-wheel b"></i></div></div>
+  <div class="bus-saver-hint">螢幕保護中 · 輕觸返回巴士報時器</div>
 </div>
 <script>
 'use strict';
@@ -384,9 +739,9 @@ async function stopsKMB(v) {
     KMB + '/route-stop/' + encodeURIComponent(v.route) + '/' + v.bound + '/' + v.service_type
   )).data;
   const names = await cached('kmb:stops', () => getJSON(KMB + '/stop').then(d => {
-    const m = new Map(); d.data.forEach(s => m.set(s.stop, { name: s.name_tc, lat: +s.lat, lng: +s.long })); return m;
+    const m = new Map(); d.data.forEach(s => m.set(s.stop, { name: s.name_tc, name_en: s.name_en, lat: +s.lat, lng: +s.long })); return m;
   }));
-  return rs.map(s => { const info = names.get(s.stop) || {}; return { seq: +s.seq, id: s.stop, name: info.name || s.stop, lat: info.lat, lng: info.lng }; });
+  return rs.map(s => { const info = names.get(s.stop) || {}; return { seq: +s.seq, id: s.stop, name: info.name || s.stop, name_en: info.name_en || '', lat: info.lat, lng: info.lng }; });
 }
 
 async function stopsCTB(v) {
@@ -394,12 +749,12 @@ async function stopsCTB(v) {
     CTB + '/route-stop/CTB/' + encodeURIComponent(v.route) + '/' + v.bound
   )).data;
   const out = await Promise.all(rs.map(async s => {
-    let nm = s.stop, lat, lng;
+    let nm = s.stop, nameEn = s.name_en || '', lat, lng;
     try {
       const info = (await cached('ctb:stop:' + s.stop, () => getJSON(CTB + '/stop/' + s.stop))).data || {};
-      nm = info.name_tc || s.stop; lat = +(info.lat || info.latitude); lng = +(info.long || info.lng || info.longitude);
+      nm = info.name_tc || s.stop; nameEn = info.name_en || nameEn; lat = +(info.lat || info.latitude); lng = +(info.long || info.lng || info.longitude);
     } catch {}
-    return { seq: +s.seq, id: s.stop, name: nm, lat, lng };
+    return { seq: +s.seq, id: s.stop, name: nm, name_en: nameEn, lat, lng };
   }));
   return out;
 }
@@ -407,7 +762,7 @@ async function stopsCTB(v) {
 async function stopsGMB(v) {
   const d = (await getJSON(GMB + '/route-stop/' + v.route_id + '/' + v.route_seq)).data;
   return (d.route_stops || []).map(s => ({
-    seq: +s.stop_seq, id: String(s.stop_id), name: s.name_tc,
+    seq: +s.stop_seq, id: String(s.stop_id), name: s.name_tc, name_en: s.name_en || s.stop_name_en || '',
     lat: +(s.lat || s.latitude), lng: +(s.long || s.lng || s.longitude)
   }));
 }
@@ -418,6 +773,42 @@ function routeStops(v) {
   return stopsGMB(v);
 }
 
+/* Route-detail data core: one static stop list per route variant, not per
+   selected boarding stop. This remains read-only and has no alarm/GPS side
+   effects; the UI slice will consume it later. */
+function routeVariantKey(v) {
+  if (!v || !v.co) throw new Error('route variant requires company');
+  if (v.co === 'GMB') return ['GMB', v.route_id, v.route_seq].map(String).join('|');
+  if (v.co === 'KMB') return ['KMB', v.route, v.dir || v.bound, v.service_type || '1'].map(String).join('|');
+  return ['CTB', v.route, v.dir || v.bound].map(String).join('|');
+}
+const routeStopsInFlight = new Map();
+function validRouteStops(stops) {
+  if (!Array.isArray(stops) || !stops.length) throw new Error('empty route stops');
+  const seqs = new Set(), ids = new Set();
+  const out = stops.map(s => ({ ...s, seq:+s.seq, id:String(s.id) }))
+    .sort((a, b) => a.seq - b.seq);
+  out.forEach(s => {
+    if (!Number.isFinite(s.seq) || !s.id || seqs.has(s.seq) || ids.has(s.id)) throw new Error('invalid route stops');
+    seqs.add(s.seq); ids.add(s.id);
+  });
+  return out;
+}
+function getRouteStopsCached(v, options = {}) {
+  const key = routeVariantKey(v);
+  if (routeStopsCache.has(key)) return Promise.resolve(routeStopsCache.get(key));
+  if (routeStopsInFlight.has(key)) return routeStopsInFlight.get(key);
+  const loader = options.loader || routeStops;
+  const promise = Promise.resolve().then(() => loader(v, options)).then(validRouteStops).then(stops => {
+    routeStopsCache.set(key, stops);
+    return stops;
+  }).finally(() => routeStopsInFlight.delete(key));
+  routeStopsInFlight.set(key, promise);
+  return promise;
+}
+function makeStopRequest(it, stop) {
+  return { ...it, seq:stop.seq, stopId:stop.id, stopName:stop.name };
+}
 /* =========================  ETA  ========================= */
 /* Returns { etas:[{iso, min, rmk, sched}], err } — sorted, future only */
 
@@ -425,16 +816,24 @@ function minsFrom(iso) {
   return Math.round((new Date(iso).getTime() - Date.now()) / 60000);
 }
 
+function parseKmbRouteEta(rows, request) {
+  const grouped = new Map();
+  (Array.isArray(rows) ? rows : []).filter(e => String(e.dir) === String(request.dir) && e.eta).forEach(e => {
+    const seq = Number(e.seq);
+    if (!Number.isFinite(seq)) return;
+    const eta = { iso:e.eta, min:minsFrom(e.eta), rmk:e.rmk_tc || e.rmk_en || '', sched:/原定|預定|Scheduled/i.test((e.rmk_tc || e.rmk_en || '')), etaSeq:Number(e.eta_seq), dataTimestamp:e.data_timestamp || null };
+    if (!grouped.has(seq)) grouped.set(seq, []);
+    grouped.get(seq).push(eta);
+  });
+  grouped.forEach(list => list.sort((a,b) => a.min - b.min));
+  return grouped;
+}
+
 async function etaKMB(it) {
   const d = (await getJSON(
     KMB + '/route-eta/' + encodeURIComponent(it.route) + '/' + it.service_type
   )).data;
-  return d.filter(e =>
-      e.seq === it.seq && e.dir === it.dir && e.eta
-    ).map(e => ({
-      iso: e.eta, min: minsFrom(e.eta),
-      rmk: e.rmk_tc || '', sched: /原定|預定|Scheduled/i.test(e.rmk_tc || '')
-    }));
+  return (parseKmbRouteEta(d, it).get(Number(it.seq)) || []).map(e => ({ iso:e.iso, min:e.min, rmk:e.rmk, sched:e.sched, dataTimestamp:e.dataTimestamp }));
 }
 
 async function etaCTB(it) {
@@ -443,7 +842,7 @@ async function etaCTB(it) {
   )).data;
   return (d || []).filter(e => e.eta && e.dir === it.dir).map(e => ({
     iso: e.eta, min: minsFrom(e.eta),
-    rmk: e.rmk_tc || '', sched: /原定|預定|Scheduled/i.test(e.rmk_tc || '')
+    rmk: e.rmk_tc || '', sched: /原定|預定|Scheduled/i.test(e.rmk_tc || ''), dataTimestamp:e.data_timestamp || e.generated_timestamp || null
   }));
 }
 
@@ -454,7 +853,7 @@ async function etaGMB(it) {
   const rows = Array.isArray(d) ? (d[0] ? d[0].eta : []) : (d.eta || []);
   return (rows || []).filter(e => e.timestamp).map(e => ({
     iso: e.timestamp, min: e.diff != null ? Math.round(e.diff) : minsFrom(e.timestamp),
-    rmk: e.remarks_tc || '', sched: false
+    rmk: e.remarks_tc || '', sched: false, dataTimestamp:e.data_timestamp || e.generated_timestamp || null
   }));
 }
 
@@ -477,14 +876,6 @@ const DEFAULTS_KEY = 'busboard.user-defaults.v1';
 const PREF_KEY = 'busboard.preferences.v1';
 const ALARM_KEY = 'busboard.alarms.v1';
 const ALARM_SESSION_KEY = 'busboard.alarm-sessions.v1';
-  const PUSH_URL_KEY = 'busboard.push-worker-url.v1';
-  const DEFAULT_PUSH_WORKER_URL = 'https://gang-baa-im-si-buspulse-hk.cw9102025.workers.dev';
-  const PUSH_DISABLED_KEY = 'busboard.push-disabled.v1';
-  const PUSH_VAPID_KEY = 'busboard.vapid-public-key.v1';
-function pushWorkerUrl() { try { return localStorage.getItem(PUSH_URL_KEY) || DEFAULT_PUSH_WORKER_URL; } catch { return DEFAULT_PUSH_WORKER_URL; } }
-function savePushWorkerUrl(value) { try { localStorage.setItem(PUSH_URL_KEY, value.trim().replace(/\/$/, '')); } catch {} }
-function backgroundPushDisabled() { try { return localStorage.getItem(PUSH_DISABLED_KEY) === '1'; } catch { return false; } }
-function saveBackgroundPushDisabled(value) { try { localStorage.setItem(PUSH_DISABLED_KEY, value ? '1' : '0'); } catch {} }
 const GETOFF_KEY = 'busboard.getoff.v1';
 let getoff = loadGetoff();
 let getoffWatch = null;
@@ -501,6 +892,31 @@ const alarmSeen = new Map();
 const alarmFallbackTimers = new Map();
 const ALARM_PLAN_KEY = 'busboard.alarm-plan.v1';
 const ALARM_STEP_MS = 20000;
+const localAlarmScheduled = new Set();
+function localAlarmKey(id, at) { return id + '|' + String(at); }
+async function scheduleNativeLocalAlarm(it, plan) {
+  // Notification Triggers is an experimental browser feature. When present,
+  // the browser stores the due notification locally; no page timer or network
+  // request is needed at the due time. Unsupported browsers use the normal
+  // ETA fallback timer instead.
+  if (!globalThis.TimestampTrigger || !('Notification' in window) || Notification.permission !== 'granted') return false;
+  const id = uid(it), key = localAlarmKey(id, plan.at);
+  if (localAlarmScheduled.has(key)) return true;
+  const reg = await notificationRegistration();
+  if (!reg?.showNotification) return false;
+  try {
+    await reg.showNotification('巴士就嚟到站', {
+      body: it.route + ' 往 ' + (it.dest || '') + '，約 ' + Math.max(0, Math.round((Number(plan.at) - Date.now()) / 60000)) + ' 分鐘到 ' + (it.stopName || ''),
+      icon: './icon-192.png', badge: './icon-192.png',
+      tag: 'buspulse-local-' + encodeURIComponent(id) + '-' + String(plan.at),
+      renotify: true, requireInteraction: true,
+      timestampTrigger: new TimestampTrigger(new Date(Number(plan.at))),
+      data: { url: './', localAlarm: true, id, at: Number(plan.at) }
+    });
+    localAlarmScheduled.add(key);
+    return true;
+  } catch { return false; }
+}
 function loadAlarmPlans() { try { const raw = JSON.parse(localStorage.getItem(ALARM_PLAN_KEY) || '{}'); return raw && typeof raw === 'object' ? raw : {}; } catch { return {}; } }
 let alarmPlans = loadAlarmPlans();
 function saveAlarmPlans() { try { localStorage.setItem(ALARM_PLAN_KEY, JSON.stringify(alarmPlans)); } catch {} }
@@ -515,6 +931,7 @@ function rememberAlarmPlan(it, e, at) {
   if (!list.some(x => String(x.key) === key)) {
     list.push({ key, at, iso:e.iso, min:Number(e.min), rmk:e.rmk || '', route:it.route, stopName:it.stopName });
     alarmPlans[id] = list.slice(-12); saveAlarmPlans();
+    scheduleNativeLocalAlarm(it, { key, at, iso:e.iso, min:e.min, rmk:e.rmk || '' }).catch(() => {});
   }
 }
 function forgetAlarmPlan(id, key) {
@@ -523,105 +940,135 @@ function forgetAlarmPlan(id, key) {
   if (!alarmPlans[id].length) delete alarmPlans[id];
   saveAlarmPlans();
 }
-function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true }; } }
+function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:45000 }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:45000 }; } }
 function loadAlarms() { try { return JSON.parse(localStorage.getItem(ALARM_KEY) || '{}') || {}; } catch { return {}; } }
-function pushRoutePayload() {
-  return items.filter(it => alarms[uid(it)]).slice(0, 20).map(it => ({
-    co:it.co, route:it.route, seq:it.seq, dir:it.dir, service_type:it.service_type || (it.co === 'KMB' ? '1' : undefined),
-    stopId:it.stopId, route_id:it.route_id, route_seq:it.route_seq,
-    dest:it.dest || '', stopName:it.stopName || '', lead:Number(prefs.lead) || 2, session:ensureAlarmSession(uid(it))
-  }));
-}
-function pushStatus(text, good=false) { const el=document.querySelector('#pushStatus'); if(el){ el.textContent=text; el.style.color=good?'#70f09b':''; } }
-function base64UrlToBytes(value) { const pad='='.repeat((4-value.length%4)%4), raw=atob((value+pad).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(raw, c=>c.charCodeAt(0)); }
-async function deletePushSubscription(base, sub) {
-  if (!base || !sub) return;
-  const res=await fetch(base+'/subscribe',{method:'DELETE',headers:{'content-type':'application/json'},body:JSON.stringify(sub.toJSON())});
-  if (!res.ok) throw new Error('刪除背景訂閱失敗（'+res.status+'）');
-}
-async function syncPushSubscription() {
-  const base=pushWorkerUrl(), routes=pushRoutePayload();
-  if (!base || !('serviceWorker' in navigator)) return;
-  try {
-    const reg=await navigator.serviceWorker.ready;
-    if (!reg.pushManager) throw new Error('此裝置未提供 Push；Android 請先用 Chrome 加入主畫面');
-    let sub=await reg.pushManager.getSubscription();
-    if (backgroundPushDisabled() || !routes.length) {
-      if (sub) await deletePushSubscription(base, sub);
-      if (!routes.length) pushStatus('✓ 已停止背景查詢：目前冇任何路線開啟鬧鐘',true);
-      return;
-    }
-    const keyRes=await fetch(base+'/vapid-public-key'); if(!keyRes.ok) throw new Error('讀取推送設定失敗');
-    const {publicKey}=await keyRes.json();
-    let savedVapidKey=''; try { savedVapidKey=localStorage.getItem(PUSH_VAPID_KEY) || ''; } catch {}
-    // A key rotation must also replace subscriptions created before this
-    // marker existed; an empty saved key is therefore intentionally a mismatch.
-    if (sub && savedVapidKey !== publicKey) {
-      await deletePushSubscription(base, sub);
-      await sub.unsubscribe();
-      sub=null;
-    }
-    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:base64UrlToBytes(publicKey)});
-    const res=await fetch(base+'/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({subscription:sub.toJSON(),routes})});
-    if(!res.ok) throw new Error('同步路線失敗（'+res.status+'）');
-    const syncResult = await res.json().catch(() => ({}));
-    (syncResult.completedRoutes || []).forEach(route => disableAlarmAfterArrival([route.co, route.route, route.dir || route.route_seq, route.stopId || route.seq].join('|')));
-    try { localStorage.setItem(PUSH_VAPID_KEY, publicKey); } catch {}
-    try {
-      if (reg.active) reg.active.postMessage({
-        type:'BACKGROUND_STATUS',
-        title:'港巴即時',
-        body:'背景提醒已開啟，系統正在運作。',
-        tag:'buspulse-background-status'
-      });
-    } catch {}
-    pushStatus('✓ 已開啟真正背景提醒；切去其他 App 都會收到通知',true);
-  } catch(e) { pushStatus(e.message || '背景推送未能開啟'); }
-}
-async function disableBackgroundPush() {
-  saveBackgroundPushDisabled(true);
-  Object.keys(alarms).forEach(id => { alarms[id] = false; });
-  Object.keys(alarmPlans).forEach(id => delete alarmPlans[id]);
-  alarmFallbackTimers.forEach(timers => timers.forEach(t => clearTimeout(t.handle)));
-  alarmFallbackTimers.clear(); alarmSeen.clear(); saveAlarms(); saveAlarmPlans();
-  const base=pushWorkerUrl();
-  try {
-    const reg=await navigator.serviceWorker?.ready;
-    const sub=await reg?.pushManager?.getSubscription();
-    if (sub) {
-      await deletePushSubscription(base, sub);
-      await sub.unsubscribe();
-    }
-  } catch {}
-  pushStatus('✓ 已真正關閉：伺服器不再查呢部手機，路線鬧鐘亦已全部停止。',true);
-  updateBackgroundPushButton(); renderDiagnostics(); shell();
-}
-function updateBackgroundPushButton() {
-  const button=$('#pushBtn'); if (!button) return;
-  const off=backgroundPushDisabled(); button.textContent=off ? '重新開啟' : '真正關閉';
-  button.classList.toggle('danger', !off); button.title=off ? '重新開啟背景推送' : '取消 Push 登記並停止所有背景提醒';
-  button.onclick=off ? enableBackgroundPush : disableBackgroundPush;
-  const top=$('#pushStateBtn');
-  if (top) {
-    top.textContent=off ? '背景提醒：已關閉' : '背景提醒：運行中';
-    top.classList.toggle('off', off);
-    top.title=off ? '背景提醒已關閉；撳此重新開啟' : '背景提醒運行中；撳此真正關閉';
-    top.onclick=off ? enableBackgroundPush : disableBackgroundPush;
-  }
-}
-async function enableBackgroundPush() {
-  const base=pushWorkerUrl();
-  if(!base) { pushStatus('請先填入背景推送伺服器網址'); return; }
-  if(!('Notification' in window)) { pushStatus('此瀏覽器不支援系統通知'); return; }
-  const perm=Notification.permission==='granted' ? 'granted' : await Notification.requestPermission();
-  if(perm!=='granted') { pushStatus('你拒絕咗系統通知，請到 Android 設定重新允許'); return; }
-  saveBackgroundPushDisabled(false);
-  // Push is only a delivery channel; it must never change the user-owned alarm switches.
-  await syncPushSubscription();
-  updateBackgroundPushButton();
-}
-
 function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} }
+let batteryState = { level:null, charging:null };
+function batteryPathLabel() {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    ? 'iPhone：設定 → 電池 → 關閉「低耗電模式」'
+    : 'Android：設定 → 電池 → 省電模式／電池節省模式 → 關閉';
+}
+function renderBatteryGuidance() {
+  const box = document.getElementById('batteryGuidance');
+  if (!box) return;
+  const low = batteryState.level != null && batteryState.level <= .2 && !batteryState.charging;
+  const percent = batteryState.level == null ? '暫時讀唔到電量' : Math.round(batteryState.level * 100) + '%';
+  const pageState = document.hidden ? '頁面目前在背景／可能被系統休眠' : '頁面目前在前景';
+  box.innerHTML = '<b>電量與省電</b><br><span class="battery-status">目前電量：' + percent + (batteryState.charging ? '（充電中）' : '') + '</span><br><span class="battery-path">' + (low ? '電量偏低，省電模式可能令背景提醒受限制。' : '如發現提醒停止，請檢查手機省電模式。') + '<br>省電模式：瀏覽器不能直接讀取開關狀態<br>睡眠／鎖屏：只能透過頁面背景及喚醒鎖定狀態間接判斷<br>' + pageState + '<br>' + batteryPathLabel() + '</span><button class="wide" id="batterySettingsBtn">開啟電池設定路徑</button></div>';
+  const btn = document.getElementById('batterySettingsBtn');
+  if (btn) btn.addEventListener('click', () => {
+    const isApple = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (!isApple) { try { window.location.href = 'intent:#Intent;action=android.settings.BATTERY_SAVER_SETTINGS;end'; } catch {} }
+    alert(batteryPathLabel() + '\n請在系統設定內關閉省電模式，再返回本程式。');
+  });
+}
+async function monitorBattery() {
+  if (!navigator.getBattery) { renderBatteryGuidance(); return; }
+  try {
+    const battery = await navigator.getBattery();
+    const update = () => { batteryState.level = battery.level; batteryState.charging = battery.charging; renderBatteryGuidance(); };
+    ['levelchange','chargingchange'].forEach(event => battery.addEventListener(event, update));
+    update();
+  } catch { renderBatteryGuidance(); }
+}
+monitorBattery();
+const busSaver = document.getElementById('busSaver'), busSaverVehicle = document.getElementById('busSaverVehicle'), busSaverTime = document.getElementById('busSaverTime');
+let busSaverTimer = null, busSaverMoveTimer = null, busSaverActive = false, busSaverWakeLock = null;
+function busSaverLabel(ms) { return ms === 0 ? '只限手動' : ms < 60000 ? (ms / 1000) + ' 秒' : (ms / 60000) + ' 分鐘'; }
+async function requestBusSaverWakeLock() {
+  if (!busSaverActive || !('wakeLock' in navigator)) return;
+  try {
+    if (!busSaverWakeLock) busSaverWakeLock = await navigator.wakeLock.request('screen');
+    busSaverWakeLock.addEventListener('release', () => { busSaverWakeLock = null; });
+  } catch { busSaverWakeLock = null; }
+}
+async function releaseBusSaverWakeLock() {
+  if (!busSaverWakeLock) return;
+  try { await busSaverWakeLock.release(); } catch {}
+  busSaverWakeLock = null;
+}
+let busSaverPathTimer = null;
+let busSaverPathIndex = 0;
+let busSaverConvoy = [];
+function busSaverPoint(x, y, duration, flip, scale) {
+  if (!busSaverVehicle) return;
+  const convoy = busSaverConvoy.length ? busSaverConvoy : [busSaverVehicle];
+  convoy.forEach((vehicle, index) => {
+    const gap = index * 230 * scale;
+    const convoyX = x + (flip ? gap : -gap);
+    const convoyY = y + index * 11;
+    const vehicleScale = Math.max(.68, scale - index * .06);
+    vehicle.style.transition = 'transform ' + duration + 'ms linear';
+    vehicle.style.transform = 'translate(' + Math.round(convoyX) + 'px,' + Math.round(convoyY) + 'px) scale(' + (flip ? '-' : '') + vehicleScale + ',' + vehicleScale + ')';
+  });
+}
+function busSaverNextPath() {
+  if (!busSaverActive || !busSaverVehicle) return;
+  const width = innerWidth, height = innerHeight;
+  const busW = 190, left = 8, right = Math.max(left, width - busW - 8);
+  const lanes = [Math.max(70, height * .20), Math.max(120, height * .43), Math.max(170, height * .66)];
+  const lane = lanes[busSaverPathIndex % lanes.length];
+  const reverse = Math.floor(busSaverPathIndex / lanes.length) % 2 === 1;
+  const startX = reverse ? right : left, endX = reverse ? left : right;
+  const nextLane = lanes[(busSaverPathIndex + 1) % lanes.length];
+  const scale = [0.78, 0.92, 1.08, 1.22][Math.floor(Math.random() * 4)];
+  const nextScale = [0.78, 0.92, 1.08, 1.22][Math.floor(Math.random() * 4)];
+  busSaverPoint(startX, lane, 250, reverse, scale);
+  window.setTimeout(() => {
+    if (!busSaverActive) return;
+    busSaverPoint(endX, lane, 18000, reverse, scale);
+    window.setTimeout(() => {
+      if (!busSaverActive) return;
+      busSaverPoint(endX, nextLane, 1200, reverse, nextScale);
+      window.setTimeout(() => {
+        busSaverPathIndex++;
+        busSaverNextPath();
+      }, 1400);
+    }, 18100);
+  }, 300);
+}
+function moveBusSaver() { busSaverNextPath(); }
+function openBusSaver() {
+  if (busSaverActive) return;
+  busSaverActive = true;
+  clearTimeout(busSaverTimer);
+  clearTimeout(busSaverPathTimer);
+  busSaver.classList.add('on');
+  requestBusSaverWakeLock();
+  busSaverPathIndex = Math.floor(Math.random() * 6);
+  busSaverConvoy = [busSaverVehicle];
+  const convoyCount = 2;
+  for (let i = 1; i < convoyCount; i++) {
+    const follower = busSaverVehicle.cloneNode(true);
+    follower.removeAttribute('id');
+    follower.classList.add('convoy-follow');
+    follower.style.opacity = String(0.82 + Math.random() * 0.18);
+    busSaverVehicle.parentElement.appendChild(follower);
+    busSaverConvoy.push(follower);
+  }
+  busSaverConvoy.forEach((vehicle, index) => {
+    if (index === 0) return;
+    vehicle.style.transition = 'none';
+    vehicle.style.transform = 'translate(-' + (index * 230) + 'px, ' + (index * 16) + 'px) scale(.86,.86)';
+  });
+  busSaverNextPath();
+}
+function closeBusSaver() {
+  if (!busSaverActive) return;
+  busSaverActive = false;
+  busSaver.classList.remove('on');
+  releaseBusSaverWakeLock();
+  busSaverConvoy.slice(1).forEach(vehicle => vehicle.remove());
+  busSaverConvoy = [];
+  clearInterval(busSaverMoveTimer);
+  clearTimeout(busSaverPathTimer);
+  busSaverMoveTimer = null;
+  busSaverPathTimer = null;
+  scheduleBusSaver();
+}
+function scheduleBusSaver() { clearTimeout(busSaverTimer); busSaverTimer = null; const delay = Number(prefs.screenSaverIdle); if (delay > 0 && items.length && !busSaverActive) busSaverTimer = setTimeout(openBusSaver, delay); }
+function registerBusActivity() { if (busSaverActive) closeBusSaver(); else scheduleBusSaver(); }
 function saveAlarms() { try { localStorage.setItem(ALARM_KEY, JSON.stringify(alarms)); } catch {} }
 function backupFile() {
   const payload = { format:'BusPulse HK backup', version:1, exportedAt:new Date().toISOString(), items, userDefaults, alarms, getoff, prefs };
@@ -677,7 +1124,7 @@ async function chooseBackupFile() {
 function backupReminder() {
   try { const last=localStorage.getItem('busboard.last-backup.v1'); if(!last) return '重要資料可能會因清除瀏覽器網站資料而消失，建議立即下載備份。'; const days=(Date.now()-new Date(last).getTime())/86400000; if(days>14) return '你上次備份已超過兩星期，建議重新下載一份最新備份。'; return '備份檔只會儲存喺你下載嘅位置，請唔好同瀏覽器網站資料一齊清除。'; } catch { return '建議定期下載備份檔，避免瀏覽器清除網站資料後遺失路線。'; }
 }
-function applyPrefs() { document.body.classList.toggle('light', prefs.theme === 'light'); document.body.classList.toggle('font-large', prefs.font === 'large'); }
+function applyPrefs() { document.body.classList.toggle('light', prefs.theme === 'light'); document.body.classList.toggle('font-small', prefs.font === 'small'); document.body.classList.toggle('font-medium', prefs.font === 'medium' || prefs.font === 'normal'); document.body.classList.toggle('font-large', prefs.font === 'large'); }
 applyPrefs();
 
 /* 預設：你話要預設路線，呢四條係示範，可以喺頁面「設定路線」隨時改。
@@ -719,7 +1166,7 @@ function save() {
 }
 const uid = it => [it.co, it.route, it.dir || it.route_seq, it.stopId || it.seq].join('|');
 function closeArrivalNotifications() {
-  try { navigator.serviceWorker?.getRegistration().then(reg => reg?.getNotifications().then(ns => ns.filter(n => n.tag?.startsWith('buspulse-')).forEach(n => n.close()))); } catch {}
+  try { navigator.serviceWorker?.getRegistration().then(reg => reg?.getNotifications({ includeTriggered:true }).then(ns => ns.filter(n => n.tag?.startsWith('buspulse-')).forEach(n => n.close()))); } catch {}
 }
 function cleanupOrphanAlarms() {
   const valid = new Set(items.map(uid)); let changed = false;
@@ -729,8 +1176,7 @@ function cleanupOrphanAlarms() {
 }
 function clearAllArrivalAlarms() {
   if (!confirm('確定要關閉所有路線嘅到站鬧鐘嗎？之後可以逐條重新開啟。')) return;
-  alarms = {}; alarmSeen.clear(); saveAlarms(); closeArrivalNotifications(); shell();
-  if (pushWorkerUrl()) syncPushSubscription();
+  alarms = {}; alarmSeen.clear(); alarmPlans = {}; alarmFallbackTimers.forEach(timers => timers.forEach(t => clearTimeout(t.handle || t))); alarmFallbackTimers.clear(); saveAlarms(); saveAlarmPlans(); closeArrivalNotifications(); shell();
   const n=document.querySelector('#alarmClearNote'); if(n) n.textContent='所有到站鬧鐘已關閉。';
 }
 cleanupOrphanAlarms();
@@ -739,12 +1185,56 @@ cleanupOrphanAlarms();
    BOARD RENDER
    =================================================================== */
 const $ = s => document.querySelector(s);
-const board = $('#board'), dot = $('#dot'), clock = $('#clock');
+const board = $('#board'), dot = $('#dot'), clock = $('#clock'), refreshBtn = $('#refreshBtn');
+const infoBar = $('#infoBar'), infoBarMain = $('#infoBarMain'), infoBarDetails = $('#infoBarDetails'), infoBarActions = $('#infoBarActions');
+const detailInfoBar = $('#detailInfoBar'), detailInfoBarMain = $('#detailInfoBarMain'), detailInfoBarDetails = $('#detailInfoBarDetails'), detailInfoBarActions = $('#detailInfoBarActions');
+const routeDetail = $('#routeDetail'), routeDetailBody = $('#routeDetailBody'), routeDetailTitle = $('#routeDetailTitle'), routeDetailOperator = $('#routeDetailOperator'), routeDetailRoute = $('#routeDetailRoute'), routeDetailSubTitle = $('#routeDetailSubTitle');
+let routeDetailReturnFocus = null;
 const esc = s => String(s == null ? '' : s)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const cssEscape = s => (globalThis.CSS && typeof CSS.escape === 'function') ? CSS.escape(String(s)) : String(s).replace(/[^a-zA-Z0-9_-]/g, ch => '\\' + ch.charCodeAt(0).toString(16) + ' ');
 let lastOK = 0, inFlight = false;
 const latestResults = new Map();
+function updateInfoBar() {
+  if (!infoBar) return;
+  const lines = [];
+  let important = false;
+  items.forEach(it => {
+    const result = latestResults.get(uid(it));
+    if (!result) { lines.push(it.route + '：資料讀取中'); return; }
+    if (result.err && !result.stale) { important = true; lines.push(it.route + '：資料暫時讀取失敗'); return; }
+    if (!result.etas?.length) { important = true; lines.push(it.route + '：此站暫時冇班次資料，可能已收車'); return; }
+    const remarks = [...new Set(result.etas.map(e => e.rmk).filter(Boolean))];
+    if (result.stale) { important = true; lines.push(it.route + '：網絡暫時中斷，顯示上次資料'); }
+    if (remarks.length) { important = true; lines.push(it.route + '：' + remarks.join('、')); }
+    if (alarms[uid(it)]) { important = true; lines.push(it.route + '：到站提醒已開啟'); }
+    if (getoff[uid(it)]?.active) { important = true; lines.push(it.route + '：已設定落車站「' + getoff[uid(it)].targetName + '」'); }
+  });
+  if (!items.length) lines.push('第一步：撳右下角「＋ 路線」加入你常坐嘅巴士。');
+  if (routeDetailState.open && routeDetailState.item) {
+    const gps = routeDetailState.gpsSource === 'eta' ? '巴士 API ETA 數據推算中' : routeDetailState.gpsSource === 'network' ? '網絡／基站定位中' : routeDetailState.gpsStatus === 'watching' ? 'GPS 定位中' : 'GPS 未開啟';
+    lines.push(routeDetailState.item.route + ' 詳情：' + gps);
+  }
+  if (items.length && !lines.length) lines.push('小提示：撳路線右側「☷」可睇沿途車站、ETA、GPS 跟車及落車提醒。');
+  const unique = [...new Set(lines)];
+  const paint = (bar, main, details, actions, list, isImportant, allowGps, allowSetup) => {
+    if (!bar) return;
+    main.textContent = list[0] || '暫時冇補充資訊';
+    details.innerHTML = list.slice(0, 8).map(line => '<div>' + esc(line) + '</div>').join('') || '<div>暫時冇補充資訊。</div>';
+    actions.innerHTML = '';
+    if (allowGps) { const b = document.createElement('button'); b.type = 'button'; b.textContent = '開啟 GPS 跟車'; b.dataset.infoAction = 'gps'; actions.appendChild(b); }
+    if (allowSetup) { const b = document.createElement('button'); b.type = 'button'; b.textContent = '設定路線'; b.dataset.infoAction = 'setup'; actions.appendChild(b); }
+    const pinned = localStorage.getItem('buspulse.info.pinned') === '1';
+    bar.classList.toggle('pinned', pinned);
+    const pin = document.createElement('button'); pin.type = 'button'; pin.textContent = pinned ? '取消長駐' : '長駐'; pin.dataset.infoAction = 'pin'; actions.appendChild(pin);
+    if (pinned) { bar.classList.remove('collapsed'); if (!bar.classList.contains('expanded')) bar.classList.add('compact'); }
+    else if (isImportant && !bar.classList.contains('expanded')) { bar.classList.remove('collapsed'); bar.classList.add('compact'); }
+  };
+  paint(infoBar, infoBarMain, infoBarDetails, infoBarActions, unique, important, routeDetailState.open && routeDetailState.item && routeDetailState.gpsStatus !== 'watching', !items.length);
+  const detailLines = routeDetailState.open && routeDetailState.item ? [routeDetailState.item.route + ' 詳情：' + (routeDetailState.gpsSource === 'eta' ? '巴士 API ETA 數據推算中' : routeDetailState.gpsSource === 'network' ? '網絡／基站定位中' : routeDetailState.gpsStatus === 'watching' ? 'GPS 定位中' : 'GPS 未開啟'), routeDetailState.gpsStatus === 'watching' ? '提示：揀時間軸車站可以查看該站 ETA；已設定落車站後會顯示落車提示。' : '提示：需要跟住巴士位置，可以撳「開啟 GPS 跟車」。'] : ['詳細頁提示：撳時間軸車站可以查看該站 ETA；需要時再開啟 GPS 跟車。'];
+  if (routeDetailState.sweepStatus === 'error') { detailLines.unshift('詳細頁部分資料暫時讀取失敗'); }
+  paint(detailInfoBar, detailInfoBarMain, detailInfoBarDetails, detailInfoBarActions, detailLines, routeDetailState.sweepStatus === 'error', !!(routeDetailState.item && routeDetailState.gpsStatus !== 'watching'), false);
+}
 // Keep a short-lived ETA snapshot so a temporary API/network failure does not
 // erase the user's countdown or cancel an alarm that was already knowable.
 const ETA_CACHE_KEY = 'busboard.eta-snapshot.v1';
@@ -765,6 +1255,42 @@ const mapCache = new Map();
 const routeStopsCache = new Map();
 const liveMapStates = new Map();
 const fareMemo = new Map();
+const routeDetailState = {
+  open:false, routeId:null, variantKey:null, stops:[], stopsStatus:'idle',
+  stopsError:null, selectedSeq:null, selectedStopId:null, etaByStop:new Map(),
+  vehicleInference:{ status:'hidden', fromStopId:null, toStopId:null, reason:null, observedAt:null },
+  generation:0, abortController:null, etaRequest:null, fareLabel:null, scheduleLabel:null, detailTicker:null, detailLastOK:null, sweepStatus:'idle',
+  gpsWatch:null, gpsNetworkWatch:null, gpsSeq:null, gpsPosition:null, gpsPositionAccuracy:null, gpsSource:null, gpsPositionTime:0, gpsStatus:'idle', gpsError:null, gpsErrorCount:0
+};
+function beginRouteDetailGeneration() {
+  routeDetailState.generation += 1;
+  routeDetailState.abortController?.abort();
+  routeDetailState.abortController = new AbortController();
+  return { generation:routeDetailState.generation, signal:routeDetailState.abortController.signal };
+}
+function isCurrentRouteDetailGeneration(generation) {
+  return routeDetailState.open && routeDetailState.generation === generation;
+}
+function closeRouteDetailState() {
+  routeDetailState.open = false;
+  routeDetailState.generation += 1;
+  routeDetailState.abortController?.abort();
+  routeDetailState.abortController = null;
+  routeDetailState.etaRequest = null;
+  clearInterval(routeDetailState.detailTicker);
+  routeDetailState.detailTicker = null;
+  if (navigator.geolocation) {
+    if (routeDetailState.gpsWatch != null) navigator.geolocation.clearWatch(routeDetailState.gpsWatch);
+    if (routeDetailState.gpsNetworkWatch != null) navigator.geolocation.clearWatch(routeDetailState.gpsNetworkWatch);
+  }
+  routeDetailState.gpsWatch = null; routeDetailState.gpsNetworkWatch = null; routeDetailState.gpsSeq = null; routeDetailState.gpsPosition = null; routeDetailState.gpsPositionAccuracy = null; routeDetailState.gpsSource = null; routeDetailState.gpsPositionTime = 0; routeDetailState.gpsStatus = 'idle'; routeDetailState.gpsError = null; routeDetailState.gpsErrorCount = 0;
+}
+function startRouteDetailTicker() {
+  clearInterval(routeDetailState.detailTicker);
+  routeDetailState.detailTicker = setInterval(() => {
+    if (routeDetailState.open && routeDetailState.stopsStatus === 'ready') renderRouteDetail();
+  }, 15000);
+}
 async function fareData() {
   if (!fareMemo.has('all')) fareMemo.set('all', getJSON('./fare-index.json', 12000).catch(() => ({})));
   return fareMemo.get('all');
@@ -801,12 +1327,423 @@ async function updateFares() {
   });
 }
 
+function setDetailEtaState(stopId, state) { routeDetailState.etaByStop.set(String(stopId), state); }
+function detailEtaLabel(eta) {
+  if (!eta) return '—';
+  const min = eta.iso && Number.isFinite(Date.parse(eta.iso)) ? Math.round((Date.parse(eta.iso) - Date.now()) / 60000) : eta.min;
+  return Number.isFinite(min) && min <= 0 ? '即將到達' : Number.isFinite(min) ? min + ' 分' : '—';
+}
+function detailEtaClock(eta) { return eta?.iso && Number.isFinite(Date.parse(eta.iso)) ? new Date(eta.iso).toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit'}) : '—'; }
+function detailEtaRemark(eta) { return eta?.rmk || (eta?.sched ? '原定班次' : ''); }
+function detailStopSubline(stop) { return (stop.name_en ? stop.name_en + ' ' : '') + '(' + stop.id + ')'; }
+function detailEtaStateFor(stop) { return routeDetailState.etaByStop.get(String(stop.id)) || { status:'loading', etas:[] }; }
+function gpsDistanceMeters(a, b) {
+  const dy = (Number(a.lat) - Number(b.latitude ?? b.lat)) * 111000;
+  const dx = (Number(a.lng) - Number(b.longitude ?? b.lng)) * 111000 * Math.cos(Number(a.lat) * Math.PI / 180);
+  return Math.hypot(dx, dy);
+}
+function nearestDetailStop(stops, coords) {
+  return stops.filter(st => Number.isFinite(st.lat) && Number.isFinite(st.lng)).reduce((best, st) => {
+    const distance = gpsDistanceMeters(st, coords);
+    return !best || distance < best.distance ? { stop:st, distance } : best;
+  }, null);
+}
+function detailGpsPanel(it, current) {
+  const state = routeDetailState, target = getoff[uid(it)];
+  const refresh = '<button class="detail-action" type="button" data-detail-refresh>立即更新全部車站 ETA</button>';
+  if (state.gpsStatus === 'error') return '<div class="detail-gps-panel is-error" role="status"><span>GPS 暫時未能定位，請確認已允許定位。</span><div class="detail-action-row"><button class="detail-action" type="button" data-detail-gps>重新開啟 GPS</button>' + refresh + '</div></div>';
+  if (state.gpsStatus !== 'watching') return '<div class="detail-gps-panel" role="status"><span>想睇住巴士行到邊？開啟 GPS 後，時間軸會標示你而家接近嘅站。</span><div class="detail-action-row"><button class="detail-action" type="button" data-detail-gps>⌖ 開啟 GPS 跟車</button>' + refresh + '</div></div>';
+  const targetNote = target?.active ? (state.gpsSeq >= target.targetSeq ? '你就嚟到喇：' + target.targetName : state.gpsSeq != null && target.targetSeq - state.gpsSeq <= 1 ? '你就嚟到喇，下一個落車：' + target.targetName : '落車站：' + target.targetName) : '';
+  const source = state.gpsSource === 'network' ? '網絡／基站定位' : state.gpsSource === 'eta' ? '巴士 API ETA 數據推算' : 'GPS 定位', stale = state.gpsSource === 'eta' ? ' · GPS 暫時中斷，使用巴士數據推算' : state.gpsErrorCount > 0 ? ' · 訊號暫時中斷，保留最後位置' : '';
+  return '<div class="detail-gps-panel is-live" role="status"><span><b>● GPS／網絡跟車中</b>　目前接近第 ' + esc(state.gpsSeq || current?.seq || '—') + ' 站「' + esc(current?.name || '讀取中') + '」<small>' + esc(source + stale) + (targetNote ? ' · ' + targetNote : '') + '</small></span><div class="detail-action-row"><button class="detail-action" type="button" data-detail-gps-stop>停止 GPS</button>' + refresh + '</div></div>';
+}
+function acceptDetailLocation(it, pos, source) {
+  const accuracy = Number(pos.coords.accuracy), at = Number(pos.timestamp) || Date.now(), state = routeDetailState;
+  const currentAccuracy = Number(state.gpsPositionAccuracy), currentAt = Number(state.gpsPositionTime) || 0;
+  // Prefer a more accurate fix, but allow a newer network fix to replace a
+  // stale GPS fix when the bus is indoors or has entered a tunnel.
+  if (state.gpsPosition && Number.isFinite(currentAccuracy) && Number.isFinite(accuracy) && accuracy > currentAccuracy + 35 && at < currentAt + 15000) return;
+  const nearest = nearestDetailStop(state.stops, pos.coords);
+  state.gpsPosition = pos.coords; state.gpsPositionAccuracy = Number.isFinite(accuracy) ? accuracy : null; state.gpsSource = source; state.gpsPositionTime = at; state.gpsErrorCount = 0;
+  state.gpsSeq = nearest?.stop?.seq || state.gpsSeq;
+  if (nearest?.stop) { state.selectedSeq = nearest.stop.seq; state.selectedStopId = nearest.stop.id; }
+  if (getoff[uid(it)]?.active) updateGetoff(it, pos.coords);
+  renderRouteDetail();
+}
+function detailLocationError() {
+  // Do not erase the last station when a bus enters a tunnel. Keep both
+  // watchers alive and let a later GPS/network fix update the timeline.
+  routeDetailState.gpsErrorCount = Math.min(9, routeDetailState.gpsErrorCount + 1);
+  routeDetailState.gpsStatus = 'watching'; routeDetailState.gpsError = '定位訊號未能取得';
+  renderRouteDetail();
+}
+function startRouteDetailGps(it) {
+  if (routeDetailState.gpsWatch != null || routeDetailState.gpsNetworkWatch != null) return;
+  if (!navigator.geolocation) { routeDetailState.gpsStatus = 'error'; routeDetailState.gpsError = 'unsupported'; renderRouteDetail(); return; }
+  routeDetailState.gpsStatus = 'watching'; routeDetailState.gpsError = null; routeDetailState.gpsErrorCount = 0; renderRouteDetail();
+  routeDetailState.gpsWatch = navigator.geolocation.watchPosition(pos => acceptDetailLocation(it, pos, 'gps'), detailLocationError, { enableHighAccuracy:true, maximumAge:10000, timeout:20000 });
+  // Low-accuracy mode lets the browser use Wi‑Fi/cell-tower positioning when
+  // satellite GPS is blocked by the bus roof or tunnel.
+  routeDetailState.gpsNetworkWatch = navigator.geolocation.watchPosition(pos => acceptDetailLocation(it, pos, 'network'), detailLocationError, { enableHighAccuracy:false, maximumAge:15000, timeout:30000 });
+}
+function stopRouteDetailGps() {
+  if (routeDetailState.gpsWatch != null && navigator.geolocation) navigator.geolocation.clearWatch(routeDetailState.gpsWatch);
+  if (routeDetailState.gpsNetworkWatch != null && navigator.geolocation) navigator.geolocation.clearWatch(routeDetailState.gpsNetworkWatch);
+  routeDetailState.gpsWatch = null; routeDetailState.gpsNetworkWatch = null; routeDetailState.gpsStatus = 'idle'; routeDetailState.gpsSeq = null; routeDetailState.gpsPosition = null; routeDetailState.gpsPositionAccuracy = null; routeDetailState.gpsSource = null; routeDetailState.gpsPositionTime = 0; routeDetailState.gpsErrorCount = 0; renderRouteDetail();
+}
+function detailVehicleStatus(stop) {
+  const eta = detailEtaStateFor(stop).etas?.[0];
+  if (!eta) return '';
+  const min = eta.iso && Number.isFinite(Date.parse(eta.iso)) ? Math.round((Date.parse(eta.iso) - Date.now()) / 60000) : eta.min;
+  if (!Number.isFinite(min)) return '';
+  return min <= 5 && !eta.sched ? '<span class="detail-bus-status"><i class="near-arrival-dot" aria-hidden="true"></i><b aria-hidden="true">🚌</b> 巴士接近中</span>' : '<span class="detail-bus-status"><b aria-hidden="true">🚌</b> 下一班巴士約 ' + esc(Math.max(0, min)) + ' 分鐘後</span>';
+}
+function detailEtaPanel(stop) {
+  const state = detailEtaStateFor(stop), labels = ['即將到達','下一班','第三班'];
+  const cells = [0,1,2].map(i => { const eta = state.etas?.[i], near = i === 0 && eta && detailEtaShouldShowBus(eta), min = eta?.iso && Number.isFinite(Date.parse(eta.iso)) ? Math.round((Date.parse(eta.iso) - Date.now()) / 60000) : eta?.min, tone = Number.isFinite(min) ? (min <= 2 ? 'eta-near' : min <= 10 ? 'eta-soon' : 'eta-later') : '', scheduled = eta?.sched ? ' scheduled' : ''; return '<div class="detail-eta ' + tone + scheduled + ' ' + (near ? 'near-arrival' : '') + '"><strong>' + (near ? '<i class="near-arrival-dot" aria-hidden="true"></i>' : '') + detailEtaLabel(eta) + '</strong><span>' + labels[i] + '</span><small>' + detailEtaClock(eta) + (detailEtaRemark(eta) ? ' · ' + esc(detailEtaRemark(eta)) : '') + '</small></div>'; }).join('');
+  return '<div class="detail-eta-panel" aria-label="目前車站即時到站時間">' + cells + '</div>';
+}
+function detailStatusText(stop) {
+  const state = detailEtaStateFor(stop);
+  if (state.status === 'loading') return '正在讀取「' + stop.name + '」的即時到站資料…';
+  if (state.status === 'stale') return '網絡暫時中斷，按上次資料估算（' + (state.cachedAt ? new Date(state.cachedAt).toLocaleTimeString('en-GB',{hour12:false}) : '時間不明') + '）；資料可能已過期。';
+  if (state.status === 'error') return '暫時讀取失敗；可以稍後重新載入。';
+  if (!state.etas?.length) return '暫時冇班次資料（可能已收車）。';
+  const fetched = state.fetchedAt ? new Date(state.fetchedAt).toLocaleTimeString('en-GB',{hour12:false}) : '剛才';
+  const source = state.sourceTimestamp && Number.isFinite(Date.parse(state.sourceTimestamp)) ? '・官方資料 ' + new Date(state.sourceTimestamp).toLocaleTimeString('en-GB',{hour12:false}) : '';
+  return '即時資料・讀取於 ' + fetched + source;
+}
+function detailStatusAction(stop) {
+  const state = detailEtaStateFor(stop);
+  const retry = state.status === 'stale' || state.status === 'error' ? '<button class="detail-retry" type="button" data-detail-retry="' + esc(stop.id) + '">重新載入本站 ETA</button>' : '';
+  return retry;
+}
+function detailEtaIsNear(eta) {
+  const iso = eta?.iso && Date.parse(eta.iso);
+  return !eta?.sched && Number.isFinite(iso) && (iso - Date.now()) <= 5 * 60000 && iso >= Date.now() - 2 * 60000;
+}
+function detailEtaShouldShowBus(eta) {
+  if (eta?.sched) return false;
+  return detailEtaIsNear(eta) || (Number.isFinite(Number(eta?.min)) && Number(eta.min) >= 0 && Number(eta.min) <= 5);
+}
+function detailEtaIsApproaching(eta) {
+  const iso = eta?.iso && Date.parse(eta.iso);
+  return !eta?.sched && Number.isFinite(iso) && (iso - Date.now()) <= 15 * 60000 && iso >= Date.now() - 2 * 60000;
+}
+function detailFirstLiveEta(stop) {
+  return (detailEtaStateFor(stop).etas || []).find(eta => !eta.sched && eta.iso && Number.isFinite(Date.parse(eta.iso)));
+}
+function detailEtaCoverageText() {
+  let ready = 0, near = 0;
+  routeDetailState.stops.forEach(stop => {
+    const state = detailEtaStateFor(stop);
+    const live = (state.etas || []).filter(eta => !eta.sched);
+    if (state.status === 'ready' && live.length) ready++;
+    if (live.some(detailEtaIsNear)) near++;
+  });
+  if (!ready) return '巴士 ETA 預報：讀取中';
+  return '即將到站提示：' + near + ' 個站 · ETA 預報：' + ready + ' 個站';
+}
+const kmbScheduleMemo = new Map();
+function scheduleMinutes(text) {
+  const m = String(text || '').match(/^(\d{1,2}):(\d{2})/); return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+function scheduleClock(minute) { if (!Number.isFinite(minute)) return '—'; const h = Math.floor(minute / 60); return String(h).padStart(2,'0') + ':' + String(minute % 60).padStart(2,'0'); }
+function parseKmbSchedule(data, bound) {
+  const rows = Object.values(data || {}).flat().filter(x => String(x.ServiceType || '').trim() === '01');
+  const field = 'BoundText' + bound, freqField = 'BoundTime' + bound;
+  const ranges = rows.map(row => { const text = String(row[field] || ''); const m = text.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/); return m ? { start:scheduleMinutes(m[1]), end:scheduleMinutes(m[2]), freq:String(row[freqField] || ''), day:String(row.DayType || '').trim() } : null; }).filter(Boolean);
+  const first = Math.min(...ranges.map(r => r.start)), last = Math.max(...ranges.map(r => r.end));
+  const now = new Date(), day = now.getDay(), dayType = day === 6 ? 'S' : day === 0 ? 'H' : 'MF', minute = now.getHours() * 60 + now.getMinutes();
+  const current = ranges.find(r => (r.day === dayType || r.day === 'D') && minute >= r.start && minute <= r.end) || null;
+  return { first, last, current, ranges };
+}
+async function loadDetailSchedule(it, generation) {
+  if (it?.co !== 'KMB') { routeDetailState.scheduleLabel = null; return; }
+  const bound = it.dir === 'I' ? 2 : 1, key = String(it.route).toUpperCase() + '|' + bound;
+  try {
+    if (!kmbScheduleMemo.has(key)) kmbScheduleMemo.set(key, getJSON('https://search.kmb.hk/KMBWebSite/Function/FunctionRequest.ashx?action=getschedule&route=' + encodeURIComponent(it.route) + '&bound=' + bound));
+    const result = await kmbScheduleMemo.get(key), parsed = parseKmbSchedule(result.data, bound);
+    if (isCurrentRouteDetailGeneration(generation)) { routeDetailState.scheduleLabel = parsed; renderRouteDetail(); }
+  } catch { if (isCurrentRouteDetailGeneration(generation)) { routeDetailState.scheduleLabel = { error:true }; renderRouteDetail(); } }
+}
+function estimateActiveBusWaves(stops = routeDetailState.stops, etaByStop = routeDetailState.etaByStop) {
+  const rows = stops.map(stop => {
+    const state = etaByStop.get(String(stop.id));
+    const eta = (state?.etas || []).find(e => e.iso && !e.sched && (e.etaSeq == null || Number(e.etaSeq) === 1));
+    return eta && state.status === 'ready' && !state.stale ? { seq:Number(stop.seq), time:Date.parse(eta.iso) } : null;
+  }).filter(Boolean).sort((a,b) => a.seq - b.seq);
+  let count = 0, previous = null, drops = 0;
+  for (const row of rows) {
+    if (previous == null) count = 1;
+    else if (row.time < previous - 60000) { count += 1; drops += 1; }
+    previous = row.time;
+  }
+  return { count, drops, samples:rows.length };
+}
+function detailOfficialServiceUrl(it) {
+  const route = String(it?.route || '').toUpperCase().replace(/\s+/g, '');
+  if (it?.co === 'KMB') return 'https://search.kmb.hk/KMBWebSite/?action=routesearch&route=' + encodeURIComponent(route) + '&lang=zh-hk';
+  if (it?.co === 'CTB') return 'https://www.citybus.com.hk/routesearch/';
+  return 'https://data.gov.hk/tc-data/dataset/hk-td-tis_15-gmb';
+}
+function detailClock(iso) {
+  const d = new Date(iso); return Number.isFinite(d.getTime()) ? d.toLocaleTimeString('zh-HK', { hour:'2-digit', minute:'2-digit', hour12:false }) : '—';
+}
+function detailServiceBlock(it) {
+  const url = detailOfficialServiceUrl(it);
+  const provider = it?.co === 'KMB' ? '九巴官方路線及時間表' : it?.co === 'CTB' ? '城巴官方路線搜尋' : '運輸署專線小巴資料';
+  const stop = routeDetailState.stops.find(s => s.seq === routeDetailState.selectedSeq) || routeDetailState.stops[0];
+  const etas = (stop ? (detailEtaStateFor(stop).etas || []) : []).filter(e => e.iso && !e.sched).slice(0, 3);
+  const now = detailClock(new Date().toISOString()), schedule = routeDetailState.scheduleLabel;
+  const scheduleText = schedule?.error ? '<span class="schedule-first">首班車：官方時間表暫時失敗</span> · <span class="schedule-last">尾班車：官方時間表暫時失敗</span>' : schedule ? ('<span class="schedule-first">首班車 ' + scheduleClock(schedule.first) + '</span> · <span class="schedule-last">尾班車 ' + scheduleClock(schedule.last) + '</span>' + (schedule.current?.freq ? ' · 當前時段 ' + esc(schedule.current.freq) + ' 分鐘／班' : '')) : '<span class="schedule-first">首班車／尾班車讀取中</span>';
+  const rows = etas.length ? etas.map((e, i) => '<div class="detail-timetable-row ' + (!i ? 'current' : '') + '"><b>' + (i === 0 ? '即將一班' : '之後一班 ' + i) + '</b><span>' + esc(detailClock(e.iso)) + '</span><small>' + esc(detailEtaLabel(e)) + '</small></div>').join('') : '<div class="detail-timetable-empty">此站暫未收到即時班次</div>';
+  return '<details class="detail-service"><summary>營運時間表及服務資料 <small>官方來源 · 按目前時間更新</small></summary><div class="detail-service-body"><div class="detail-timetable-head">目前時間 <b>' + esc(now) + '</b> · ' + esc(stop?.name || '所選車站') + '</div><div class="detail-timetable-head detail-schedule-head"><b>' + scheduleText + '</b></div><div class="detail-timetable" aria-live="polite">' + rows + '</div><p class="detail-service-note"><strong>即時資料：</strong>以上係此站目前收到嘅官方 ETA，畫面會隨時間及更新結果改變；首班／尾班請以官方時間表為準。</p><p class="detail-service-note"><strong>巴士位置估計：</strong>系統會用沿線 ETA 時間斷層及各班 ETA 順序，估計現時有幾多個行駛波段，以及每個波段大約位於邊兩個站之間；板頭數字與下方已顯示嘅估計位置同步更新。</p><a class="detail-service-link" href="' + esc(url) + '" target="_blank" rel="noopener">開啟 ' + esc(provider) + ' ↗</a></div></details>';
+}
+function detailScheduleSummary() {
+  const s = routeDetailState.scheduleLabel;
+  if (!s) return '<span class="schedule-first">首班車：讀取中</span><span class="schedule-last">尾班車：讀取中</span>';
+  if (s.error) return '<span class="schedule-first">首班車：官方時間表暫時失敗</span><span class="schedule-last">尾班車：官方時間表暫時失敗</span>';
+  return '<span class="schedule-first">首班車：' + esc(scheduleClock(s.first)) + '</span><span class="schedule-last">尾班車：' + esc(scheduleClock(s.last)) + '</span>';
+}
+function detailFareValue(it, fares) {
+  const routeSeq = it.co === 'GMB' ? (+it.route_seq || 1) : (it.dir === 'I' ? 2 : 1);
+  const route = String(it.route || '').toUpperCase().replace(/\s+/g, '');
+  const companies = it.co === 'KMB' ? ['KMB','LWB','KMB+CTB','LWB+CTB'] : it.co === 'CTB' ? ['CTB','KMB+CTB','LWB+CTB'] : [it.co];
+  const fare = companies.map(co => Number(fares?.[co + '|' + route + '|' + routeSeq])).find(value => Number.isFinite(value));
+  return Number.isFinite(fare) ? '$' + fare.toFixed(1) : '官方資料未提供';
+}
+async function loadDetailFare(it, generation) {
+  try { const fares = await fareData(); if (isCurrentRouteDetailGeneration(generation)) { routeDetailState.fareLabel = detailFareValue(it, fares); renderRouteDetail(); } }
+  catch { if (isCurrentRouteDetailGeneration(generation)) { routeDetailState.fareLabel = '官方資料未提供'; renderRouteDetail(); } }
+}
+function reverseDetailItem(it) {
+  if (!it || !['KMB','CTB'].includes(it.co)) return null;
+  // Some compact route cards only persist stopName + dest.  Do not lose the
+  // endpoint when reversing such an item: the selected stop is the missing
+  // origin/destination fallback, not the literal word 「終點」.
+  const currentOrigin = it.origin || it.stopName || '';
+  const currentDest = it.dest || '';
+  const next = { ...it, origin:currentDest || currentOrigin, dest:currentOrigin || currentDest, dir:it.dir === 'I' ? 'O' : 'I' };
+  next.bound = it.bound === 'inbound' ? 'outbound' : 'inbound';
+  next.dirLabel = next.origin + ' → ' + next.dest;
+  return next;
+}
+async function switchRouteDetailDirection() {
+  const next = reverseDetailItem(routeDetailState.item);
+  if (!next) return;
+  const request = beginRouteDetailGeneration();
+  routeDetailState.item = next; routeDetailState.routeId = uid(next); routeDetailState.variantKey = routeVariantKey(next);
+  routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = null; routeDetailState.selectedStopId = null; routeDetailState.etaByStop.clear(); routeDetailState.etaRequest = null; routeDetailState.fareLabel = null; routeDetailState.sweepStatus = 'loading';
+  startRouteDetailTicker(); renderRouteDetail();
+  try {
+    const stops = await getRouteStopsCached(next, { signal:request.signal });
+    if (!isCurrentRouteDetailGeneration(request.generation)) return;
+    routeDetailState.stops = stops; routeDetailState.stopsStatus = 'ready'; routeDetailState.etaRequest = request; renderRouteDetail(); loadDetailFare(next, request.generation);
+    loadRouteDetailEtas(next, request, routeDetailState.selectedStopId).then(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'ready'; }).catch(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'error'; });
+  } catch (e) { if (isCurrentRouteDetailGeneration(request.generation)) { routeDetailState.stopsStatus = 'error'; renderRouteDetail(); } }
+}
+function applyDetailEtaResult(it, stop, etas, error, batchId) {
+  const id = uid(makeStopRequest(it, stop));
+  if (!error) {
+    const clean = (etas || []).filter(e => e.iso && Number.isFinite(Date.parse(e.iso)) && e.min >= -2).slice(0,4);
+    if (clean.length) cacheEta(id, clean);
+    const sourceTimestamp = clean.map(e => e.dataTimestamp).find(ts => ts && Number.isFinite(Date.parse(ts))) || null;
+    setDetailEtaState(stop.id, { status:'ready', etas:clean, fetchedAt:new Date().toISOString(), sourceTimestamp, batchId });
+    return;
+  }
+  const fallback = cachedEta(id);
+  if (fallback) setDetailEtaState(stop.id, { status:'stale', stale:true, etas:fallback.etas, cachedAt:fallback.cachedAt, batchId:null, error });
+  else setDetailEtaState(stop.id, { status:'error', etas:[], batchId:null, error });
+}
+function deriveEstimatedSegments(stops, etaByStop, now = Date.now()) {
+  const candidates = [];
+  for (let i = 0; i < stops.length - 1; i++) {
+    const from = stops[i], to = stops[i + 1], a = etaByStop.get(String(from.id)), b = etaByStop.get(String(to.id));
+    if (!a || !b || a.status !== 'ready' || b.status !== 'ready' || a.stale || b.stale) continue;
+    if (a.batchId == null || b.batchId == null || a.batchId !== b.batchId) continue;
+    if (Math.abs(now - Date.parse(a.fetchedAt || '')) > 75000 || Math.abs(now - Date.parse(b.fetchedAt || '')) > 75000) continue;
+    const ea = (a.etas || []).find(e => e.iso && !e.sched && Date.parse(e.iso) >= now);
+    const eb = (b.etas || []).find(e => e.iso && !e.sched && Date.parse(e.iso) >= now);
+    if (!ea || !eb) continue;
+    const ta = Date.parse(ea.iso), tb = Date.parse(eb.iso), gap = tb - ta;
+    if (!(tb > ta && gap >= 30000 && gap <= 20 * 60000 && ta - now <= 3 * 60000)) continue;
+    candidates.push({ fromSeq:from.seq, toSeq:to.seq, confidence:'estimated', observedAt:new Date(now).toISOString() });
+  }
+  return candidates.length ? [candidates.sort((x,y) => Math.abs(x.fromSeq - (stops[0]?.seq || 0)) - Math.abs(y.fromSeq - (stops[0]?.seq || 0)))[0]] : [];
+}
+function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
+  const byWave = new Map();
+  stops.forEach(stop => {
+    const state = etaByStop.get(String(stop.id));
+    (state?.etas || []).forEach(eta => {
+      const time = eta.iso && Date.parse(eta.iso);
+      if (!Number.isFinite(time) || eta.sched) return;
+      const wave = eta.etaSeq == null ? 1 : Number(eta.etaSeq);
+      if (!Number.isFinite(wave)) return;
+      if (!byWave.has(wave)) byWave.set(wave, []);
+      byWave.get(wave).push({ seq:Number(stop.seq), time });
+    });
+  });
+  const result = [];
+  for (const [etaSeq, points] of byWave) {
+    points.sort((a,b) => a.seq - b.seq);
+    let segment = null;
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i], b = points[i + 1];
+      if (b.time <= a.time) continue;
+      if (a.time <= now && now < b.time) { segment = { fromSeq:a.seq, toSeq:b.seq, etaSeq, confidence:'estimated' }; break; }
+    }
+    if (!segment && points[0] && points[0].time > now && points[0].time - now <= 5 * 60000 && points[1] && points[1].time > points[0].time) {
+      segment = { fromSeq:points[0].seq, toSeq:points[1].seq, etaSeq, confidence:'approaching' };
+    }
+    if (segment) result.push(segment);
+  }
+  return result.sort((a,b) => a.fromSeq - b.fromSeq);
+}
+function applyEtaPositionFallback(segments) {
+  const state = routeDetailState;
+  if (state.gpsStatus !== 'watching' || !segments.length) return;
+  const age = Date.now() - (Number(state.gpsPositionTime) || 0);
+  if (state.gpsSource === 'eta' || state.gpsErrorCount > 0 || age > 45000) {
+    const segment = segments[0];
+    state.gpsSeq = segment.fromSeq;
+    state.gpsSource = 'eta';
+  }
+}
+async function loadRouteDetailEtas(it, request, priorityStopId = routeDetailState.selectedStopId, onlyStopId = null) {
+  const ordered = [...routeDetailState.stops].sort((a,b) => String(a.id) === String(priorityStopId) ? -1 : String(b.id) === String(priorityStopId) ? 1 : 0);
+  const stops = onlyStopId == null ? ordered : ordered.filter(stop => String(stop.id) === String(onlyStopId));
+  stops.forEach(stop => setDetailEtaState(stop.id, { status:'loading', etas:[] }));
+  if (it.co === 'KMB') {
+    try {
+      const d = (await getJSON(KMB + '/route-eta/' + encodeURIComponent(it.route) + '/' + it.service_type)).data || [];
+      if (!isCurrentRouteDetailGeneration(request.generation)) return;
+      const grouped = parseKmbRouteEta(d, it), fetchedAt = new Date().toISOString();
+      stops.forEach(stop => applyDetailEtaResult(it, stop, grouped.get(Number(stop.seq)) || [], null, request.generation));
+    } catch (e) {
+      if (isCurrentRouteDetailGeneration(request.generation)) stops.forEach(stop => applyDetailEtaResult(it, stop, [], e.name === 'AbortError' ? '連線超時' : '讀取失敗', request.generation));
+    }
+  } else {
+    let cursor = 0;
+    const worker = async () => { while (cursor < stops.length) { const stop = stops[cursor++]; const result = await fetchETA(makeStopRequest(it, stop)); if (!isCurrentRouteDetailGeneration(request.generation)) return; applyDetailEtaResult(it, stop, result.etas || [], result.err, request.generation); renderRouteDetail(); } };
+    await Promise.all([worker(), worker(), worker()]);
+  }
+  if (isCurrentRouteDetailGeneration(request.generation)) renderRouteDetail();
+}
+
+function updateRouteDetailCompact(){
+  if (!routeDetail) return;
+  const dock = routeDetail.querySelector('.detail-live-dock');
+  if (dock) dock.classList.toggle('compact', routeDetail.scrollTop > 52);
+}
+routeDetail.addEventListener('scroll', updateRouteDetailCompact, { passive:true });
+function renderRouteDetail() {
+  const it = routeDetailState.item;
+  if (!it || !routeDetailBody) return;
+  const selected = routeDetailState.gpsSeq || routeDetailState.selectedSeq;
+  const selectedStop = routeDetailState.stops.find(s => s.seq === selected) || routeDetailState.stops[0];
+  if (selectedStop) { routeDetailState.selectedSeq = selectedStop.seq; routeDetailState.selectedStopId = selectedStop.id; }
+  routeDetailOperator.textContent = it.co;
+  routeDetailOperator.className = 'detail-title-operator ' + it.co;
+  routeDetailRoute.textContent = it.route;
+  routeDetailSubTitle.textContent = (it.origin || it.stopName || '') + ' → ' + (it.dest || '') + ' · 唯讀路線詳情';
+  if (routeDetailState.stopsStatus === 'loading') { routeDetailBody.innerHTML = '<div class="detail-loading">載入路線站點…</div>'; return; }
+  if (routeDetailState.stopsStatus === 'error') { routeDetailBody.innerHTML = '<div class="detail-loading">站點讀取失敗，請返回後再試。</div>'; return; }
+  const current = selectedStop || { name:'未選擇車站', id:'', seq:'' };
+  const busEstimate = estimateActiveBusWaves();
+  const inferred = deriveEstimatedSegments(routeDetailState.stops, routeDetailState.etaByStop);
+  routeDetailState.vehicleInference = inferred[0] ? { status:'estimated', ...inferred[0] } : { status:'hidden', reason:'暫無足夠資料推算巴士位置' };
+  // The header and timeline use one synchronized, deduplicated ETA-segment
+  // result.  The separate time-drop estimate remains available for diagnosis,
+  // but is not allowed to disagree with what the user can see.
+  const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop);
+  applyEtaPositionFallback(virtualSegments);
+  const markerAfter = new Map(virtualSegments.map(segment => [segment.fromSeq, '<div class="detail-inference virtual" role="status" aria-label="估計巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="virtual-bus-card"><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計巴士位置"></span></span><span class="virtual-bus-copy"><b>' + (segment.confidence === 'approaching' ? '估計巴士即將到站' : '估計巴士正在途中行駛') + '</b><small>估計位置（獨立推算）：第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間</small></span></div>']));
+  const visibleBusCount = markerAfter.size;
+  const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
+  const nearStation = null;
+  const nearStationEta = null;
+  for (let i = 0; i < routeDetailState.stops.length - 1; i++) {
+    const a = detailEtaStateFor(routeDetailState.stops[i]), b = detailEtaStateFor(routeDetailState.stops[i + 1]);
+    const ea = detailFirstLiveEta(routeDetailState.stops[i]);
+    const eb = detailFirstLiveEta(routeDetailState.stops[i + 1]);
+    if (ea && eb && detailEtaIsApproaching(ea) && Date.parse(eb.iso) > Date.parse(ea.iso) && Date.parse(eb.iso) - Date.parse(ea.iso) <= 20 * 60000) enRouteSeqs.add(routeDetailState.stops[i].seq);
+  }
+  routeDetailBody.classList.remove('detail-loading');
+  routeDetailBody.innerHTML =
+    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><div class="detail-meta-row"><span class="summary-count">共 ' + routeDetailState.stops.length + ' 個站</span><span class="summary-buses" title="按同一輪 ETA 逐段推算">ETA 推算行駛中：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 部' : '讀取中') + '</span></div><div class="detail-meta-row"><span class="summary-coverage">' + detailEtaCoverageText() + '</span></div><div class="detail-meta-row"><span class="summary-schedule">' + detailScheduleSummary() + '</span></div><div class="detail-meta-row"><span class="summary-fare">全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
+    '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
+    detailGpsPanel(it, current) +
+    detailEtaPanel(current) +
+    '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +
+    '<div class="detail-section-title"><span>沿途車站列表</span><small>共 ' + routeDetailState.stops.length + ' 個站</small></div>' +
+    '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const isLive = routeDetailState.gpsSeq === st.seq;
+    const isTarget = getoff[uid(it)]?.active && getoff[uid(it)].targetSeq === st.seq;
+    const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected ' : '') + (isLive ? 'is-live ' : '') + (isTarget ? 'is-getoff-target' : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (isLive ? '，你而家接近呢度' : st.seq === selected ? '，已選' : '，按兩下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-content"><span class="stop-copy"><strong>' + esc(st.seq) + '　' + esc(st.name) + '</strong><small>' + esc(st.name_en || st.id) + '</small></span>' + '<span class="stop-state">' + (isLive ? '你而家喺呢度' : isTarget ? '落車站' : state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></span></button>'; const near = nearStation === st.seq ? '<div class="detail-between-bus" role="img" aria-label="巴士即將到站" title="巴士即將到站"><span class="bus-front-marker"></span><span class="bus-status-label">' + (nearStationEta?.sched ? '原定班次接近' : '巴士接近中') + '</span></div>' : ''; return row + near + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it);
+  updateRouteDetailCompact();
+  routeDetailBody.querySelector('[data-detail-gps]')?.addEventListener('click', () => startRouteDetailGps(it));
+  routeDetailBody.querySelector('[data-detail-gps-stop]')?.addEventListener('click', stopRouteDetailGps);
+  routeDetailBody.querySelectorAll('[data-detail-stop]').forEach(button => button.addEventListener('click', () => {
+    const stop = routeDetailState.stops.find(s => String(s.seq) === button.dataset.detailStop);
+    if (!stop) return;
+    routeDetailState.selectedSeq = stop.seq; routeDetailState.selectedStopId = stop.id; renderRouteDetail();
+    routeDetailBody.querySelector('[data-detail-stop="' + cssEscape(String(stop.seq)) + '"]')?.focus({ preventScroll:true });
+  }));
+  routeDetailBody.querySelectorAll('[data-detail-stop]').forEach(button => button.addEventListener('keydown', event => {
+    if (!['ArrowDown','ArrowUp'].includes(event.key)) return;
+    event.preventDefault();
+    const buttons = [...routeDetailBody.querySelectorAll('[data-detail-stop]')];
+    const next = buttons[buttons.indexOf(button) + (event.key === 'ArrowDown' ? 1 : -1)];
+    if (next) next.click();
+  }));
+  routeDetailBody.querySelector('[data-detail-retry]')?.addEventListener('click', () => {
+    const stop = routeDetailState.stops.find(s => String(s.id) === routeDetailBody.querySelector('[data-detail-retry]')?.dataset.detailRetry);
+    if (!stop || !routeDetailState.item || !routeDetailState.etaRequest) return;
+    setDetailEtaState(stop.id, { status:'loading', etas:[] }); renderRouteDetail();
+    loadRouteDetailEtas(routeDetailState.item, routeDetailState.etaRequest, stop.id, stop.id).catch(() => {});
+  });
+  routeDetailBody.querySelector('[data-detail-refresh]')?.addEventListener('click', event => {
+    if (!routeDetailState.item || !routeDetailState.etaRequest) return;
+    const request = routeDetailState.etaRequest;
+    const button = event.currentTarget; button.disabled = true; button.textContent = '正在更新全部車站…';
+    loadRouteDetailEtas(routeDetailState.item, request, routeDetailState.selectedStopId).catch(() => {}).finally(() => { if (button.isConnected) { button.disabled = false; button.textContent = '立即更新全部車站 ETA'; } });
+  });
+  routeDetailBody.querySelector('[data-detail-reverse]')?.addEventListener('click', switchRouteDetailDirection);
+  updateInfoBar();
+}
+async function openRouteDetail(it, trigger) {
+  routeDetailReturnFocus = trigger || document.activeElement;
+  routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.fareLabel = null; routeDetailState.sweepStatus = 'loading';
+  const request = beginRouteDetailGeneration();
+  routeDetail.classList.add('on'); routeDetail.setAttribute('aria-hidden', 'false'); document.body.classList.add('detail-open'); startRouteDetailTicker();
+  routeDetailBody.innerHTML = '<div class="detail-loading">載入路線站點…</div>';
+  history.pushState({ buspulseRouteDetail:true }, '', '#route-detail'); routeDetail.querySelector('.detail-back').focus();
+  try {
+    const stops = await getRouteStopsCached(it, { signal:request.signal });
+    if (!isCurrentRouteDetailGeneration(request.generation)) return;
+    routeDetailState.stops = stops; routeDetailState.stopsStatus = 'ready'; routeDetailState.etaRequest = request; renderRouteDetail(); if (getoff[uid(it)]?.active) startRouteDetailGps(it); loadDetailFare(it, request.generation); loadDetailSchedule(it, request.generation); loadRouteDetailEtas(it, request, routeDetailState.selectedStopId).then(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'ready'; }).catch(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'error'; });
+  } catch (e) {
+    if (!isCurrentRouteDetailGeneration(request.generation)) return;
+    routeDetailState.stopsStatus = 'error'; renderRouteDetail();
+  }
+}
+function closeRouteDetail(options = {}) {
+  if (!routeDetailState.open) return;
+  const useHistory = options.history !== false;
+  closeRouteDetailState(); routeDetailState.item = null; routeDetail.classList.remove('on'); routeDetail.setAttribute('aria-hidden', 'true'); document.body.classList.remove('detail-open');
+  updateInfoBar();
+  routeDetailReturnFocus?.focus?.();
+  if (useHistory && history.state?.buspulseRouteDetail) history.back();
+}
+
 function shell() {
   mapCache.clear();
   if (!items.length) {
     board.innerHTML =
-      '<div class="empty"><div class="big">&#128652;</div>' +
-      '<p>仲未揀路線<br>揿右下角<b>＋ 設定路線</b>加你嘅巴士</p></div>';
+      '<div class="empty"><img class="big" src="icon-192.png" alt="BusPulse HK 巴士圖標">' +
+      '<p>仲未揀路線<br>揿右下角<b>＋ 路線</b>加你嘅巴士</p></div>';
+    updateInfoBar();
     return;
   }
   board.innerHTML = items.map(it => {
@@ -820,8 +1757,8 @@ function shell() {
       '<button class="alarm-btn ' + (alarms[uid(it)] ? 'on' : '') + '" data-alarm-id="' + id + '" title="開關到站提醒" aria-label="開關到站提醒">🔔</button>' +
       '<button class="map-head-btn" data-map-id="' + id + '" title="查看路線地圖" aria-label="查看路線地圖">⌖</button>' +
       '</div>' +
-      '<div class="stop"><button class="stop-edit" data-edit-stop="' + id + '" title="更改上車站">&#128205; <b>' + esc(it.stopName || '') + '</b></button><a class="fare" data-fare="' + id + '" title="官方全程車資">全程車資：讀取中</a></div>' +
-      '<div class="etas" data-slot="' + id + '">' +
+      '<div class="stop"><button class="stop-edit" data-edit-stop="' + id + '" title="更改上車站">&#128205; <b>' + esc(it.stopName || '') + '</b></button><a class="fare" data-fare="' + id + '" title="官方全程車資">全程車資：讀取中</a><button class="detail-entry" data-detail-id="' + id + '" type="button" title="查看完整路線及沿途車站" aria-label="查看完整路線及沿途車站">☷</button></div>' +
+	      '<div class="etas" data-slot="' + id + '">' +
         '<div class="eta"><div class="m pulse">··</div><div class="u">載入中</div></div>' +
       '</div>' +
       '<div class="alarm-note" data-alarm-note="' + id + '" aria-live="polite"></div>' +
@@ -845,10 +1782,15 @@ function shell() {
     const item = items.find(x => uid(x) === button.dataset.mapId);
     if (item) button.addEventListener('click', () => toggleMap(item, button));
   });
+  board.querySelectorAll('[data-detail-id]').forEach(button => {
+    const item = items.find(x => uid(x) === button.dataset.detailId);
+    if (item) button.addEventListener('click', () => openRouteDetail(item, button));
+  });
   updateFares().catch(() => {});
+  updateInfoBar();
 }
 
-function toggleAlarm(id, button) {
+async function toggleAlarm(id, button) {
   alarms[id] = !alarms[id];
   if (alarms[id]) alarmSessions[id] = newAlarmSession();
   else delete alarmSessions[id];
@@ -859,6 +1801,7 @@ function toggleAlarm(id, button) {
     // Turning the alarm off must also cancel any already planned local reminder and close a notification that may still be on screen.
     closeArrivalNotifications();
     if (activeAlarmAlerts.has(id)) stopAlarmAlert(id);
+    delete alarmPlans[id];
     saveAlarmPlans();
   }
   saveAlarms();
@@ -868,9 +1811,10 @@ function toggleAlarm(id, button) {
     unlockAudio();
     button.title = '關閉到站提醒';
     // 以按鈕點擊作為使用者手勢，直接申請系統通知權限。
-    requestNotifications();
+    const permission = await requestNotifications();
+    if (permission !== 'granted') alert(permission === 'denied' ? '通知已被封鎖，鬧鐘提醒可能無法顯示。' : '尚未允許系統通知，鬧鐘提醒可能無法顯示。');
   } else button.title = '開關到站提醒';
-  if (pushWorkerUrl()) syncPushSubscription();
+  renderDiagnostics();
 }
 function disableAlarmAfterArrival(id) {
   if (!alarms[id]) return;
@@ -886,9 +1830,6 @@ function disableAlarmAfterArrival(id) {
     button.textContent = '🔔';
     button.title = '開關到站提醒';
   }
-  pushStatus('✓ 呢條路線已提醒一次，鬧鐘已自動關閉；再撳鈴鐺可等下一班', true);
-  // 前景提醒亦要即時從 Worker 移除，避免同一程稍後再收到一次背景 Push。
-  if (pushWorkerUrl()) syncPushSubscription();
 }
 let audioCtx = null;
 const activeAlarmAlerts = new Map();
@@ -904,7 +1845,8 @@ function stopAlarmAlert(id) {
   navigator.vibrate?.(0);
 }
 async function unlockAudio() { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'closed') audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') await audioCtx.resume(); return audioCtx; } catch { return null; } }
-async function ringBell() {
+async function ringBell(options = {}) {
+  if (!options.userInitiated && !options.alarmAuthorized) return false;
   if (prefs.webSound === false) return false;
   try {
     const ctx = await unlockAudio();
@@ -930,11 +1872,23 @@ async function notificationRegistration(timeoutMs = 1800) {
     return registration || null;
   } catch { return null; }
 }
+function scrollRouteDetailToAlarmStop(it) {
+  if (!document.body.classList.contains('detail-open') || !routeDetailState.item || uid(routeDetailState.item) !== uid(it)) return;
+  const wantedId = String(it.stopId || '');
+  const wantedName = String(it.stopName || '').trim();
+  const stop = routeDetailState.stops.find(s => wantedId && String(s.id) === wantedId) || routeDetailState.stops.find(s => wantedName && String(s.name).trim() === wantedName);
+  if (!stop) return;
+  routeDetailState.selectedSeq = stop.seq;
+  routeDetailState.selectedStopId = stop.id;
+  renderRouteDetail();
+  window.setTimeout(() => routeDetailBody.querySelector('[data-detail-stop="' + cssEscape(String(stop.seq)) + '"]')?.scrollIntoView({ behavior:'smooth', block:'center' }), 80);
+}
 async function notifyArrival(it, min, tripKey) {
   const id = uid(it);
   // Defensive guard: a queued timer or an in-flight API response must not
   // create a new alert after the user has switched this route off.
-  if (!alarms[id]) return;
+  const alarmAuthorized = !!alarms[id];
+  if (!alarmAuthorized) return;
   const lateMinutes = Math.max(0, Math.round(-Number(min || 0)));
   const isCatchup = lateMinutes > 0;
   const body = isCatchup
@@ -943,14 +1897,15 @@ async function notifyArrival(it, min, tripKey) {
   const card = board.querySelector('[data-id="' + cssEscape(id) + '"]');
   const note = board.querySelector('[data-alarm-note="' + cssEscape(id) + '"]');
   if (note) {
-    note.textContent = isCatchup ? '⚠ 背景期間已錯過提醒：' + it.route + ' 約 ' + lateMinutes + ' 分鐘前到站時間（重新開啟後補發）' : '🔔 ' + it.route + ' 約 ' + Math.max(0, min) + ' 分鐘到站';
+    note.textContent = isCatchup ? '⚠ 頁面暫停期間已錯過提醒：' + it.route + ' 約 ' + lateMinutes + ' 分鐘前到站時間（恢復頁面後補發）' : '🔔 ' + it.route + ' 約 ' + Math.max(0, min) + ' 分鐘到站';
     note.classList.add('show');
     if (isCatchup) note.classList.add('catchup');
   }
+  scrollRouteDetailToAlarmStop(it);
   // Stop this one-time alarm only after the catch-up message has been placed
   // on the route card, so the user gets visible feedback even if audio is blocked.
   disableAlarmAfterArrival(id);
-  const webPlayed = await ringBell();
+  const webPlayed = await ringBell({ alarmAuthorized });
   const alert = {card,notification:null}; activeAlarmAlerts.set(id, alert);
   if (card) { card.classList.remove('alert-flash'); void card.offsetWidth; card.classList.add('alert-flash'); alert.timer=setTimeout(() => { card.classList.remove('alert-flash'); if(activeAlarmAlerts.get(id)===alert) activeAlarmAlerts.delete(id); }, 12000); }
   if (prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission === 'granted') {
@@ -1019,7 +1974,7 @@ function scheduleAlarmFallbacks(it, res, options = {}) {
   const timers = alarmFallbackTimers.get(id) || new Map();
   // Do not cancel an already scheduled trip on every 25-second refresh.
   // Live ETA timestamps can move slightly; cancelling here can keep chasing
-  // the moving timestamp forever and miss the actual background alert.
+  // the moving timestamp forever and miss the actual alarm alert.
   for (const [key, timer] of timers) {
     if (timer.at < now - 2 * 60 * 60 * 1000 || timer.at > now + 3 * 60 * 60 * 1000) {
       clearTimeout(timer.handle); timers.delete(key);
@@ -1030,6 +1985,7 @@ function scheduleAlarmFallbacks(it, res, options = {}) {
     if (!Number.isFinite(at)) return;
     const key = String(at);
     rememberAlarmPlan(it, e, at);
+    scheduleNativeLocalAlarm(it, { key, at, iso:e.iso, min:e.min, rmk:e.rmk || '' }).catch(() => {});
     if (timers.has(key)) return;
     // A small margin helps when the browser wakes a throttled background
     // timer late. checkAlarms still de-duplicates the same trip.
@@ -1108,8 +2064,7 @@ async function openGetoffSetup(it) {
   sTitle.textContent = '設定落車提醒';
   sBody.innerHTML = '<div class="msg"><span class="spin"></span>載入 ' + esc(it.route) + ' 站頭 …</div>';
   try {
-    const stops = await routeStops(it);
-    routeStopsCache.set(uid(it), stops);
+    const stops = await getRouteStopsCached(it);
     sBody.innerHTML = '<div class="lbl">' + esc(it.route) + ' · ' + esc(it.dest || '') + '</div>' +
       '<div class="hint">揀你想落車嘅站。開始後，手機會用 GPS 判斷你接近目標站；GPS 只會喺你主動開始後使用。</div>' +
       '<button class="wide" id="getoffMapBtn">🗺 地圖揀站</button>' +
@@ -1170,7 +2125,7 @@ function stopGetoff(it) { delete getoff[uid(it)]; saveGetoff(); if (getoffWatch 
 function notifyGetoffError() { const n=document.querySelector('#getoffNote'); if(n) n.textContent='GPS 暫時未能定位，請確認已允許定位及開啟手機 GPS。'; }
 function updateGetoff(it, coords) {
   const state=getoff[uid(it)]; if (!state?.active) return;
-  const d=routeStopsCache.get(uid(it));
+  const d=routeStopsCache.get(routeVariantKey(it));
   if (!d?.length) return;
   const here={lat:coords.latitude,lng:coords.longitude};
   let nearest=d[0], best=Infinity;
@@ -1178,7 +2133,7 @@ function updateGetoff(it, coords) {
   const before=Math.max(0,state.targetSeq-nearest.seq);
   const note=document.querySelector('#getoffNote'); if(note) note.textContent=nearest.seq >= state.targetSeq ? '已接近／到達目標站：' + state.targetName : '目前接近第 ' + nearest.seq + ' 站，距離目標約 ' + before + ' 個站';
   const key=state.targetSeq + ':' + nearest.seq;
-  if (before <= 1 && nearest.seq < state.targetSeq && state.alertKey !== key) { state.alertKey=key; saveGetoff(); ringBell(); if(navigator.vibrate) navigator.vibrate([300,120,300,120,500]); const card=board.querySelector('[data-id="'+cssEscape(uid(it))+'"]'); if(card){card.classList.remove('alert-flash');void card.offsetWidth;card.classList.add('alert-flash');setTimeout(()=>card.classList.remove('alert-flash'),12000);} if(prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission==='granted') navigator.serviceWorker?.ready.then(reg=>reg.showNotification('就嚟落車喇',{body:it.route+' 下一個站：'+state.targetName,icon:'./icon-192.png',tag:'getoff-'+uid(it),requireInteraction:true,silent:false})).catch(()=>{}); }
+  if (before <= 1 && nearest.seq < state.targetSeq && state.alertKey !== key) { state.alertKey=key; saveGetoff(); ringBell({ alarmAuthorized:true }); if(navigator.vibrate) navigator.vibrate([300,120,300,120,500]); const card=board.querySelector('[data-id="'+cssEscape(uid(it))+'"]'); if(card){card.classList.remove('alert-flash');void card.offsetWidth;card.classList.add('alert-flash');setTimeout(()=>card.classList.remove('alert-flash'),12000);} if(prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission==='granted') navigator.serviceWorker?.ready.then(reg=>reg.showNotification('就嚟落車喇',{body:it.route+' 下一個站：'+state.targetName,icon:'./icon-192.png',tag:'getoff-'+uid(it),requireInteraction:true,silent:false})).catch(()=>{}); }
 }
 
 function renderPip() {
@@ -1215,9 +2170,29 @@ async function requestNotifications() {
     return Notification.permission;
   } catch { return Notification.permission || 'error'; }
 }
+async function previewSelectedSound() {
+  if (prefs.webSound === false) {
+    await sendTestNotification();
+    return;
+  }
+  unlockAudio();
+  const played = await ringBell({ userInitiated:true });
+  if (!played) alert('網站聲效未能播放，請確認手機媒體音量及瀏覽器聲音權限。');
+}
+async function sendTestNotification() {
+  const permission = await requestNotifications();
+  if (permission !== 'granted') { alert('未能發送：請先允許系統通知。'); return; }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    await reg.showNotification('BusPulse HK 測試通知', { body:'如果手機通知聲已開，應該會聽到提示聲。', icon:'./icon-192.png', badge:'./icon-192.png', tag:'buspulse-test-' + Date.now(), renotify:true, requireInteraction:true, silent:false, vibrate:[260,100,260] });
+    alert('測試通知已發送。若見到通知但無聲，請檢查手機通知音量、勿擾模式，以及 BusPulse HK 通知分類是否設為「有聲」。');
+  } catch { alert('發送測試通知失敗，請確認已由主畫面開啟並允許通知。'); }
+  updateNotificationButton();
+  renderDiagnostics();
+}
 /* -------------------------------------------------------------------
-   背景提醒診斷
-   報告瀏覽器實際批准咗咩，令「冇響鬧」可以查清原因，而唔係靠猜。
+   本地鬧鐘診斷
+   顯示本地鬧鐘所需的通知與計時狀態，方便排查提醒問題。
    ------------------------------------------------------------------- */
 function renderDiagnostics() {
   const el = document.querySelector('#diagBox');
@@ -1231,7 +2206,7 @@ function renderDiagnostics() {
   const planCount = Object.values(alarmPlans).reduce((n, l) => n + (Array.isArray(l) ? l.length : 0), 0);
   const rows = [
     ['系統通知權限', perm === 'granted' ? '✓ 已允許' : perm === 'denied' ? '✗ 已封鎖' : '⚠ 未決定（請撳上面允許）'],
-    ['Service Worker', ('serviceWorker' in navigator) ? '✓' : '✗'],
+    ['本地通知支援', ('serviceWorker' in navigator) ? '✓ 已可用' : '✗ 不支援'],
     ['已開啟鬧鐘', armed + ' 條'],
     ['已排定補發計劃', planCount + ' 個'],
     ['上次成功更新', lastOK ? Math.round((Date.now() - lastOK) / 1000) + ' 秒前' : '未更新']
@@ -1241,7 +2216,7 @@ function renderDiagnostics() {
     html += '<div class="diag-warn">⚠ iPhone／iPad 必須先用 Safari「分享 → 加入主畫面」，再由主畫面圖示開啟，通知才會運作。</div>';
   }
   if (perm === 'denied') {
-    html += '<div class="diag-warn">⚠ 通知已被封鎖，所有背景提醒都唔會出現，請到瀏覽器設定重新開啟。</div>';
+    html += '<div class="diag-warn">⚠ 通知已被封鎖，系統通知都唔會出現，請到瀏覽器設定重新開啟。</div>';
   }
   const plans = [];
   Object.entries(alarmPlans).forEach(([id, list]) => {
@@ -1260,19 +2235,23 @@ function renderDiagnostics() {
 function updateNotificationButton() {
   const button = $('#notifyBtn');
   if (!button) return;
-  button.classList.remove('notify-on', 'notify-off');
-  if (!('Notification' in window)) { button.textContent = '此瀏覽器不支援通知'; button.disabled = true; return; }
+  button.classList.remove('notification-on','notification-off','notification-warn');
+  if (!('Notification' in window)) { button.textContent = '系統通知：此瀏覽器不支援'; button.classList.add('notification-warn'); button.disabled = true; return; }
   if (Notification.permission === 'granted') {
-    const enabled = prefs.notificationsEnabled !== false;
-    button.classList.add(enabled ? 'notify-on' : 'notify-off');
-    button.textContent = enabled ? '系統通知已允許 ✓（撳此暫停）' : '系統通知已暫停（撳此開啟）';
+    const on = prefs.notificationsEnabled !== false;
+    button.textContent = on ? '系統通知：已開啟 ✓（撳此暫停）' : '系統通知：已暫停（撳此開啟）';
+    button.classList.add(on ? 'notification-on' : 'notification-off');
+    button.setAttribute('aria-pressed', String(on));
     button.disabled = false;
   } else if (Notification.permission === 'denied') {
-    button.classList.add('notify-off');
-    button.textContent = '通知已封鎖，請到瀏覽器設定開啟';
+    button.textContent = '系統通知：已被封鎖（到設定開啟）';
+    button.classList.add('notification-warn');
+    button.setAttribute('aria-pressed', 'false');
     button.disabled = false;
   } else {
-    button.textContent = '允許系統通知';
+    button.textContent = '系統通知：未開啟（撳此允許）';
+    button.classList.add('notification-warn');
+    button.setAttribute('aria-pressed', 'false');
     button.disabled = false;
   }
 }
@@ -1282,69 +2261,6 @@ async function toggleNotificationSetting() {
   prefs.notificationsEnabled = prefs.notificationsEnabled === false;
   savePrefs(); updateNotificationButton(); renderDiagnostics();
 }
-async function sendTestNotification() {
-  if (!('Notification' in window)) { alert('此瀏覽器不支援系統通知'); return false; }
-  await requestNotifications();
-  if (Notification.permission !== 'granted') { alert('未允許系統通知，請先在瀏覽器設定開啟'); return false; }
-  try {
-    const reg = await navigator.serviceWorker?.ready;
-    const body = '呢個係測試提示，代表背景到站通知通道可以運作。';
-    if (reg?.active) {
-      navigator.setAppBadge?.(1).catch?.(() => {});
-      reg.active.postMessage({ type:'BUS_ARRIVAL', title:'【測試】港巴即時提示', body, badgeNumber:1, silent:!!prefs.systemSilent, tag:'buspulse-test', requireInteraction:true });
-    } else {
-      navigator.setAppBadge?.(1).catch?.(() => {});
-      await reg?.showNotification('【測試】港巴即時提示', { body, icon:'./icon-192.png', silent:!!prefs.systemSilent, vibrate:prefs.systemSilent?[]:[260,100,260], tag:'buspulse-test', requireInteraction:true });
-    }
-    return true;
-  } catch { alert('測試通知未能發出，請重新載入網站後再試'); return false; }
-}
-let testNotifyTimer = null;
-let testNotifyEndsAt = 0;
-function cancelTestNotification() {
-  if (testNotifyTimer) { clearTimeout(testNotifyTimer); testNotifyTimer = null; }
-  testNotifyEndsAt = 0;
-  const status = $('#testNotifyStatus');
-  const button = $('#testNotifyBtn');
-  const badge = $('#testCountdown');
-  if (status) status.textContent = '未安排測試；撳掣後請立即將網站放到背景。';
-  if (button) { button.disabled = false; button.textContent = '安排背景測試'; }
-  if (badge) { badge.textContent = '待機'; badge.classList.add('ready'); }
-}
-async function scheduleTestNotification(delayMs) {
-  if (!('Notification' in window)) { alert('此瀏覽器不支援系統通知'); return; }
-  await requestNotifications();
-  if (Notification.permission !== 'granted') { alert('未允許系統通知，請先在瀏覽器設定開啟'); return; }
-  // 由安排按鈕的使用者手勢解鎖音效，時間到時先播放所選聲效，再發系統通知。
-  unlockAudio();
-  cancelTestNotification();
-  testNotifyEndsAt = Date.now() + delayMs;
-  const button = $('#testNotifyBtn');
-  const status = $('#testNotifyStatus');
-  const badge = $('#testCountdown');
-  if (button) { button.disabled = true; button.textContent = '已安排，請放到背景'; }
-  if (badge) badge.classList.remove('ready');
-  const updateCountdown = () => {
-    const left = Math.max(0, testNotifyEndsAt - Date.now());
-    if (badge) badge.textContent = Math.ceil(left / 1000) + 's';
-    if (status) status.textContent = '背景測試倒數：' + Math.ceil(left / 1000) + ' 秒；而家可以切去其他 App 或鎖屏。';
-    if (left > 0) setTimeout(updateCountdown, 1000);
-  };
-  updateCountdown();
-  testNotifyTimer = setTimeout(async () => {
-    testNotifyTimer = null;
-    ringBell();
-    const reg = await navigator.serviceWorker?.ready;
-    const body = '延遲背景測試完成；如果你而家先收到，代表背景通知通道有反應。';
-    if (reg?.active) reg.active.postMessage({ type:'BUS_ARRIVAL', title:'【測試】港巴即時背景提示', body, badgeNumber:1, silent:!!prefs.systemSilent, tag:'buspulse-delayed-test', requireInteraction:true });
-    else await reg?.showNotification('【測試】港巴即時背景提示', { body, icon:'./icon-192.png', silent:!!prefs.systemSilent, vibrate:prefs.systemSilent?[]:[260,100,260], tag:'buspulse-delayed-test', requireInteraction:true });
-    testNotifyEndsAt = 0;
-    if (status) status.textContent = '背景測試已發出；如果冇收到，請檢查通知權限及省電設定。';
-    if (button) { button.disabled = false; button.textContent = '安排背景測試'; }
-    if (badge) { badge.textContent = '完成'; badge.classList.add('ready'); }
-  }, delayMs);
-}
-
 async function roadPath(stops) {
   const valid = stops.filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
   if (valid.length < 2) return valid.map(x => [x.lat, x.lng]);
@@ -1358,7 +2274,16 @@ async function roadPath(stops) {
       try {
         const q=await getJSON('https://router.project-osrm.org/route/v1/driving/' + a.lng + ',' + a.lat + ';' + b.lng + ',' + b.lat + '?overview=full&geometries=geojson&steps=false', 12000);
         const line=q.routes?.[0]?.geometry?.coordinates || [];
-        if (line.length > 1) { if (i > 1) line.shift(); segmented.push(...line.map(x => [x[1],x[0]])); continue; }
+        if (line.length > 1) {
+          const lats=line.map(x=>x[1]), lngs=line.map(x=>x[0]);
+          const outside=line.some(x => Math.abs(x[1]-((a.lat+b.lat)/2)) > .18 || Math.abs(x[0]-((a.lng+b.lng)/2)) > .25);
+          const directKm=gapKm(a,b), routeKm=Number(q.routes?.[0]?.distance || 0)/1000;
+          // OSRM may choose a ferry/跨境 detour between nearby airport stops.
+          // Reject implausible segments before drawing them.
+          if (!outside && routeKm > 0 && routeKm <= Math.max(25, directKm * 6)) {
+            if (i > 1) line.shift(); segmented.push(...line.map(x => [x[1],x[0]])); continue;
+          }
+        }
       } catch {}
       if (i > 1) segmented.pop();
       segmented.push([a.lat,a.lng],[b.lat,b.lng]);
@@ -1398,7 +2323,7 @@ async function toggleMap(it, button) {
   const mapEl = wrap.querySelector('.route-map');
   mapEl.innerHTML = '<div class="map-loading"><span class="spin"></span>載入站頭位置…</div>';
   try {
-    const stops = (await routeStops(it)).filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
+    const stops = (await getRouteStopsCached(it)).filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
     if (!stops.length) throw new Error('no-coordinates');
     mapEl.innerHTML = '';
     const map = L.map(mapEl, { zoomControl: false, attributionControl: true });
@@ -1508,7 +2433,7 @@ function toggleLiveRouteGPS(it, map, stops, button) {
 function locateOnExistingMap(it) {
   const map = mapCache.get(uid(it));
   if (!map) return;
-  routeStops(it).then(stops => locateOnMap(map, stops.filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng)), board.querySelector('[data-locate-id="' + cssEscape(uid(it)) + '"]')));
+  getRouteStopsCached(it).then(stops => locateOnMap(map, stops.filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng)), board.querySelector('[data-locate-id="' + cssEscape(uid(it)) + '"]')));
 }
 
 function paint(it, res) {
@@ -1532,7 +2457,7 @@ function paint(it, res) {
     const liveMin = e.iso && Number.isFinite(Date.parse(e.iso)) ? Math.round((Date.parse(e.iso) - Date.now()) / 60000) : e.min;
     const hhmm = new Date(e.iso).toLocaleTimeString('en-GB',
       { hour:'2-digit', minute:'2-digit', hour12:false });
-    const cls = ['eta', 'i' + Math.min(i, 2)];
+    const cls = ['eta', liveMin <= 2 ? 'eta-near' : liveMin <= 10 ? 'eta-soon' : 'eta-later'];
     if (e.sched) cls.push('sch');
     let big;
     if (liveMin <= 0) { cls.push('arr'); big = '<div class="eta-main"><div class="m">即將到達</div></div>'; }
@@ -1549,8 +2474,21 @@ function paint(it, res) {
   }
 }
 
-async function refresh() {
-  if (inFlight || !items.length) return;
+async function refresh(options = {}) {
+  const manual = options.manual === true;
+  if (inFlight || !items.length) {
+    if (manual && !items.length && refreshBtn) {
+      refreshBtn.classList.add('no-data');
+      refreshBtn.title = '請先設定路線';
+      setTimeout(() => { refreshBtn.classList.remove('no-data'); refreshBtn.title = '即刻更新'; }, 900);
+    }
+    return;
+  }
+  if (manual && refreshBtn) {
+    refreshBtn.disabled = true;
+    refreshBtn.classList.add('loading');
+    refreshBtn.title = '更新中…';
+  }
   inFlight = true;
   try {
     dot.className = 'dot';
@@ -1579,12 +2517,20 @@ async function refresh() {
     console.warn('BusPulse refresh failed', e);
   } finally {
     inFlight = false;
+    updateInfoBar();
+    if (manual && refreshBtn) {
+      refreshBtn.disabled = false;
+      refreshBtn.classList.remove('loading');
+      refreshBtn.title = dot.classList.contains('err') ? '更新失敗，請稍後再試' : '更新完成';
+      setTimeout(() => { if (refreshBtn) refreshBtn.title = '即刻更新'; }, 1600);
+    }
   }
 }
 
 /* clock + staleness indicator */
 setInterval(() => {
   clock.textContent = new Date().toLocaleTimeString('en-GB', { hour12:prefs.time12 });
+  if (busSaverTime) busSaverTime.textContent = new Date().toLocaleTimeString('en-GB', { hour12:false, hour:'2-digit', minute:'2-digit' });
   if (lastOK && Date.now() - lastOK > 75000 && !inFlight) dot.className = 'dot stale';
   wakeAlarmPlans();
 }, 1000);
@@ -1628,7 +2574,46 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pageshow', () => { wakeAlarmPlans(); refresh(); });
 window.addEventListener('online', () => { wakeAlarmPlans(); refresh(); });
-$('#refreshBtn').addEventListener('click', () => { refresh(); });
+refreshBtn.addEventListener('click', () => { refresh({ manual:true }); });
+function bindInfoBar(bar) {
+  if (!bar) return;
+  if (localStorage.getItem('buspulse.info.pinned') !== '1') bar.classList.add('collapsed');
+  let longPress = null, suppressClick = false;
+  bar.addEventListener('click', event => {
+    if (suppressClick) { suppressClick = false; return; }
+    const action = event.target.closest('[data-info-action]');
+    if (action) {
+      event.stopPropagation();
+      if (action.dataset.infoAction === 'setup') { viewHome(); openSheet(); }
+      if (action.dataset.infoAction === 'gps' && routeDetailState.item) startRouteDetailGps(routeDetailState.item);
+      if (action.dataset.infoAction === 'collapse') { bar.classList.remove('expanded','compact'); bar.classList.add('collapsed'); }
+      if (action.dataset.infoAction === 'pin') { const next = localStorage.getItem('buspulse.info.pinned') === '1' ? '0' : '1'; localStorage.setItem('buspulse.info.pinned', next); updateInfoBar(); }
+      return;
+    }
+    if (bar.classList.contains('collapsed')) { bar.classList.remove('collapsed'); bar.classList.add('compact'); }
+    else if (bar.classList.contains('compact')) { bar.classList.remove('compact'); bar.classList.add('expanded'); }
+    else { bar.classList.remove('expanded'); bar.classList.add('compact'); }
+    bar.setAttribute('aria-label', bar.classList.contains('expanded') ? '完整補充資訊，撳一下收合成一行' : '補充資訊，撳一下查看');
+  });
+  bar.addEventListener('pointerdown', () => { longPress = setTimeout(() => { suppressClick = true; bar.classList.remove('expanded','compact'); bar.classList.add('collapsed'); }, 650); });
+  ['pointerup','pointercancel','pointerleave'].forEach(type => bar.addEventListener(type, () => { if (longPress) { clearTimeout(longPress); longPress = null; } }));
+  bar.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); bar.click(); } });
+}
+bindInfoBar(infoBar); bindInfoBar(detailInfoBar);
+document.addEventListener('pointerdown', event => {
+  [infoBar, detailInfoBar].forEach(bar => {
+    if (bar && bar.classList.contains('expanded') && !bar.contains(event.target)) {
+      bar.classList.remove('expanded');
+      bar.classList.add('compact');
+    }
+  });
+});
+const fab = document.querySelector('#fab');
+const moveFabForInfo = () => { if (!fab) return; const bar = document.body.classList.contains('detail-open') ? detailInfoBar : infoBar; const height = bar && bar.offsetParent !== null ? bar.offsetHeight : 0; fab.style.bottom = `calc(${Math.max(58, height + 16)}px + var(--safe-b))`; };
+new ResizeObserver(moveFabForInfo).observe(infoBar); new ResizeObserver(moveFabForInfo).observe(detailInfoBar); window.addEventListener('resize', moveFabForInfo);
+const collapseInfoOnScroll = () => { [infoBar, detailInfoBar].forEach(bar => { if (bar) { bar.classList.remove('expanded'); if (bar.classList.contains('pinned')) { bar.classList.remove('collapsed'); bar.classList.add('compact'); } else if (window.scrollY > 12 || routeDetail?.scrollTop > 52) { bar.classList.remove('compact'); bar.classList.add('collapsed'); } } }); };
+window.addEventListener('scroll', collapseInfoOnScroll, { passive:true });
+routeDetail.addEventListener('scroll', collapseInfoOnScroll, { passive:true });
 /* ===================================================================
    SETTINGS SHEET
    =================================================================== */
@@ -1641,6 +2626,21 @@ mask.addEventListener('click', closeSheet);
 $('#closeBtn').addEventListener('click', closeSheet);
 $('#fab').addEventListener('click', () => { viewHome(); openSheet(); });
 $('#prefsBtn').addEventListener('click', () => { viewPrefs(); openSheet(); });
+$('#routeDetailBack').addEventListener('click', () => closeRouteDetail());
+window.addEventListener('popstate', () => { if (routeDetailState.open) closeRouteDetail({ history:false }); });
+document.addEventListener('keydown', e => { if (routeDetailState.open && e.key === 'Escape') { e.preventDefault(); closeRouteDetail(); } });
+busSaver.addEventListener('click', closeBusSaver);
+busSaver.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') { e.preventDefault(); closeBusSaver(); } });
+document.addEventListener('pointerdown', registerBusActivity, { passive:true });
+document.addEventListener('pointermove', registerBusActivity, { passive:true });
+document.addEventListener('wheel', registerBusActivity, { passive:true });
+document.addEventListener('touchstart', registerBusActivity, { passive:true });
+document.addEventListener('keydown', e => { if (busSaverActive && e.key !== 'Tab') closeBusSaver(); else registerBusActivity(); });
+window.addEventListener('resize', moveBusSaver);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && busSaverActive) requestBusSaverWakeLock();
+  renderBatteryGuidance();
+});
 
 function viewPrefs() {
   sTitle.textContent = '顯示與提醒設定';
@@ -1648,43 +2648,39 @@ function viewPrefs() {
     '<div class="settings-intro">只保留最常用設定喺呢度；其他功能撳下面分組先展開，畫面會清爽好多。</div>' +
     '<div class="lbl">到站提醒</div>' +
     '<div class="pref-row"><div>提早幾多分鐘響鬧<small>揀咗路線卡上方嘅 🔔 後生效；每條路線只提醒一程，響完會自動關閉</small></div><select class="pref-select" id="leadSel"><option value="1">1 分鐘</option><option value="2">2 分鐘</option><option value="3">3 分鐘</option><option value="5">5 分鐘</option></select></div>' +
-    '<button class="wide" id="notifyBtn">允許系統通知</button>' +
-    '<details class="settings-group"><summary>背景推送</summary><div class="group-body">' +
-    '<div class="pref-row"><div>真正背景推送<small>伺服器每分鐘查巴士 ETA；關閉會取消 Push 登記、停止伺服器查詢及本機鬧鐘</small></div><button class="wide" id="pushBtn" style="width:auto;margin:0">真正關閉</button></div>' +
-    '<div class="hint">背景推送只會檢查已開啟、尚未到站嘅路線；每條路線成功提醒一次後會自動移除。</div>' +
-    '<input class="tin" id="pushUrl" placeholder="背景推送伺服器網址（部署後填入）" value="" />' +
-    '<div class="hint" id="pushStatus">已連接背景推送伺服器；撳「開啟」登記呢部手機。</div>' +
-    '<div class="pref-row"><div>Cloudflare 用量<small>每日 quota 會喺香港時間 08:00 重設</small></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><a class="wide" href="https://dash.cloudflare.com/5989bdd689f97c9274b758913d4e6651/workers/overview" target="_blank" rel="noopener" style="width:auto;margin:0;text-decoration:none;text-align:center">Worker 用量</a><a class="wide" href="https://dash.cloudflare.com/5989bdd689f97c9274b758913d4e6651/workers/kv/namespaces" target="_blank" rel="noopener" style="width:auto;margin:0;text-decoration:none;text-align:center">KV 用量</a></div></div>' +
-    '</div></details>' +
+    '<button class="wide notification-toggle notification-warn" id="notifyBtn" type="button" aria-pressed="false">系統通知：未開啟（撳此允許）</button>' +
     '<details class="settings-group"><summary>提示聲測試</summary><div class="group-body">' +
     '<div class="pref-row"><div>提示聲款式<small>測試前景網站提示聲效果</small></div><select class="pref-select" id="soundSel"><option value="double">兩下叮噹</option><option value="triple">三下提示</option><option value="alarm">鬧鐘長響</option></select></div>' +
     '<div class="pref-row"><div>提示聲長度<small>只影響網站前景播放嘅聲效</small></div><select class="pref-select" id="soundLenSel"><option value="short">較短</option><option value="normal">標準</option><option value="long">較長</option></select></div>' +
     '<div class="pref-row"><div>聲音來源<small>測試網站聲效或手機系統通知聲</small></div><select class="pref-select" id="webSoundSel"><option value="true">網站聲效＋系統聲</option><option value="false">只用系統通知聲</option></select></div>' +
-    '<button class="wide" id="previewSoundBtn">🔔 試聽目前提示聲</button>' +
-    '<div class="pref-row"><div>延遲背景測試<small>安排後立即切到背景或鎖屏，時間到發出通知</small></div><select class="pref-select" id="testDelaySel"><option value="15000">15 秒後</option><option value="60000">1 分鐘後</option></select></div>' +
-    '<div class="test-notify-row"><button class="wide" id="testNotifyBtn">安排背景測試</button><span class="test-countdown ready" id="testCountdown">待機</span></div>' +
-    '<div class="hint" id="testNotifyStatus">未安排測試；撳掣後請立即將網站放到背景。</div></div></details>' +
+    '<button class="wide" id="previewSoundBtn">🔔 試聽程式網站聲效</button><button class="wide" id="testNotificationBtn">📳 測試手機系統通知聲</button></div></details>' +
+    '<details class="settings-group"><summary>電量與省電</summary><div class="group-body"><div class="hint">網頁可以讀取低電量提示，但不能代替你關閉系統省電模式；按下面捷徑後，請在手機設定確認關閉。</div><div class="backup-box" id="batteryGuidance">讀取電量中…</div></div></details>' +
+        '<details class="settings-group"><summary>螢幕保護</summary><div class="group-body">' +
+    '<div class="hint">螢幕保護啟動後會嘗試保持手機螢幕喚醒，避免程式停止提醒；離開螢幕保護即刻釋放，減少耗電。輕觸或操作即可返回。</div>' +
+    '<div class="pref-row"><div>幾耐無操作後開始<small>只要已設定至少一條路線，就會在閒置後自動開啟</small></div><select class="pref-select" id="busSaverDelay"><option value="15000">15 秒</option><option value="30000">30 秒</option><option value="45000">45 秒</option><option value="60000">1 分鐘</option><option value="120000">2 分鐘</option><option value="300000">5 分鐘</option><option value="0">只限手動</option></select></div>' +
+    '<button class="wide" id="openBusSaverBtn">🚌 立即開啟螢幕保護</button></div></details>' +
     '<details class="settings-group"><summary>外觀</summary><div class="group-body">' +
-    '<div class="pref-row"><div>字體大小<small>只影響主畫面閱讀大小</small></div><select class="pref-select" id="fontSel"><option value="normal">標準</option><option value="large">較大</option></select></div>' +
+    '<div class="pref-row"><div>字體大小<small>只影響主畫面閱讀大小</small></div><select class="pref-select" id="fontSel"><option value="small">細</option><option value="medium">中</option><option value="large">大</option></select></div>' +
     '<div class="pref-row"><div>時間顯示<small>ETA 卡片時間及頂部時鐘</small></div><select class="pref-select" id="timeSel"><option value="false">24 小時制</option><option value="true">12 小時制</option></select></div>' +
     '<div class="pref-row"><div>顏色模式<small>可以選擇黑暗或光明版</small></div><select class="pref-select" id="themeSel"><option value="dark">黑暗模式</option><option value="light">光明模式</option></select></div></div></details>' +
-    '<details class="settings-group"><summary>背景提醒診斷</summary><div class="group-body"><div class="hint">背景提醒受手機系統限制。最穩定嘅做法：將本網站加入主畫面，以 App 形式開啟。</div><div class="diag-box" id="diagBox"></div></div></details>' +
+    '<details class="settings-group"><summary>本地鬧鐘診斷</summary><div class="group-body"><div class="hint">本地鬧鐘依賴瀏覽器通知權限；請保持網站或已安裝的 App 可正常運作。</div><div class="diag-box" id="diagBox"></div></div></details>' +
     '<button class="wide" id="prefsBack">← 返回路線設定</button>';
-  $('#leadSel').value = String(prefs.lead); $('#pushUrl').value=pushWorkerUrl(); if(pushWorkerUrl()) pushStatus('已設定推送伺服器；請按「開啟」同步路線。'); $('#soundSel').value = prefs.sound; $('#soundLenSel').value = prefs.soundLen; $('#webSoundSel').value = String(prefs.webSound !== false); $('#fontSel').value = prefs.font; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
+  $('#leadSel').value = String(prefs.lead); $('#soundSel').value = prefs.sound; $('#soundLenSel').value = prefs.soundLen; $('#webSoundSel').value = String(prefs.webSound !== false); $('#busSaverDelay').value = String(prefs.screenSaverIdle); $('#fontSel').value = ['small','medium','large'].includes(prefs.font) ? prefs.font : 'medium'; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
   updateNotificationButton();
-  updateBackgroundPushButton();
-  $('#leadSel').addEventListener('change', e => { prefs.lead=+e.target.value; savePrefs(); if (pushWorkerUrl()) syncPushSubscription(); });
+  $('#leadSel').addEventListener('change', e => { prefs.lead=+e.target.value; savePrefs(); });
   $('#soundSel').addEventListener('change', e => { prefs.sound=e.target.value; savePrefs(); });
   $('#soundLenSel').addEventListener('change', e => { prefs.soundLen=e.target.value; savePrefs(); });
-  $('#webSoundSel').addEventListener('change', e => { prefs.webSound=e.target.value === 'true'; if (!prefs.webSound) prefs.systemSilent=false; savePrefs(); });
-  $('#previewSoundBtn').addEventListener('click', () => { unlockAudio(); ringBell(); });
+  $('#webSoundSel').addEventListener('change', e => { prefs.webSound=e.target.value === 'true'; if (!prefs.webSound) prefs.systemSilent=false; savePrefs(); $('#previewSoundBtn').textContent = prefs.webSound ? '🔔 試聽目前提示聲（網站＋系統）' : '📳 試聽目前提示聲（純系統）'; });
+  $('#previewSoundBtn').textContent = prefs.webSound ? '🔔 試聽目前提示聲（網站＋系統）' : '📳 試聽目前提示聲（純系統）';
+  $('#previewSoundBtn').addEventListener('click', previewSelectedSound);
+  $('#busSaverDelay').addEventListener('change', e => { prefs.screenSaverIdle=+e.target.value; savePrefs(); scheduleBusSaver(); });
+  $('#openBusSaverBtn').addEventListener('click', () => { closeSheet(); openBusSaver(); });
   $('#fontSel').addEventListener('change', e => { prefs.font=e.target.value; savePrefs(); applyPrefs(); });
   $('#timeSel').addEventListener('change', e => { prefs.time12=e.target.value === 'true'; savePrefs(); });
   $('#themeSel').addEventListener('change', e => { prefs.theme=e.target.value; savePrefs(); applyPrefs(); });
   $('#notifyBtn').addEventListener('click', toggleNotificationSetting);
-  $('#pushUrl').addEventListener('change', e => { savePushWorkerUrl(e.target.value); pushStatus(pushWorkerUrl() ? '已儲存伺服器網址；請按「開啟」啟用。' : '未連接背景推送伺服器。'); });
+  $('#testNotificationBtn').addEventListener('click', sendTestNotification);
   renderDiagnostics();
-  $('#testNotifyBtn').addEventListener('click', () => scheduleTestNotification(Number($('#testDelaySel').value)));
   $('#prefsBack').addEventListener('click', viewHome);
 }
 
@@ -1706,13 +2702,15 @@ function viewHome() {
       '</div>').join('') + '</div>';
   }
   h += '<button class="wide p" id="addBtn">＋ 加新路線</button>';
-  h += '<div class="lbl">其他</div>';
-  h += '<div class="backup-box"><b>資料備份</b><br><span id="backupNote">' + backupReminder() + '</span><div class="backup-actions"><button class="wide" id="exportBtn">⬇ 下載備份</button><button class="wide" id="shareBtn">↗ 分享備份</button></div><button class="wide" id="importBtn">⬆ 還原備份</button><input type="file" id="backupFile" accept="application/json,.json" style="display:none"></div>';
-  h += '<div class="backup-box"><b>到站提醒管理</b><br><span id="alarmClearNote">刪除路線後，該路線嘅鬧鐘會自動清理。</span><button class="wide danger" id="clearAlarmsBtn">關閉所有到站鬧鐘</button></div>';
+  h += '<div class="lbl">工具與資料</div>';
+  h += '<details class="settings-group utility-group"><summary>資料備份與還原</summary><div class="group-body"><div class="backup-box"><b>資料備份</b><br><span id="backupNote">' + backupReminder() + '</span><div class="backup-actions"><button class="wide" id="exportBtn">⬇ 下載備份</button><button class="wide" id="shareBtn">↗ 分享備份</button></div><button class="wide" id="importBtn">⬆ 還原備份</button><input type="file" id="backupFile" accept="application/json,.json" style="display:none"></div>';
+  h += '</div></details>';
+  h += '<details class="settings-group utility-group"><summary>鬧鐘與預設路線</summary><div class="group-body"><div class="backup-box"><b>到站提醒管理</b><br><span id="alarmClearNote">刪除路線後，該路線嘅鬧鐘會自動清理。</span><button class="wide danger" id="clearAlarmsBtn">關閉所有到站鬧鐘</button></div>';
   h += '<button class="wide" id="installBtn" style="display:none">&#128241; 安裝到主畫面</button>';
   h += '<button class="wide" id="saveDefaultBtn">將目前路線儲存為預設</button>';
   h += '<button class="wide" id="loadDefaultBtn" ' + (userDefaults.length ? '' : 'disabled') + '>使用預設路線' + (userDefaults.length ? '（' + userDefaults.length + ' 條）' : '（尚未設定）') + '</button>';
   h += '<button class="wide danger" id="clearDefaultBtn" ' + (userDefaults.length ? '' : 'disabled') + '>清除預設路線</button>';
+  h += '</div></details>';
   h += '<div class="hint" id="getoffNote">落車提醒只會喺你主動揀站及允許 GPS 後啟動。</div>';
   h += '<div class="hint">設定會存喺呢部機嘅瀏覽器，下次開返一樣。</div>';
   sBody.innerHTML = h;
@@ -1720,8 +2718,8 @@ function viewHome() {
 
   sBody.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
     const removed = items[+b.dataset.del], id = removed && uid(removed);
-    items.splice(+b.dataset.del, 1); if (id) { delete alarms[id]; alarmSeen.delete(id); delete getoff[id]; saveAlarms(); saveGetoff(); }
-    if (pushWorkerUrl()) syncPushSubscription();
+    if (id && routeDetailState.open && routeDetailState.routeId === id) closeRouteDetail();
+    items.splice(+b.dataset.del, 1); if (id) { delete alarms[id]; delete alarmPlans[id]; alarmSeen.delete(id); clearAlarmFallbackTimers(id); delete getoff[id]; saveAlarms(); saveAlarmPlans(); saveGetoff(); }
     save(); closeArrivalNotifications(); shell(); refresh(); viewHome();
   }));
   sBody.querySelectorAll('[data-up]').forEach(b => b.addEventListener('click', () => {
@@ -1913,7 +2911,7 @@ async function viewStops(v) {
   sBody.innerHTML = '<div class="msg"><span class="spin"></span>載入站頭 …</div>';
   sBody.scrollTop = 0;
   let stops;
-  try { stops = await routeStops(v); }
+  try { stops = await getRouteStopsCached(v); }
   catch {
     sBody.innerHTML = '<div class="msg">站頭讀取失敗</div>' +
       '<button class="wide" id="bk">← 返回</button>';
@@ -1921,7 +2919,6 @@ async function viewStops(v) {
     return;
   }
   setupMapInstance = null;
-  routeStopsCache.set(uid({co:v.co, route:v.route, dir:v.dir, stopId:'__setup__'}), stops);
   sBody.innerHTML =
     '<div class="lbl">' + esc(v.dirLabel) + '</div>' +
     '<div class="map-actions" style="padding:0 0 10px"><button class="map-toggle" id="setupMapBtn"><span>🗺 先睇全條路線地圖</span><span class="map-arrow">⌄</span></button></div>' +
@@ -1963,7 +2960,7 @@ function addItem(v, s) {
         seq:s.seq, stopId:s.id, stopName:s.name, dest:v.dest };
   if (items.some(x => uid(x) === uid(it))) { viewHome(); return; }
   // 新增路線預設關閉到站鬧鐘。只有使用者主動撳該路線的 🔔，
-  // 先可以加入本機提醒及真正背景 Push 登記；單純允許系統通知唔等於
+  // 先可以加入本機提醒；單純允許系統通知唔等於
   // 同意所有新路線自動響鬧鐘。
   items.push(it);
   alarms[uid(it)] = false;
@@ -1990,10 +2987,8 @@ if ('serviceWorker' in navigator) {
    BOOT
    =================================================================== */
 shell();
-updateBackgroundPushButton();
 startLoop();
-// 開站時重同步，清理舊版本可能遺留、但目前已沒有啟用鬧鐘的 Worker 訂閱。
-if (pushWorkerUrl()) syncPushSubscription();
+scheduleBusSaver();
 </script>
 </body>
 </html>
