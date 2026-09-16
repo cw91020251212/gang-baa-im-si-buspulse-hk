@@ -2805,7 +2805,7 @@ function viewPrefs() {
     '<details class="settings-group"><summary>外觀</summary><div class="group-body">' +
     '<div class="pref-row"><div>字體大小<small>只影響主畫面閱讀大小</small></div><select class="pref-select" id="fontSel"><option value="small">細</option><option value="medium">中</option><option value="large">大</option></select></div>' +
     '<div class="pref-row"><div>時間顯示<small>ETA 卡片時間及頂部時鐘</small></div><select class="pref-select" id="timeSel"><option value="false">24 小時制</option><option value="true">12 小時制</option></select></div>' +
-    '<div class="pref-row"><div>顏色模式<small>可以選擇黑暗或光明版</small></div><select class="pref-select" id="themeSel"><option value="dark">黑暗模式</option><option value="light">光明模式</option></select></div></div></details>' +
+    '<div class="pref-row"><div>顏色模式<small>可以選擇黑暗版或光明版</small></div><select class="pref-select" id="themeSel"><option value="dark">黑暗版</option><option value="light">光明版</option></select></div></div></details>' +
     '<details class="settings-group"><summary>本地鬧鐘診斷</summary><div class="group-body"><div class="hint">本地鬧鐘依賴瀏覽器通知權限；請保持網站或已安裝的 App 可正常運作。</div><div class="diag-box" id="diagBox"></div></div></details>' +
     '<button class="wide" id="prefsBack">← 返回路線設定</button>';
   $('#leadSel').value = String(prefs.lead); $('#soundSel').value = prefs.sound; $('#soundLenSel').value = prefs.soundLen; $('#webSoundSel').value = String(prefs.webSound !== false); $('#busSaverDelay').value = String(prefs.screenSaverIdle); $('#fontSel').value = ['small','medium','large'].includes(prefs.font) ? prefs.font : 'medium'; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
