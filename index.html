@@ -2121,6 +2121,17 @@ async function requestNotifications() {
     return Notification.permission;
   } catch { return Notification.permission || 'error'; }
 }
+async function sendTestNotification() {
+  const permission = await requestNotifications();
+  if (permission !== 'granted') { alert('未能發送：請先允許系統通知。'); return; }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    await reg.showNotification('BusPulse HK 測試通知', { body:'如果手機通知聲已開，應該會聽到提示聲。', icon:'./icon-192.png', badge:'./icon-192.png', tag:'buspulse-test-' + Date.now(), renotify:true, requireInteraction:true, silent:false, vibrate:[260,100,260] });
+    alert('測試通知已發送。若見到通知但無聲，請檢查手機通知音量、勿擾模式，以及 BusPulse HK 通知分類是否設為「有聲」。');
+  } catch { alert('發送測試通知失敗，請確認已由主畫面開啟並允許通知。'); }
+  updateNotificationButton();
+  renderDiagnostics();
+}
 /* -------------------------------------------------------------------
    本地鬧鐘診斷
    顯示本地鬧鐘所需的通知與計時狀態，方便排查提醒問題。
@@ -2571,7 +2582,7 @@ function viewPrefs() {
     '<div class="settings-intro">只保留最常用設定喺呢度；其他功能撳下面分組先展開，畫面會清爽好多。</div>' +
     '<div class="lbl">到站提醒</div>' +
     '<div class="pref-row"><div>提早幾多分鐘響鬧<small>揀咗路線卡上方嘅 🔔 後生效；每條路線只提醒一程，響完會自動關閉</small></div><select class="pref-select" id="leadSel"><option value="1">1 分鐘</option><option value="2">2 分鐘</option><option value="3">3 分鐘</option><option value="5">5 分鐘</option></select></div>' +
-    '<button class="wide" id="notifyBtn">允許系統通知</button>' +
+    '<button class="wide" id="notifyBtn">允許系統通知</button><button class="wide" id="testNotificationBtn">發送測試系統通知</button>' +
     '<details class="settings-group"><summary>提示聲測試</summary><div class="group-body">' +
     '<div class="pref-row"><div>提示聲款式<small>測試前景網站提示聲效果</small></div><select class="pref-select" id="soundSel"><option value="double">兩下叮噹</option><option value="triple">三下提示</option><option value="alarm">鬧鐘長響</option></select></div>' +
     '<div class="pref-row"><div>提示聲長度<small>只影響網站前景播放嘅聲效</small></div><select class="pref-select" id="soundLenSel"><option value="short">較短</option><option value="normal">標準</option><option value="long">較長</option></select></div>' +
@@ -2601,6 +2612,7 @@ function viewPrefs() {
   $('#timeSel').addEventListener('change', e => { prefs.time12=e.target.value === 'true'; savePrefs(); });
   $('#themeSel').addEventListener('change', e => { prefs.theme=e.target.value; savePrefs(); applyPrefs(); });
   $('#notifyBtn').addEventListener('click', toggleNotificationSetting);
+  $('#testNotificationBtn').addEventListener('click', sendTestNotification);
   renderDiagnostics();
   $('#prefsBack').addEventListener('click', viewHome);
 }
