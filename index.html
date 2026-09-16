@@ -2503,10 +2503,10 @@ window.addEventListener('popstate', () => { if (routeDetailState.open) closeRout
 document.addEventListener('keydown', e => { if (routeDetailState.open && e.key === 'Escape') { e.preventDefault(); closeRouteDetail(); } });
 busSaver.addEventListener('click', closeBusSaver);
 busSaver.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') { e.preventDefault(); closeBusSaver(); } });
-document.addEventListener('pointerdown', e => { if (!e.target.closest('#busSaver')) registerBusActivity(); }, { passive:true });
-document.addEventListener('pointermove', e => { if (!e.target.closest('#busSaver')) registerBusActivity(); }, { passive:true });
-document.addEventListener('wheel', e => { if (!e.target.closest('#busSaver')) registerBusActivity(); }, { passive:true });
-document.addEventListener('touchstart', e => { if (!e.target.closest('#busSaver')) registerBusActivity(); }, { passive:true });
+document.addEventListener('pointerdown', registerBusActivity, { passive:true });
+document.addEventListener('pointermove', registerBusActivity, { passive:true });
+document.addEventListener('wheel', registerBusActivity, { passive:true });
+document.addEventListener('touchstart', registerBusActivity, { passive:true });
 document.addEventListener('keydown', e => { if (busSaverActive && e.key !== 'Tab') closeBusSaver(); else registerBusActivity(); });
 window.addEventListener('resize', moveBusSaver);
 
