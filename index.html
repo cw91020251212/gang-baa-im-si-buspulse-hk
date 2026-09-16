@@ -434,13 +434,13 @@ body.light .detail-gps-panel{background:#e2e9ee;border-color:#8ea8bd}.light .det
   overflow-wrap: anywhere;
 }
 /* Final placement: the information bar is always reachable at the viewport bottom. */
-.info-bar{position:fixed!important;left:10px;right:10px;bottom:calc(8px + var(--safe-b));z-index:80;margin:0!important;}
+.info-bar{position:fixed!important;left:10px;right:10px;bottom:var(--safe-b);z-index:80;margin:0!important;}
 .detail-info-bar{display:none;}
 body.detail-open #infoBar{display:none;}
 body.detail-open .detail-info-bar{display:block;}
 .info-bar.collapsed{left:0;right:0;bottom:var(--safe-b);width:auto;height:4px;min-height:4px;margin:0!important;border:0;border-radius:0;background:#718cff;opacity:.72;}
 .light .info-bar.collapsed{background:#4b78a1;}
-.info-bar.compact{left:10px;right:10px;bottom:calc(8px + var(--safe-b));min-height:30px;height:30px;padding:0 10px;border-radius:9px;}
+.info-bar.compact{left:10px;right:10px;bottom:var(--safe-b);min-height:30px;height:30px;padding:0 10px;border-radius:9px;}
 .info-bar.compact .info-bar-details,.info-bar.compact .info-bar-actions,.info-bar.compact .info-bar-hint{display:none;}
 .info-bar.compact .info-bar-collapse{display:block;}
 .info-bar.compact .info-bar-main{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:0;}
