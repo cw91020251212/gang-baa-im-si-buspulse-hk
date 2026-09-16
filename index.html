@@ -596,6 +596,31 @@ body.light .push-state.off{background:#e5c3c9!important;color:#671724!important;
 .alarm-btn:not(.on),.getoff-btn:not(.on){background:#4b2029!important;}
 body.light .alarm-btn.on,body.light .getoff-btn.on{background:#b8ddc8!important;}
 body.light .alarm-btn:not(.on),body.light .getoff-btn:not(.on){background:#e5c3c9!important;}
+/* Final contrast layer: these rules intentionally come last so legacy pastel overrides cannot hide red labels. */
+.alarm-btn:not(.on),.getoff-btn:not(.on){
+  color:#fff1f3!important;
+  background:#7f2535!important;
+  border:1px solid #ff7182!important;
+  filter:none!important;
+}
+.alarm-btn:not(.on)::after{background:#fff1f3!important;}
+body.light .alarm-btn:not(.on),body.light .getoff-btn:not(.on){
+  color:#741026!important;
+  background:#ffd9df!important;
+  border:1px solid #8d1630!important;
+  filter:none!important;
+}
+body.light .alarm-btn:not(.on)::after{background:#741026!important;}
+.alarm-btn.on,.getoff-btn.on{
+  color:#073e2b!important;
+  background:#b8ddc8!important;
+  border:1px solid #36e0a0!important;
+}
+body.light .alarm-btn.on,body.light .getoff-btn.on{
+  color:#073e2b!important;
+  background:#b8ddc8!important;
+  border:1px solid #08734d!important;
+}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
