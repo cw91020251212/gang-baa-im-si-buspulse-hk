@@ -2121,6 +2121,15 @@ async function requestNotifications() {
     return Notification.permission;
   } catch { return Notification.permission || 'error'; }
 }
+async function previewSelectedSound() {
+  if (prefs.webSound === false) {
+    await sendTestNotification();
+    return;
+  }
+  unlockAudio();
+  const played = await ringBell({ userInitiated:true });
+  if (!played) alert('網站聲效未能播放，請確認手機媒體音量及瀏覽器聲音權限。');
+}
 async function sendTestNotification() {
   const permission = await requestNotifications();
   if (permission !== 'granted') { alert('未能發送：請先允許系統通知。'); return; }
@@ -2604,8 +2613,9 @@ function viewPrefs() {
   $('#leadSel').addEventListener('change', e => { prefs.lead=+e.target.value; savePrefs(); });
   $('#soundSel').addEventListener('change', e => { prefs.sound=e.target.value; savePrefs(); });
   $('#soundLenSel').addEventListener('change', e => { prefs.soundLen=e.target.value; savePrefs(); });
-  $('#webSoundSel').addEventListener('change', e => { prefs.webSound=e.target.value === 'true'; if (!prefs.webSound) prefs.systemSilent=false; savePrefs(); });
-  $('#previewSoundBtn').addEventListener('click', () => { unlockAudio(); ringBell({ userInitiated:true }); });
+  $('#webSoundSel').addEventListener('change', e => { prefs.webSound=e.target.value === 'true'; if (!prefs.webSound) prefs.systemSilent=false; savePrefs(); $('#previewSoundBtn').textContent = prefs.webSound ? '🔔 試聽目前提示聲（網站＋系統）' : '📳 試聽目前提示聲（純系統）'; });
+  $('#previewSoundBtn').textContent = prefs.webSound ? '🔔 試聽目前提示聲（網站＋系統）' : '📳 試聽目前提示聲（純系統）';
+  $('#previewSoundBtn').addEventListener('click', previewSelectedSound);
   $('#busSaverDelay').addEventListener('change', e => { prefs.screenSaverIdle=+e.target.value; savePrefs(); scheduleBusSaver(); });
   $('#openBusSaverBtn').addEventListener('click', () => { closeSheet(); openBusSaver(); });
   $('#fontSel').addEventListener('change', e => { prefs.font=e.target.value; savePrefs(); applyPrefs(); });
