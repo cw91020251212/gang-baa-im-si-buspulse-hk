@@ -1545,7 +1545,7 @@ function renderRouteDetail() {
   const recentWaveCounts = routeDetailState.waveHistory.slice(-3).map(x => x.count);
   const waveStable = recentWaveCounts.length >= 3 && Math.max(...recentWaveCounts) - Math.min(...recentWaveCounts) <= 1;
   const visibleBusCount = busEstimate.count;
-  const waveLabel = waveStable ? '穩定可能途中波段' : '可能途中波段';
+  const waveLabel = waveStable ? '穩定可能途中位置' : '可能途中位置';
   const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
   const nearStation = null;
   const nearStationEta = null;
