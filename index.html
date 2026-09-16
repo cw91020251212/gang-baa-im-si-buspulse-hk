@@ -806,6 +806,7 @@ let alarms = loadAlarms();
 // A single route-level key is not enough: after the user skips one bus, the
 // following bus must still be allowed to trigger a new notification.
 const alarmSeen = new Map();
+const alarmTokens = new Map();
 // Backup timers based on the last ETA received. They complement API polling:
 // if a poll misses the exact alert window, the countdown can still notify.
 const alarmFallbackTimers = new Map();
@@ -1611,6 +1612,7 @@ function shell() {
 
 async function toggleAlarm(id, button) {
   alarms[id] = !alarms[id];
+  alarmTokens.set(id, (alarmTokens.get(id) || 0) + 1);
   if (alarms[id]) alarmSessions[id] = newAlarmSession();
   else delete alarmSessions[id];
   saveAlarmSessions();
@@ -1697,6 +1699,7 @@ async function notifyArrival(it, min, tripKey) {
   // create a new alert after the user has switched this route off.
   const alarmAuthorized = !!alarms[id];
   if (!alarmAuthorized) return;
+  const token = alarmTokens.get(id) || 0;
   const lateMinutes = Math.max(0, Math.round(-Number(min || 0)));
   const isCatchup = lateMinutes > 0;
   const body = isCatchup
@@ -1706,6 +1709,7 @@ async function notifyArrival(it, min, tripKey) {
   // The route card stays compact; arrival feedback uses the bell, system notification,
   // and the existing card flash instead of inserting another message panel.
   disableAlarmAfterArrival(id);
+  if ((alarmTokens.get(id) || 0) !== token) return;
   const webPlayed = await ringBell({ alarmAuthorized });
   const alert = {card,notification:null}; activeAlarmAlerts.set(id, alert);
   if (card) { card.classList.remove('alert-flash'); void card.offsetWidth; card.classList.add('alert-flash'); alert.timer=setTimeout(() => { card.classList.remove('alert-flash'); if(activeAlarmAlerts.get(id)===alert) activeAlarmAlerts.delete(id); }, 12000); }
@@ -1727,6 +1731,9 @@ async function notifyArrival(it, min, tripKey) {
         data: { url: './' }
     };
     const deliver = async () => {
+      // The user may have switched the route off while notification permission
+      // or the Service Worker was still being resolved.
+      if ((alarmTokens.get(id) || 0) !== token) return false;
       // 前景直接交畀 Edge Notification，避免 SW 更新通知但唔播聲。
       if (!document.hidden) {
         try { alert.notification = new Notification('巴士就嚟到站', notification); return true; } catch {}
