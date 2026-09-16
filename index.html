@@ -1474,8 +1474,12 @@ function renderRouteDetail() {
   // but is not allowed to disagree with what the user can see.
   const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop);
   applyEtaPositionFallback(virtualSegments);
-  const markerAfter = new Map(virtualSegments.map(segment => [segment.fromSeq, '<div class="detail-inference virtual" role="status" aria-label="估計巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="virtual-bus-card"><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計巴士位置"></span></span><span class="virtual-bus-copy"><b>' + (segment.confidence === 'approaching' ? '估計巴士即將到站' : '估計巴士正在途中行駛') + '</b><small>估計位置（獨立推算）：第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間</small></span></div>']));
-  const visibleBusCount = markerAfter.size;
+  const markerAfter = new Map();
+  virtualSegments.forEach(segment => {
+    const html = '<div class="detail-inference virtual" role="status" aria-label="估計巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="virtual-bus-card"><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計巴士位置"></span></span><span class="virtual-bus-copy"><b>' + (segment.confidence === 'approaching' ? '估計巴士即將到站' : '估計巴士正在途中行駛') + '</b><small>ETA 波段推算位置：第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間</small></span></div>';
+    markerAfter.set(segment.fromSeq, (markerAfter.get(segment.fromSeq) || '') + html);
+  });
+  const visibleBusCount = virtualSegments.length;
   const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
   const nearStation = null;
   const nearStationEta = null;
@@ -1486,7 +1490,7 @@ function renderRouteDetail() {
     if (ea && eb && detailEtaIsApproaching(ea) && Date.parse(eb.iso) > Date.parse(ea.iso) && Date.parse(eb.iso) - Date.parse(ea.iso) <= 20 * 60000) enRouteSeqs.add(routeDetailState.stops[i].seq);
   }
   routeDetailBody.innerHTML =
-    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><span>共 ' + routeDetailState.stops.length + ' 個站</span><span title="按同一輪 ETA 逐段推算">ETA 推算行駛中：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 部' : '讀取中') + '</span><span>' + detailEtaCoverageText() + '</span>' + detailScheduleSummary() + '<span>全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
+    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><span>共 ' + routeDetailState.stops.length + ' 個站</span><span title="按同一輪 ETA 序列逐段推算；唔係官方車輛數">ETA 波段推算：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 個' : '讀取中') + '</span><span>' + detailEtaCoverageText() + '</span>' + detailScheduleSummary() + '<span>全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
     '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
     detailGpsPanel(it, current) +
     detailEtaPanel(current) +
