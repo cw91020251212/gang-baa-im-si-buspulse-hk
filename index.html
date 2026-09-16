@@ -899,21 +899,21 @@ function busSaverNextPath() {
   const reverse = Math.floor(busSaverPathIndex / lanes.length) % 2 === 1;
   const startX = reverse ? right : left, endX = reverse ? left : right;
   const nextLane = lanes[(busSaverPathIndex + 1) % lanes.length];
-  const scale = [0.72, 0.9, 1.12, 1.28][Math.floor(Math.random() * 4)];
-  const nextScale = [0.72, 0.9, 1.12, 1.28][Math.floor(Math.random() * 4)];
+  const scale = [0.78, 0.92, 1.08, 1.22][Math.floor(Math.random() * 4)];
+  const nextScale = [0.78, 0.92, 1.08, 1.22][Math.floor(Math.random() * 4)];
   busSaverPoint(startX, lane, 250, reverse, scale);
   window.setTimeout(() => {
     if (!busSaverActive) return;
-    busSaverPoint(endX, lane, 14000, reverse, scale);
+    busSaverPoint(endX, lane, 18000, reverse, scale);
     window.setTimeout(() => {
       if (!busSaverActive) return;
-      busSaverPoint(endX, nextLane, 900, reverse, nextScale);
+      busSaverPoint(endX, nextLane, 1200, reverse, nextScale);
       window.setTimeout(() => {
         busSaverPathIndex++;
         busSaverNextPath();
-      }, 1000);
-    }, 9100);
-  }, 280);
+      }, 1400);
+    }, 18100);
+  }, 300);
 }
 function moveBusSaver() { busSaverNextPath(); }
 function openBusSaver() {
