@@ -905,7 +905,8 @@ function renderBatteryGuidance() {
   if (!box) return;
   const low = batteryState.level != null && batteryState.level <= .2 && !batteryState.charging;
   const percent = batteryState.level == null ? '暫時讀唔到電量' : Math.round(batteryState.level * 100) + '%';
-  box.innerHTML = '<b>電量與省電</b><br><span class="battery-status">目前電量：' + percent + (batteryState.charging ? '（充電中）' : '') + '</span><br><span class="battery-path">' + (low ? '電量偏低，省電模式可能令背景提醒受限制。' : '如發現提醒停止，請檢查手機省電模式。') + '<br>' + batteryPathLabel() + '</span><button class="wide" id="batterySettingsBtn">開啟電池設定路徑</button></div>';
+  const pageState = document.hidden ? '頁面目前在背景／可能被系統休眠' : '頁面目前在前景';
+  box.innerHTML = '<b>電量與省電</b><br><span class="battery-status">目前電量：' + percent + (batteryState.charging ? '（充電中）' : '') + '</span><br><span class="battery-path">' + (low ? '電量偏低，省電模式可能令背景提醒受限制。' : '如發現提醒停止，請檢查手機省電模式。') + '<br>省電模式：瀏覽器不能直接讀取開關狀態<br>睡眠／鎖屏：只能透過頁面背景及喚醒鎖定狀態間接判斷<br>' + pageState + '<br>' + batteryPathLabel() + '</span><button class="wide" id="batterySettingsBtn">開啟電池設定路徑</button></div>';
   const btn = document.getElementById('batterySettingsBtn');
   if (btn) btn.addEventListener('click', () => {
     const isApple = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -2561,6 +2562,7 @@ document.addEventListener('keydown', e => { if (busSaverActive && e.key !== 'Tab
 window.addEventListener('resize', moveBusSaver);
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && busSaverActive) requestBusSaverWakeLock();
+  renderBatteryGuidance();
 });
 
 function viewPrefs() {
