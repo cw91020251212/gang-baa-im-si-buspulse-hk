@@ -924,7 +924,7 @@ function openBusSaver() {
   busSaver.classList.add('on');
   busSaverPathIndex = Math.floor(Math.random() * 6);
   busSaverConvoy = [busSaverVehicle];
-  const convoyCount = 2 + Math.floor(Math.random() * 3);
+  const convoyCount = 2;
   for (let i = 1; i < convoyCount; i++) {
     const follower = busSaverVehicle.cloneNode(true);
     follower.removeAttribute('id');
