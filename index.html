@@ -671,6 +671,19 @@ body:not(.light) .sheet #notifyBtn {
   background:transparent!important;
   box-shadow:none!important;
 }
+/* Restore original light-mode timeline marker: green circle and one inner station frame. */
+body.light .stop-row.is-live,
+body.light .stop-row.is-selected,
+body.light .stop-row.is-live.is-selected{background:transparent!important;border-color:transparent!important;box-shadow:none!important;}
+body.light .stop-row.is-live .stop-copy,
+body.light .stop-row.is-selected .stop-copy,
+body.light .stop-row.is-live.is-selected .stop-copy{background:transparent!important;border:0!important;box-shadow:none!important;}
+body.light .stop-row.is-live .stop-content,
+body.light .stop-row.is-selected .stop-content,
+body.light .stop-row.is-live.is-selected .stop-content{background:rgba(8,115,77,.1)!important;border:1px solid rgba(8,115,77,.45)!important;box-shadow:none!important;}
+body.light .stop-row.is-live .stop-dot:after,
+body.light .stop-row.is-selected .stop-dot:after,
+body.light .stop-row.is-live.is-selected .stop-dot:after{background:#08734d!important;border-color:#07583d!important;box-shadow:0 0 0 5px rgba(8,115,77,.18)!important;}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
