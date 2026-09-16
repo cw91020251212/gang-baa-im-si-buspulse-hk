@@ -1326,6 +1326,28 @@ function rememberWaveEstimate(stops, etaByStop, estimate) {
   routeDetailState.waveHistory.push({ count:estimate.count, at:Date.now() });
   if (routeDetailState.waveHistory.length > 5) routeDetailState.waveHistory.shift();
 }
+function saveEtaVerificationSnapshot(it, rows, generatedAt) {
+  if (!it || !Array.isArray(rows) || !rows.length) return;
+  const key = 'buspulse_eta_verification_v1';
+  let all = {};
+  try { all = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (_) { all = {}; }
+  const routeKey = [it.co, it.route, it.service_type, it.dest || ''].join('|');
+  const snapshot = { at:generatedAt || new Date().toISOString(), rows:rows.map(row => ({ seq:Number(row.seq), eta_seq:Number(row.eta_seq || 1), eta:row.eta || null, lat:Number(row.lat), lng:Number(row.lng) })) };
+  const history = Array.isArray(all[routeKey]) ? all[routeKey] : [];
+  history.push(snapshot);
+  all[routeKey] = history.slice(-360);
+  try { localStorage.setItem(key, JSON.stringify(all)); } catch (_) {
+    all[routeKey] = history.slice(-60);
+    try { localStorage.setItem(key, JSON.stringify(all)); } catch (__) {}
+  }
+}
+window.exportEtaVerification = function () {
+  const raw = localStorage.getItem('buspulse_eta_verification_v1') || '{}';
+  const blob = new Blob([raw], {type:'application/json'});
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = 'buspulse-eta-verification-' + new Date().toISOString().slice(0,10) + '.json'; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
 function estimateActiveBusWaves(stops = routeDetailState.stops, etaByStop = routeDetailState.etaByStop) {
   const etaData = stops.map(stop => {
     const state = etaByStop.get(String(stop.id));
@@ -1474,6 +1496,7 @@ async function loadRouteDetailEtas(it, request, priorityStopId = routeDetailStat
       const d = (await getJSON(KMB + '/route-eta/' + encodeURIComponent(it.route) + '/' + it.service_type)).data || [];
       if (!isCurrentRouteDetailGeneration(request.generation)) return;
       const grouped = parseKmbRouteEta(d, it), fetchedAt = new Date().toISOString();
+      saveEtaVerificationSnapshot(it, d, fetchedAt);
       stops.forEach(stop => applyDetailEtaResult(it, stop, grouped.get(Number(stop.seq)) || [], null, request.generation));
     } catch (e) {
       if (isCurrentRouteDetailGeneration(request.generation)) stops.forEach(stop => applyDetailEtaResult(it, stop, [], e.name === 'AbortError' ? '連線超時' : '讀取失敗', request.generation));
