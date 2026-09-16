@@ -1282,7 +1282,14 @@ async function loadDetailSchedule(it, generation) {
     if (isCurrentRouteDetailGeneration(generation)) { routeDetailState.scheduleLabel = parsed; renderRouteDetail(); }
   } catch { if (isCurrentRouteDetailGeneration(generation)) { routeDetailState.scheduleLabel = { error:true }; renderRouteDetail(); } }
 }
-function countActiveBuses(etaData, { bufferMs = 60000 } = {}) {
+function stopDistanceMeters(a, b) {
+  const lat1 = Number(a?.lat), lon1 = Number(a?.lng), lat2 = Number(b?.lat), lon2 = Number(b?.lng);
+  if (![lat1, lon1, lat2, lon2].every(Number.isFinite)) return null;
+  const rad = Math.PI / 180, dLat = (lat2 - lat1) * rad, dLon = (lon2 - lon1) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) ** 2;
+  return 6371000 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+function countActiveBuses(etaData, { bufferMs = 60000, expectedSpeedMps = 8, toleranceRatio = 0.25 } = {}) {
   const bySeq = new Map();
   for (const row of Array.isArray(etaData) ? etaData : []) {
     const seq = Number(row?.seq), time = Date.parse(row?.eta || row?.iso || '');
@@ -1291,23 +1298,29 @@ function countActiveBuses(etaData, { bufferMs = 60000 } = {}) {
     if (row.etaSeq != null && Number(row.etaSeq) !== 1) continue;
     if (row.sched || row.scheduled) continue;
     const old = bySeq.get(seq);
-    if (!old || time < old.time) bySeq.set(seq, { seq, time });
+    if (!old || time < old.time) bySeq.set(seq, { seq, time, lat:Number(row.lat), lng:Number(row.lng) });
   }
   const rows = [...bySeq.values()].sort((a,b) => a.seq - b.seq);
   if (!rows.length) return { count:0, drops:0, samples:0 };
-  let count = 1, drops = 0, previous = rows[0].time;
+  let count = 1, drops = 0, previous = rows[0].time, distanceMeters = 0;
   for (const row of rows.slice(1)) {
-    if (row.time < previous - Math.max(0, Number(bufferMs) || 0)) { count++; drops++; }
+    const distance = stopDistanceMeters(rows[rows.indexOf(row) - 1], row);
+    if (Number.isFinite(distance)) distanceMeters += distance;
+    const travelAllowance = Number.isFinite(distance) && Number(expectedSpeedMps) > 0
+      ? (distance / Number(expectedSpeedMps)) * 1000 * Math.max(0, Number(toleranceRatio) || 0)
+      : 0;
+    const threshold = Math.max(Math.max(0, Number(bufferMs) || 0), travelAllowance);
+    if (row.time < previous - threshold) { count++; drops++; }
     previous = row.time;
   }
-  return { count, drops, samples:rows.length };
+  return { count, drops, samples:rows.length, distanceMeters:Math.round(distanceMeters) };
 }
 function estimateActiveBusWaves(stops = routeDetailState.stops, etaByStop = routeDetailState.etaByStop) {
   const etaData = stops.map(stop => {
     const state = etaByStop.get(String(stop.id));
     if (!state || state.status !== 'ready' || state.stale) return null;
     const eta = (state.etas || []).find(e => e.iso && !e.sched && (e.etaSeq == null || Number(e.etaSeq) === 1));
-    return eta ? { seq:Number(stop.seq), iso:eta.iso, etaSeq:eta.etaSeq, sched:eta.sched } : null;
+    return eta ? { seq:Number(stop.seq), iso:eta.iso, etaSeq:eta.etaSeq, sched:eta.sched, lat:stop.lat, lng:stop.lng } : null;
   }).filter(Boolean);
   return countActiveBuses(etaData);
 }
