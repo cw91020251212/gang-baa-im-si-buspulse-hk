@@ -1074,7 +1074,7 @@ const routeDetailState = {
   open:false, routeId:null, variantKey:null, stops:[], stopsStatus:'idle',
   stopsError:null, selectedSeq:null, selectedStopId:null, etaByStop:new Map(),
   vehicleInference:{ status:'hidden', fromStopId:null, toStopId:null, reason:null, observedAt:null },
-  generation:0, abortController:null, etaRequest:null, fareLabel:null, scheduleLabel:null, detailTicker:null, detailLastOK:null, sweepStatus:'idle',
+  generation:0, abortController:null, etaRequest:null, fareLabel:null, scheduleLabel:null, detailTicker:null, detailLastOK:null, sweepStatus:'idle', waveHistory:[], waveSignature:null,
   gpsWatch:null, gpsNetworkWatch:null, gpsSeq:null, gpsPosition:null, gpsPositionAccuracy:null, gpsSource:null, gpsPositionTime:0, gpsStatus:'idle', gpsError:null, gpsErrorCount:0
 };
 function beginRouteDetailGeneration() {
@@ -1315,6 +1315,17 @@ function countActiveBuses(etaData, { bufferMs = 60000, expectedSpeedMps = 8, tol
   }
   return { count, drops, samples:rows.length, distanceMeters:Math.round(distanceMeters) };
 }
+function rememberWaveEstimate(stops, etaByStop, estimate) {
+  const signature = stops.map(stop => {
+    const state = etaByStop.get(String(stop.id));
+    const eta = (state?.etas || []).find(e => e.iso && !e.sched && (e.etaSeq == null || Number(e.etaSeq) === 1));
+    return eta?.iso || '-';
+  }).join('|');
+  if (signature === routeDetailState.waveSignature || !signature.includes('|')) return;
+  routeDetailState.waveSignature = signature;
+  routeDetailState.waveHistory.push({ count:estimate.count, at:Date.now() });
+  if (routeDetailState.waveHistory.length > 5) routeDetailState.waveHistory.shift();
+}
 function estimateActiveBusWaves(stops = routeDetailState.stops, etaByStop = routeDetailState.etaByStop) {
   const etaData = stops.map(stop => {
     const state = etaByStop.get(String(stop.id));
@@ -1377,7 +1388,7 @@ async function switchRouteDetailDirection() {
   if (!next) return;
   const request = beginRouteDetailGeneration();
   routeDetailState.item = next; routeDetailState.routeId = uid(next); routeDetailState.variantKey = routeVariantKey(next);
-  routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = null; routeDetailState.selectedStopId = null; routeDetailState.etaByStop.clear(); routeDetailState.etaRequest = null; routeDetailState.fareLabel = null; routeDetailState.sweepStatus = 'loading';
+  routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = null; routeDetailState.selectedStopId = null; routeDetailState.etaByStop.clear(); routeDetailState.etaRequest = null; routeDetailState.fareLabel = null; routeDetailState.sweepStatus = 'loading'; routeDetailState.waveHistory = []; routeDetailState.waveSignature = null;
   startRouteDetailTicker(); renderRouteDetail();
   try {
     const stops = await getRouteStopsCached(next, { signal:request.signal });
@@ -1506,7 +1517,11 @@ function renderRouteDetail() {
     const html = '<div class="detail-inference virtual" role="status" aria-label="估計巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="virtual-bus-card"><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計巴士位置"></span></span><span class="virtual-bus-copy"><b>' + (segment.confidence === 'approaching' ? '估計巴士即將到站' : '估計巴士正在途中行駛') + '</b><small>ETA 波段推算位置：第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間</small></span></div>';
     markerAfter.set(segment.fromSeq, (markerAfter.get(segment.fromSeq) || '') + html);
   });
+  rememberWaveEstimate(routeDetailState.stops, routeDetailState.etaByStop, busEstimate);
+  const recentWaveCounts = routeDetailState.waveHistory.slice(-3).map(x => x.count);
+  const waveStable = recentWaveCounts.length >= 3 && Math.max(...recentWaveCounts) - Math.min(...recentWaveCounts) <= 1;
   const visibleBusCount = busEstimate.count;
+  const waveLabel = waveStable ? '穩定可能行車波段' : '可能行車波段';
   const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
   const nearStation = null;
   const nearStationEta = null;
@@ -1517,7 +1532,7 @@ function renderRouteDetail() {
     if (ea && eb && detailEtaIsApproaching(ea) && Date.parse(eb.iso) > Date.parse(ea.iso) && Date.parse(eb.iso) - Date.parse(ea.iso) <= 20 * 60000) enRouteSeqs.add(routeDetailState.stops[i].seq);
   }
   routeDetailBody.innerHTML =
-    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><span>共 ' + routeDetailState.stops.length + ' 個站</span><span title="按相鄰站 ETA 作保守推算，並非官方車輛數">可能行車波段：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 個' : '讀取中') + '</span><span>' + detailEtaCoverageText() + '</span>' + detailScheduleSummary() + '<span>全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
+    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><span>共 ' + routeDetailState.stops.length + ' 個站</span><span title="按相鄰站 ETA 作保守推算，並非官方車輛數；連續刷新結果接近時會標示穩定">' + waveLabel + '：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 個' : '讀取中') + '</span><span>' + detailEtaCoverageText() + '</span>' + detailScheduleSummary() + '<span>全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
     '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
     detailGpsPanel(it, current) +
     detailEtaPanel(current) +
@@ -1559,7 +1574,7 @@ function renderRouteDetail() {
 }
 async function openRouteDetail(it, trigger) {
   routeDetailReturnFocus = trigger || document.activeElement;
-  routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.fareLabel = null; routeDetailState.sweepStatus = 'loading';
+  routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.fareLabel = null; routeDetailState.sweepStatus = 'loading'; routeDetailState.waveHistory = []; routeDetailState.waveSignature = null;
   const request = beginRouteDetailGeneration();
   routeDetail.classList.add('on'); routeDetail.setAttribute('aria-hidden', 'false'); document.body.classList.add('detail-open'); startRouteDetailTicker();
   routeDetailBody.innerHTML = '<div class="detail-loading">載入路線站點…</div>';
