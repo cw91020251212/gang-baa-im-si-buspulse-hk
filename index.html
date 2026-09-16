@@ -1535,6 +1535,7 @@ function renderRouteDetail() {
   // but is not allowed to disagree with what the user can see.
   const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop);
   applyEtaPositionFallback(virtualSegments);
+  const busEstimate = { count:virtualSegments.length, drops:0, samples:virtualSegments.length };
   const markerAfter = new Map();
   virtualSegments.forEach(segment => {
     const html = '<div class="detail-inference virtual" role="status" aria-label="估計巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="virtual-bus-card"><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計巴士位置"></span></span><span class="virtual-bus-copy"><b>' + (segment.confidence === 'approaching' ? '估計巴士即將到站' : '估計巴士正在途中行駛') + '</b><small>ETA 波段推算位置：第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間</small></span></div>';
@@ -1544,7 +1545,7 @@ function renderRouteDetail() {
   const recentWaveCounts = routeDetailState.waveHistory.slice(-3).map(x => x.count);
   const waveStable = recentWaveCounts.length >= 3 && Math.max(...recentWaveCounts) - Math.min(...recentWaveCounts) <= 1;
   const visibleBusCount = busEstimate.count;
-  const waveLabel = waveStable ? '穩定可能行車波段' : '可能行車波段';
+  const waveLabel = waveStable ? '穩定可能途中波段' : '可能途中波段';
   const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
   const nearStation = null;
   const nearStationEta = null;
