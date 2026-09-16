@@ -612,6 +612,51 @@ body:not(.light) .alarm-btn.on,body:not(.light) .getoff-btn.on{
 body.light .alarm-btn:not(.on),body.light .getoff-btn:not(.on){color:#671724!important;background:#e5c3c9!important;border:1px solid #a52b3c!important;filter:none!important;}
 body.light .alarm-btn:not(.on)::after{background:#671724!important;}
 body.light .alarm-btn.on,body.light .getoff-btn.on{color:#073e2b!important;background:#b8ddc8!important;border:1px solid #08734d!important;}
+/* Dark mode: all internal controls use transparent surfaces; state is shown by border and text only. */
+body:not(.light) .wide,
+body:not(.light) .map-toggle,
+body:not(.light) .map-head-btn,
+body:not(.light) .locate-btn,
+body:not(.light) .detail-entry,
+body:not(.light) .alight-btn,
+body:not(.light) .detail-action,
+body:not(.light) .notification-toggle,
+body:not(.light) .pref-select,
+body:not(.light) .toggle {
+  background:transparent!important;
+  box-shadow:none!important;
+}
+body:not(.light) .wide,
+body:not(.light) .map-toggle,
+body:not(.light) .locate-btn,
+body:not(.light) .detail-action,
+body:not(.light) .notification-toggle,
+body:not(.light) .pref-select {
+  color:#dbe5ff!important;
+  border-color:rgba(133,169,255,.78)!important;
+}
+body:not(.light) .wide.p,
+body:not(.light) .locate-btn,
+body:not(.light) .notification-toggle.notification-on,
+body:not(.light) .toggle.on {
+  color:#7df0b4!important;
+  border-color:#36e0a0!important;
+}
+body:not(.light) .wide.danger,
+body:not(.light) .notification-toggle.notification-off,
+body:not(.light) .notification-toggle.notification-warn,
+body:not(.light) .toggle:not(.on) {
+  color:#ffaaa5!important;
+  border-color:#ff625c!important;
+}
+body:not(.light) .map-head-btn,
+body:not(.light) .detail-entry,
+body:not(.light) .pref-select {
+  color:#c9d5ff!important;
+  border-color:rgba(133,169,255,.72)!important;
+}
+body:not(.light) .toggle{border-color:var(--line)!important;}
+body:not(.light) .toggle.on{border-color:#36e0a0!important;}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
