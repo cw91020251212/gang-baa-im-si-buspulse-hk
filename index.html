@@ -1432,6 +1432,7 @@ const fareMemo = new Map();
 const routeDetailState = {
   open:false, routeId:null, variantKey:null, stops:[], stopsStatus:'idle',
   stopsError:null, selectedSeq:null, selectedStopId:null, etaByStop:new Map(),
+  etaHistory:new Map(), detailEtaLoading:false, detailLastFetchAt:0,
   vehicleInference:{ status:'hidden', fromStopId:null, toStopId:null, reason:null, observedAt:null },
   generation:0, abortController:null, etaRequest:null, fareLabel:null, scheduleLabel:null, detailTicker:null, detailLastOK:null, sweepStatus:'idle',
   gpsWatch:null, gpsNetworkWatch:null, gpsSeq:null, gpsPosition:null, gpsPositionAccuracy:null, gpsSource:null, gpsPositionTime:0, gpsStatus:'idle', gpsError:null, gpsErrorCount:0
@@ -1462,7 +1463,10 @@ function closeRouteDetailState() {
 function startRouteDetailTicker() {
   clearInterval(routeDetailState.detailTicker);
   routeDetailState.detailTicker = setInterval(() => {
-    if (routeDetailState.open && routeDetailState.stopsStatus === 'ready') renderRouteDetail();
+    if (routeDetailState.open && routeDetailState.stopsStatus === 'ready') {
+      renderRouteDetail();
+      if (!routeDetailState.detailEtaLoading && Date.now() - routeDetailState.detailLastFetchAt >= 60000) refreshRouteDetailEtas();
+    }
   }, 15000);
 }
 async function fareData() {
@@ -1721,10 +1725,29 @@ async function switchRouteDetailDirection() {
     loadRouteDetailEtas(next, request, routeDetailState.selectedStopId).then(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'ready'; }).catch(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'error'; });
   } catch (e) { if (isCurrentRouteDetailGeneration(request.generation)) { routeDetailState.stopsStatus = 'error'; renderRouteDetail(); } }
 }
+function smoothDetailEtas(stopId, etas) {
+  const now = Date.now(), key = String(stopId);
+  const history = routeDetailState.etaHistory.get(key) || [];
+  const next = (etas || []).map((eta, index) => {
+    const rawIso = eta.iso, rawTime = Date.parse(rawIso);
+    if (!Number.isFinite(rawTime) || eta.sched) return {...eta};
+    const previous = history.filter(x => x.index === index && now - x.at <= 5 * 60000).map(x => x.time);
+    const samples = [...previous, rawTime].sort((a,b) => a - b);
+    const median = samples[Math.floor(samples.length / 2)] || rawTime;
+    const smoothedTime = Math.round(rawTime * 0.6 + median * 0.4);
+    return {...eta, rawIso, iso:new Date(smoothedTime).toISOString(), min:Math.round((smoothedTime - now) / 60000)};
+  });
+  next.forEach((eta, index) => {
+    const time = Date.parse(eta.rawIso || eta.iso);
+    if (Number.isFinite(time) && !eta.sched) history.push({ index, time, at:now });
+  });
+  routeDetailState.etaHistory.set(key, history.filter(x => now - x.at <= 5 * 60000).slice(-25));
+  return next;
+}
 function applyDetailEtaResult(it, stop, etas, error, batchId) {
   const id = uid(makeStopRequest(it, stop));
   if (!error) {
-    const clean = (etas || []).filter(e => e.iso && Number.isFinite(Date.parse(e.iso)) && e.min >= -2).slice(0,4);
+    const clean = smoothDetailEtas(stop.id, (etas || []).filter(e => e.iso && Number.isFinite(Date.parse(e.iso)) && e.min >= -2).slice(0,4));
     if (clean.length) cacheEta(id, clean);
     const sourceTimestamp = clean.map(e => e.dataTimestamp).find(ts => ts && Number.isFinite(Date.parse(ts))) || null;
     setDetailEtaState(stop.id, { status:'ready', etas:clean, fetchedAt:new Date().toISOString(), sourceTimestamp, batchId });
@@ -1868,6 +1891,7 @@ function applyEtaPositionFallback(segments) {
   }
 }
 async function loadRouteDetailEtas(it, request, priorityStopId = routeDetailState.selectedStopId, onlyStopId = null) {
+  routeDetailState.detailLastFetchAt = Date.now();
   const ordered = [...routeDetailState.stops].sort((a,b) => String(a.id) === String(priorityStopId) ? -1 : String(b.id) === String(priorityStopId) ? 1 : 0);
   const stops = onlyStopId == null ? ordered : ordered.filter(stop => String(stop.id) === String(onlyStopId));
   stops.forEach(stop => setDetailEtaState(stop.id, { status:'loading', etas:[] }));
@@ -1886,6 +1910,13 @@ async function loadRouteDetailEtas(it, request, priorityStopId = routeDetailStat
     await Promise.all([worker(), worker(), worker()]);
   }
   if (isCurrentRouteDetailGeneration(request.generation)) renderRouteDetail();
+}
+async function refreshRouteDetailEtas() {
+  const state = routeDetailState;
+  if (!state.open || state.stopsStatus !== 'ready' || !state.item || !state.etaRequest || state.detailEtaLoading) return;
+  state.detailEtaLoading = true;
+  try { await loadRouteDetailEtas(state.item, state.etaRequest, state.selectedStopId); }
+  catch {} finally { state.detailEtaLoading = false; }
 }
 
 function updateRouteDetailCompact(){
@@ -1970,7 +2001,7 @@ function renderRouteDetail() {
 }
 async function openRouteDetail(it, trigger) {
   routeDetailReturnFocus = trigger || document.activeElement;
-  routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.fareLabel = null; routeDetailState.sweepStatus = 'loading';
+  routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.etaHistory.clear(); routeDetailState.detailEtaLoading = false; routeDetailState.detailLastFetchAt = 0; routeDetailState.fareLabel = null; routeDetailState.sweepStatus = 'loading';
   const request = beginRouteDetailGeneration();
   routeDetail.classList.add('on'); routeDetail.setAttribute('aria-hidden', 'false'); document.body.classList.add('detail-open'); startRouteDetailTicker();
   routeDetailBody.innerHTML = '<div class="detail-loading">載入路線站點…</div>';
