@@ -1794,10 +1794,10 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
     for (let i = 0; i < points.length - 1; i++) {
       const a = points[i], b = points[i + 1];
       if (b.time <= a.time) continue;
-      if (a.time <= now && now < b.time) { segment = { fromSeq:a.seq, toSeq:b.seq, etaSeq, confidence:'estimated' }; break; }
+      if (a.time <= now && now < b.time) { segment = { fromSeq:a.seq, toSeq:b.seq, etaSeq, confidence:'high' }; break; }
     }
     if (!segment && points[0] && points[0].time > now && points[0].time - now <= 5 * 60000 && points[1] && points[1].time > points[0].time) {
-      segment = { fromSeq:points[0].seq, toSeq:points[1].seq, etaSeq, confidence:'approaching' };
+      segment = { fromSeq:points[0].seq, toSeq:points[1].seq, etaSeq, confidence:'high', approaching:true };
     }
     if (segment) result.push(segment);
   }
@@ -1813,7 +1813,7 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
     if (!ea || !eb) continue;
     const ta = Date.parse(ea.iso), tb = Date.parse(eb.iso);
     if (tb > ta && ta - now <= 5 * 60000 && tb - ta <= 20 * 60000) {
-      result.push({ fromSeq:Number(from.seq), toSeq:Number(to.seq), etaSeq:null, confidence:ta <= now ? 'estimated' : 'approaching' });
+      result.push({ fromSeq:Number(from.seq), toSeq:Number(to.seq), etaSeq:null, confidence:'medium', approaching:ta > now });
       occupied.add(Number(from.seq));
     }
   }
@@ -1842,7 +1842,7 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
       // A negative/near-zero gap is precisely the case this fallback repairs.
       if (etaGapMinutes > Math.max(5, travelMinutes + 3)) continue;
       if (!occupied.has(Number(from.seq))) {
-        result.push({ fromSeq:Number(from.seq), toSeq:Number(to.seq), etaSeq:null, confidence:'distance-inferred', travelMinutes:Math.round(travelMinutes) });
+        result.push({ fromSeq:Number(from.seq), toSeq:Number(to.seq), etaSeq:null, confidence:'low', travelMinutes:Math.round(travelMinutes) });
         occupied.add(Number(from.seq));
       }
       break;
@@ -1908,7 +1908,7 @@ function renderRouteDetail() {
   // but is not allowed to disagree with what the user can see.
   const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop);
   applyEtaPositionFallback(virtualSegments);
-  const markerAfter = new Map(virtualSegments.map(segment => [segment.fromSeq, '<div class="detail-inference virtual" role="status" aria-label="估計 ' + esc(it.route) + ' 巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="virtual-bus-card"><span class="virtual-route-label" aria-hidden="true">' + esc(it.route) + '</span><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計 ' + esc(it.route) + ' 巴士位置"></span></span><span class="virtual-bus-copy"><b>' + (segment.confidence === 'approaching' ? '估計巴士即將到站' : '估計巴士正在途中行駛') + '</b><small>' + (segment.confidence === 'distance-inferred' ? '按車站距離推算：' + esc(segment.travelMinutes) + ' 分鐘路段；' : '估計位置（獨立推算）：') + '第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間</small></span></div>']));
+  const markerAfter = new Map(virtualSegments.map(segment => [segment.fromSeq, '<div class="detail-inference virtual" role="status" aria-label="估計 ' + esc(it.route) + ' 巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="virtual-bus-card"><span class="virtual-route-label" aria-hidden="true">' + esc(it.route) + '</span><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計 ' + esc(it.route) + ' 巴士位置"></span></span><span class="virtual-bus-copy"><b>' + (segment.confidence === 'low' ? '低信心度：推算附近有巴士' : segment.approaching ? '估計巴士即將到站' : '估計巴士正在途中行駛') + '</b><small>' + (segment.confidence === 'low' ? '按站點距離及 ETA 推算：' + esc(segment.travelMinutes) + ' 分鐘路段；' : segment.confidence === 'medium' ? '按站序及 ETA 推算；' : '按同一 ETA 波次推算；') + '第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間</small></span></div>']));
   const visibleBusCount = markerAfter.size;
   const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
   const nearStation = null;
