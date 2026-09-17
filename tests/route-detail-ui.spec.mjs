@@ -90,8 +90,28 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('.detail-service-link')).toHaveAttribute('href', /search\.kmb\.hk/);
   await expect(page.locator('.detail-official-update-link')).toContainText('查看官方最新消息／臨時改道');
   await expect(page.locator('.detail-official-update-link')).toHaveAttribute('href', /search\.kmb\.hk/);
+  await expect(page.locator('.detail-frequency-title')).toContainText('官方班次頻率表');
+  await expect(page.locator('.detail-frequency-row')).toHaveCount(2);
+  await expect(page.locator('.detail-frequency-row').first()).toContainText('15 分鐘／班');
+  await expect(page.locator('.detail-schedule-check')).toContainText('班次參考核對');
   await expect(page.locator('.detail-meta')).toContainText('首班車：05:30');
   await expect(page.locator('.detail-meta')).toContainText('尾班車：24:20');
+});
+
+test('schedule validation compares visible ETA count with the official headway', async ({ page }) => {
+  await page.goto('./?smoke=route-detail-scheduled-cue', { waitUntil: 'domcontentloaded' });
+  const result = await page.evaluate(() => ({
+    bounds: scheduleFrequencyBounds('8-11'),
+    label: scheduleFrequencyText('8-11'),
+    check: detailScheduleValidation({ current:{ freq:'8-11' } }, [
+      { iso:new Date(Date.now() + 10 * 60000).toISOString(), sched:false },
+      { iso:new Date(Date.now() + 30 * 60000).toISOString(), sched:false },
+      { iso:new Date(Date.now() + 50 * 60000).toISOString(), sched:false },
+      { iso:new Date(Date.now() + 55 * 60000).toISOString(), sched:false },
+      { iso:new Date(Date.now() + 59 * 60000).toISOString(), sched:false }
+    ]).className
+  }));
+  expect(result).toMatchObject({ bounds:{ min:8, max:11 }, label:'8–11 分鐘／班', check:'ok' });
 });
 
 test('Escape and browser Back close the overlay and restore the entry focus', async ({ page }) => {
