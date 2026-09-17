@@ -84,8 +84,11 @@ body{
 .etas::-webkit-scrollbar{display:none}
 .eta{
   background:linear-gradient(145deg,rgba(39,54,82,.9),rgba(29,42,66,.9)); border:1px solid var(--line); border-radius:10px;
-  padding:12px 8px 11px; min-width:0; min-height:88px; flex:0 0 calc((100% - 16px) / 3); display:flex; flex-direction:column; justify-content:center; text-align:center;
+  padding:12px 8px 11px; min-width:0; min-height:88px; flex:0.92 1 0; display:flex; flex-direction:column; justify-content:center; text-align:center;
 }
+.eta:first-child{flex:1.16 1 0}
+.eta:first-child .m{font-size:29px}
+.eta:first-child .u,.eta:first-child .t{font-size:11.5px}
 .eta-empty{background:rgba(39,54,82,.3);border-style:dashed;opacity:.72}
 .eta-main{display:flex;align-items:baseline;justify-content:center;gap:4px;min-height:30px;white-space:nowrap}.eta .m{font-size:26px; font-weight:800; line-height:1.05; font-variant-numeric:tabular-nums}
 .eta .u{font-size:10.5px; color:var(--faint); font-weight:600}
