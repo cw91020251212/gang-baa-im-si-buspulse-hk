@@ -88,6 +88,8 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('.detail-service')).toContainText('營運時間表及服務資料');
   await expect(page.locator('.detail-service')).toContainText('官方來源');
   await expect(page.locator('.detail-service-link')).toHaveAttribute('href', /search\.kmb\.hk/);
+  await expect(page.locator('.detail-official-update-link')).toContainText('查看官方最新消息／臨時改道');
+  await expect(page.locator('.detail-official-update-link')).toHaveAttribute('href', /search\.kmb\.hk/);
   await expect(page.locator('.detail-meta')).toContainText('首班車：05:30');
   await expect(page.locator('.detail-meta')).toContainText('尾班車：24:20');
 });

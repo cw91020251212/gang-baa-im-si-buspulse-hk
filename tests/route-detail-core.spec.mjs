@@ -36,6 +36,20 @@ test('route detail core keeps variants separate and deduplicates stop loading', 
   expect(result.variantsLoaded).toBe(true);
 });
 
+test('normalised stops retain coordinate-based segment and cumulative distances', async ({ page }) => {
+  await page.goto('./?smoke=route-detail-distance', { waitUntil: 'domcontentloaded' });
+  const result = await page.evaluate(() => validRouteStops([
+    { seq:2, id:'b', name:'第二站', lat:22.31, lng:114.21 },
+    { seq:1, id:'a', name:'第一站', lat:22.30, lng:114.20 },
+    { seq:3, id:'c', name:'第三站', lat:22.32, lng:114.22 }
+  ]).map(stop => ({ seq:stop.seq, segment:stop.distanceFromPreviousMeters, cumulative:stop.cumulativeDistanceMeters })));
+  expect(result.map(stop => stop.seq)).toEqual([1, 2, 3]);
+  expect(result[0].segment).toBeNull();
+  expect(result[1].segment).toBeGreaterThan(0);
+  expect(result[2].segment).toBeGreaterThan(0);
+  expect(result[2].cumulative).toBeGreaterThan(result[1].cumulative);
+});
+
 test('failed or aborted stop loading is not cached and can retry', async ({ page }) => {
   await page.goto('./?smoke=route-detail-abort', { waitUntil: 'domcontentloaded' });
   const result = await page.evaluate(async () => {

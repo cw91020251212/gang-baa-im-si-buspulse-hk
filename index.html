@@ -328,7 +328,7 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
 .detail-service summary::-webkit-details-marker{display:none}.detail-service summary:after{content:'＋';color:var(--faint);font-size:17px}.detail-service[open] summary:after{content:'－'}.detail-service-body{padding:0 13px 12px;border-top:1px solid var(--line)}
 .detail-service-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}.detail-service-item{padding:9px 10px;border-radius:10px;background:var(--card2);font-size:11px}.detail-service-item b{display:block;color:var(--tx);font-size:12px}.detail-service-item span{display:block;color:var(--faint);margin-top:3px;line-height:1.35}.detail-service-note{margin:9px 0 0;color:var(--faint);font-size:10.5px;line-height:1.45}.detail-service-note strong{color:var(--dim)}
 .detail-timetable-head{margin-top:10px;padding:9px 10px;border-radius:10px;background:var(--card2);font-size:11px;color:var(--dim)}.detail-timetable-head b{color:var(--now)}.detail-timetable{display:grid;gap:6px;margin-top:7px}.detail-timetable-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;background:var(--card2);font-size:11px}.detail-timetable-row.current{outline:1px solid var(--now);background:rgba(54,224,160,.1)}.detail-timetable-row b{color:var(--tx)}.detail-timetable-row span{font-size:15px;font-weight:900;color:var(--tx)}.detail-timetable-row small{color:var(--faint)}.detail-timetable-empty{padding:10px;color:var(--faint);font-size:11px;background:var(--card2);border-radius:10px;margin-top:7px}
-.detail-service-link{display:inline-block;margin-top:9px;color:var(--now);font-size:11px;font-weight:800;text-decoration:none}.detail-service-link:hover{text-decoration:underline}
+.detail-service-link{display:inline-block;margin-top:9px;color:var(--now);font-size:11px;font-weight:800;text-decoration:none}.detail-service-link:hover{text-decoration:underline}.detail-official-update-link{display:inline-flex;align-items:center;gap:5px;margin:10px 7px 0 0;padding:8px 10px;border:1px solid rgba(54,224,160,.45);border-radius:8px;background:rgba(54,224,160,.1);color:var(--now);font-size:11px;font-weight:800;text-decoration:none}.detail-official-update-link:hover,.detail-official-update-link:focus-visible{text-decoration:underline;background:rgba(54,224,160,.18)}
 .detail-between-bus{position:relative;height:26px;margin:0 0 0 0;z-index:2}.detail-between-bus .bus-front-marker{left:25px;top:50%;}.detail-between-bus .bus-status-label{position:absolute;left:43px;top:50%;transform:translateY(-50%);padding:4px 9px;border-radius:999px;background:rgba(54,224,160,.12);color:var(--now);font-size:10px;font-weight:800;white-space:nowrap}.detail-inference .bus-front-marker{width:18px;height:13px}.detail-between-bus .bus-front-marker{animation:busBounce 1.15s ease-in-out infinite;transform:translate(-50%,-50%)}
  .detail-inference.virtual{position:relative;display:flex;align-items:center;gap:8px;margin:2px 5px 4px 0;padding:5px 0 5px 68px;min-height:44px;border:0;background:transparent;color:var(--tx);box-shadow:none}
  .virtual-bus-card{position:absolute;left:0;top:50%;transform:translateY(-50%);flex:0 0 56px;width:56px;height:40px;display:grid;place-items:end center;border:0;border-radius:8px;background:transparent;overflow:visible}
@@ -960,7 +960,24 @@ function validRouteStops(stops) {
     if (!Number.isFinite(s.seq) || !s.id || seqs.has(s.seq) || ids.has(s.id)) throw new Error('invalid route stops');
     seqs.add(s.seq); ids.add(s.id);
   });
-  return out;
+  let cumulative = 0, pathComplete = true;
+  const hasCoordinates = value => Number.isFinite(Number(value?.lat)) && Number.isFinite(Number(value?.lng));
+  return out.map((stop, index) => {
+    const previous = out[index - 1];
+    const segment = index > 0 && pathComplete && hasCoordinates(previous) && hasCoordinates(stop)
+      ? gpsDistanceMeters(previous, stop) : null;
+    if (index > 0) {
+      if (segment == null || !Number.isFinite(segment)) pathComplete = false;
+      else cumulative += segment;
+    }
+    return {
+      ...stop,
+      // Official APIs provide stop coordinates, not road-network mileage.
+      // These fields are straight-line estimates, never official bus travel distances.
+      distanceFromPreviousMeters: segment,
+      cumulativeDistanceMeters: pathComplete ? cumulative : null
+    };
+  });
 }
 function getRouteStopsCached(v, options = {}) {
   const key = routeVariantKey(v);
@@ -1669,18 +1686,25 @@ function detailOfficialServiceUrl(it) {
   if (it?.co === 'CTB') return 'https://www.citybus.com.hk/routesearch/';
   return 'https://data.gov.hk/tc-data/dataset/hk-td-tis_15-gmb';
 }
+function detailOfficialUpdateUrl(it) {
+  // KMB route search includes route announcements and temporary stop notices.
+  if (it?.co === 'KMB') return detailOfficialServiceUrl(it);
+  if (it?.co === 'CTB') return 'https://www.citybus.com.hk/News/Info/index.aspx?intLangID=2';
+  return 'https://www.td.gov.hk/tc/transport_in_hong_kong/public_transport/minibuses/';
+}
 function detailClock(iso) {
   const d = new Date(iso); return Number.isFinite(d.getTime()) ? d.toLocaleTimeString('zh-HK', { hour:'2-digit', minute:'2-digit', hour12:false }) : '—';
 }
 function detailServiceBlock(it) {
   const url = detailOfficialServiceUrl(it);
+  const updateUrl = detailOfficialUpdateUrl(it);
   const provider = it?.co === 'KMB' ? '九巴官方路線及時間表' : it?.co === 'CTB' ? '城巴官方路線搜尋' : '運輸署專線小巴資料';
   const stop = routeDetailState.stops.find(s => s.seq === routeDetailState.selectedSeq) || routeDetailState.stops[0];
   const etas = (stop ? (detailEtaStateFor(stop).etas || []) : []).filter(e => e.iso && !e.sched).slice(0, 3);
   const now = detailClock(new Date().toISOString()), schedule = routeDetailState.scheduleLabel;
   const scheduleText = schedule?.error ? '<span class="schedule-first">首班車：官方時間表暫時失敗</span> · <span class="schedule-last">尾班車：官方時間表暫時失敗</span>' : schedule ? ('<span class="schedule-first">首班車 ' + scheduleClock(schedule.first) + '</span> · <span class="schedule-last">尾班車 ' + scheduleClock(schedule.last) + '</span>' + (schedule.current?.freq ? ' · 當前時段 ' + esc(schedule.current.freq) + ' 分鐘／班' : '')) : '<span class="schedule-first">首班車／尾班車讀取中</span>';
   const rows = etas.length ? etas.map((e, i) => '<div class="detail-timetable-row ' + (!i ? 'current' : '') + '"><b>' + (i === 0 ? '即將一班' : '之後一班 ' + i) + '</b><span>' + esc(detailClock(e.iso)) + '</span><small>' + esc(detailEtaLabel(e)) + '</small></div>').join('') : '<div class="detail-timetable-empty">此站暫未收到即時班次</div>';
-  return '<details class="detail-service"><summary>營運時間表及服務資料 <small>官方來源 · 按目前時間更新</small></summary><div class="detail-service-body"><div class="detail-timetable-head">目前時間 <b>' + esc(now) + '</b> · ' + esc(stop?.name || '所選車站') + '</div><div class="detail-timetable-head detail-schedule-head"><b>' + scheduleText + '</b></div><div class="detail-timetable" aria-live="polite">' + rows + '</div><p class="detail-service-note"><strong>即時資料：</strong>以上係此站目前收到嘅官方 ETA，畫面會隨時間及更新結果改變；首班／尾班請以官方時間表為準。</p><p class="detail-service-note"><strong>巴士位置估計：</strong>系統會用沿線 ETA 時間斷層及各班 ETA 順序，估計現時有幾多個行駛波段，以及每個波段大約位於邊兩個站之間；板頭數字與下方已顯示嘅估計位置同步更新。</p><a class="detail-service-link" href="' + esc(url) + '" target="_blank" rel="noopener">開啟 ' + esc(provider) + ' ↗</a></div></details>';
+  return '<details class="detail-service"><summary>營運時間表及服務資料 <small>官方來源 · 按目前時間更新</small></summary><div class="detail-service-body"><div class="detail-timetable-head">目前時間 <b>' + esc(now) + '</b> · ' + esc(stop?.name || '所選車站') + '</div><div class="detail-timetable-head detail-schedule-head"><b>' + scheduleText + '</b></div><div class="detail-timetable" aria-live="polite">' + rows + '</div><p class="detail-service-note"><strong>即時資料：</strong>以上係此站目前收到嘅官方 ETA，畫面會隨時間及更新結果改變；首班／尾班請以官方時間表為準。</p><p class="detail-service-note"><strong>巴士位置估計：</strong>系統會用沿線 ETA 時間斷層及各班 ETA 順序，估計現時有幾多個行駛波段，以及每個波段大約位於邊兩個站之間；板頭數字與下方已顯示嘅估計位置同步更新。</p><a class="detail-official-update-link" href="' + esc(updateUrl) + '" target="_blank" rel="noopener">查看官方最新消息／臨時改道 ↗</a><a class="detail-service-link" href="' + esc(url) + '" target="_blank" rel="noopener">開啟 ' + esc(provider) + ' ↗</a></div></details>';
 }
 function detailScheduleSummary() {
   const s = routeDetailState.scheduleLabel;
@@ -1790,6 +1814,11 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
     }) || null;
   };
   const routeDistance = (fromIndex, toIndex) => {
+    const fromCumulative = Number(stops[fromIndex]?.cumulativeDistanceMeters);
+    const toCumulative = Number(stops[toIndex]?.cumulativeDistanceMeters);
+    if (Number.isFinite(fromCumulative) && Number.isFinite(toCumulative) && toCumulative >= fromCumulative) {
+      return toCumulative - fromCumulative;
+    }
     let metres = 0;
     for (let k = fromIndex; k < toIndex; k++) {
       const a = stops[k], b = stops[k + 1];
@@ -1803,7 +1832,7 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
     const state = etaByStop.get(String(stop.id));
     const fetchedAt = Date.parse(state?.fetchedAt || '');
     const sourceAt = Date.parse(state?.sourceTimestamp || '');
-    if (!state || state.status !== 'ready' || state.stale || !Number.isFinite(fetchedAt) || now - fetchedAt > 90000 || (Number.isFinite(sourceAt) && now - sourceAt > 150000)) return;
+    if (!state || state.status !== 'ready' || state.stale || (Number.isFinite(fetchedAt) && now - fetchedAt > 90000) || (Number.isFinite(sourceAt) && now - sourceAt > 150000)) return;
     (state?.etas || []).forEach(eta => {
       const time = eta.iso && Date.parse(eta.iso);
       if (!Number.isFinite(time) || eta.sched) return;
@@ -1946,7 +1975,7 @@ function renderRouteDetail() {
   // but is not allowed to disagree with what the user can see.
   const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop);
   applyEtaPositionFallback(virtualSegments);
-  const markerAfter = new Map(virtualSegments.map(segment => [segment.fromSeq, '<div class="detail-inference virtual" role="status" aria-label="估計 ' + esc(it.route) + ' 巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="virtual-bus-card"><span class="virtual-route-label" aria-hidden="true">' + esc(it.route) + '</span><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計 ' + esc(it.route) + ' 巴士位置"></span></span><span class="virtual-bus-copy"><b>' + (segment.confidence === 'low' ? '低信心度：推算附近有巴士' : segment.approaching ? '估計巴士即將到站' : '估計巴士正在途中行駛') + '</b><small>' + (segment.confidence === 'low' ? '按站點距離及 ETA 推算：' + esc(segment.travelMinutes) + ' 分鐘路段；' : segment.confidence === 'medium' ? '按站序及 ETA 推算；' : '按同一 ETA 波次推算；') + '第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間 · 信心度 ' + esc(segment.score) + '/100（' + esc(segment.scoreLabel) + '）</small></span></div>']));
+  const markerAfter = new Map(virtualSegments.map(segment => [segment.fromSeq, '<div class="detail-inference virtual" role="status" aria-label="估計 ' + esc(it.route) + ' 巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="virtual-bus-card"><span class="virtual-route-label" aria-hidden="true">' + esc(it.route) + '</span><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計 ' + esc(it.route) + ' 巴士位置"></span></span><span class="virtual-bus-copy"><b>' + (segment.confidence === 'low' ? '低信心度：估計位置附近有巴士' : segment.approaching ? '估計位置：巴士即將到站' : '估計位置：巴士正在途中行駛') + '</b><small>' + (segment.confidence === 'low' ? '按站點距離及 ETA 推算：' + esc(segment.travelMinutes) + ' 分鐘路段；' : segment.confidence === 'medium' ? '按站序及 ETA 推算；' : '按同一 ETA 波次推算；') + '第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間 · 信心度 ' + esc(segment.score) + '/100（' + esc(segment.scoreLabel) + '）</small></span></div>']));
   const visibleBusCount = markerAfter.size;
   const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
   const nearStation = null;
