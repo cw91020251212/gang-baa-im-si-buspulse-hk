@@ -1777,6 +1777,23 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
     }
     if (segment) result.push(segment);
   }
+  // Some API responses omit or change etaSeq between nearby stops.  When
+  // consecutive stops still report a strictly increasing live ETA, keep the
+  // visible bus marker instead of losing it solely because the wave id differs.
+  const occupied = new Set(result.map(segment => segment.fromSeq));
+  for (let i = 0; i < stops.length - 1; i++) {
+    const from = stops[i], to = stops[i + 1];
+    if (occupied.has(Number(from.seq))) continue;
+    const a = etaByStop.get(String(from.id)), b = etaByStop.get(String(to.id));
+    const ea = (a?.etas || []).find(eta => !eta.sched && eta.iso && Number.isFinite(Date.parse(eta.iso)) && Date.parse(eta.iso) >= now - 2 * 60000);
+    const eb = (b?.etas || []).find(eta => !eta.sched && eta.iso && Number.isFinite(Date.parse(eta.iso)) && Date.parse(eta.iso) >= now - 2 * 60000);
+    if (!ea || !eb) continue;
+    const ta = Date.parse(ea.iso), tb = Date.parse(eb.iso);
+    if (tb > ta && ta - now <= 5 * 60000 && tb - ta <= 20 * 60000) {
+      result.push({ fromSeq:Number(from.seq), toSeq:Number(to.seq), etaSeq:null, confidence:ta <= now ? 'estimated' : 'approaching' });
+      occupied.add(Number(from.seq));
+    }
+  }
   return result.sort((a,b) => a.fromSeq - b.fromSeq);
 }
 function applyEtaPositionFallback(segments) {
