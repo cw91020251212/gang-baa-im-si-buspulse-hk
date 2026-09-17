@@ -86,6 +86,7 @@ body{
   background:linear-gradient(145deg,rgba(39,54,82,.9),rgba(29,42,66,.9)); border:1px solid var(--line); border-radius:10px;
   padding:12px 8px 11px; min-width:0; min-height:88px; flex:0 0 calc((100% - 16px) / 3); display:flex; flex-direction:column; justify-content:center; text-align:center;
 }
+.eta-empty{background:rgba(39,54,82,.3);border-style:dashed;opacity:.72}
 .eta-main{display:flex;align-items:baseline;justify-content:center;gap:4px;min-height:30px;white-space:nowrap}.eta .m{font-size:26px; font-weight:800; line-height:1.05; font-variant-numeric:tabular-nums}
 .eta .u{font-size:10.5px; color:var(--faint); font-weight:600}
 .eta .t{font-size:11px; color:var(--faint); margin-top:5px; font-variant-numeric:tabular-nums}
@@ -2606,7 +2607,9 @@ function paint(it, res) {
     card.insertAdjacentHTML('beforeend', '<div class="none">暫時冇班次資料（可能已收車）</div>');
     return;
   }
-  slot.innerHTML = res.etas.map((e, i) => {
+  const etaItems = res.etas.slice(0, 3).concat(Array(Math.max(0, 3 - res.etas.length)).fill(null));
+  slot.innerHTML = etaItems.map((e, i) => {
+    if (!e) return '<div class="eta eta-empty" aria-hidden="true"></div>';
     const liveMin = e.iso && Number.isFinite(Date.parse(e.iso)) ? Math.round((Date.parse(e.iso) - Date.now()) / 60000) : e.min;
     const hhmm = new Date(e.iso).toLocaleTimeString('en-GB',
       { hour:'2-digit', minute:'2-digit', hour12:false });
