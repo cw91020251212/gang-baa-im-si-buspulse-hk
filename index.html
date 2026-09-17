@@ -1751,9 +1751,33 @@ function deriveEstimatedSegments(stops, etaByStop, now = Date.now()) {
   return candidates.length ? [candidates.sort((x,y) => Math.abs(x.fromSeq - (stops[0]?.seq || 0)) - Math.abs(y.fromSeq - (stops[0]?.seq || 0)))[0]] : [];
 }
 function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
+  const liveEta = (stop, maxAheadMinutes = 5) => {
+    const state = etaByStop.get(String(stop.id));
+    if (!state || state.status !== 'ready' || state.stale) return null;
+    const fetchedAt = Date.parse(state.fetchedAt || '');
+    const sourceAt = Date.parse(state.sourceTimestamp || '');
+    if (!Number.isFinite(fetchedAt) || now - fetchedAt > 90000) return null;
+    if (Number.isFinite(sourceAt) && now - sourceAt > 150000) return null;
+    return (state.etas || []).find(eta => {
+      const time = eta.iso && Date.parse(eta.iso);
+      return !eta.sched && Number.isFinite(time) && time >= now - 2 * 60000 && time - now <= maxAheadMinutes * 60000;
+    }) || null;
+  };
+  const routeDistance = (fromIndex, toIndex) => {
+    let metres = 0;
+    for (let k = fromIndex; k < toIndex; k++) {
+      const a = stops[k], b = stops[k + 1];
+      if (![a.lat, a.lng, b.lat, b.lng].every(Number.isFinite)) return 0;
+      metres += gpsDistanceMeters(a, b);
+    }
+    return metres;
+  };
   const byWave = new Map();
   stops.forEach(stop => {
     const state = etaByStop.get(String(stop.id));
+    const fetchedAt = Date.parse(state?.fetchedAt || '');
+    const sourceAt = Date.parse(state?.sourceTimestamp || '');
+    if (!state || state.status !== 'ready' || state.stale || !Number.isFinite(fetchedAt) || now - fetchedAt > 90000 || (Number.isFinite(sourceAt) && now - sourceAt > 150000)) return;
     (state?.etas || []).forEach(eta => {
       const time = eta.iso && Date.parse(eta.iso);
       if (!Number.isFinite(time) || eta.sched) return;
@@ -1785,8 +1809,7 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
     const from = stops[i], to = stops[i + 1];
     if (occupied.has(Number(from.seq))) continue;
     const a = etaByStop.get(String(from.id)), b = etaByStop.get(String(to.id));
-    const ea = (a?.etas || []).find(eta => !eta.sched && eta.iso && Number.isFinite(Date.parse(eta.iso)) && Date.parse(eta.iso) >= now - 2 * 60000);
-    const eb = (b?.etas || []).find(eta => !eta.sched && eta.iso && Number.isFinite(Date.parse(eta.iso)) && Date.parse(eta.iso) >= now - 2 * 60000);
+    const ea = liveEta(from), eb = liveEta(to);
     if (!ea || !eb) continue;
     const ta = Date.parse(ea.iso), tb = Date.parse(eb.iso);
     if (tb > ta && ta - now <= 5 * 60000 && tb - ta <= 20 * 60000) {
@@ -1810,16 +1833,14 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
       const b = etaByStop.get(String(to.id));
       const eb = (b?.etas || []).find(eta => !eta.sched && eta.iso && Number.isFinite(Date.parse(eta.iso)) && Date.parse(eta.iso) >= now - 2 * 60000 && Date.parse(eta.iso) - now <= 5 * 60000);
       if (!eb) continue;
-      const points = stops.slice(i, j + 1);
-      let distance = 0;
-      for (let k = 0; k < points.length - 1; k++) {
-        if (![points[k].lat, points[k].lng, points[k + 1].lat, points[k + 1].lng].every(Number.isFinite)) { distance = 0; break; }
-        distance += gpsDistanceMeters(points[k], points[k + 1]);
-      }
+      const distance = routeDistance(i, j);
       const travelMinutes = distance > 0 ? Math.max(2, Math.min(15, distance / 1000 / 12 * 60)) : 0;
       if (travelMinutes < 2 || distance <= 250) continue;
       const etaGapMinutes = (Date.parse(eb.iso) - Date.parse(ea.iso)) / 60000;
-      if (Math.abs(etaGapMinutes) > Math.max(5, travelMinutes + 3)) continue;
+      // The ETA gap is allowed to be inconsistent, but a positive gap much
+      // longer than the distance-based travel time indicates separate buses.
+      // A negative/near-zero gap is precisely the case this fallback repairs.
+      if (etaGapMinutes > Math.max(5, travelMinutes + 3)) continue;
       if (!occupied.has(Number(from.seq))) {
         result.push({ fromSeq:Number(from.seq), toSeq:Number(to.seq), etaSeq:null, confidence:'distance-inferred', travelMinutes:Math.round(travelMinutes) });
         occupied.add(Number(from.seq));
