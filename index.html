@@ -2133,6 +2133,8 @@ function stopAlarmAlert(id) {
 async function unlockAudio() { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'closed') audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') await audioCtx.resume(); return audioCtx; } catch { return null; } }
 async function ringBell(options = {}) {
   if (!options.userInitiated && !options.alarmAuthorized) return false;
+  // Automatic sound is never allowed without the specific route's manual speaker switch.
+  if (!options.userInitiated && options.alarmId && !alarms[options.alarmId]) return false;
   if (prefs.webSound === false) return false;
   try {
     const ctx = await unlockAudio();
@@ -2183,7 +2185,7 @@ async function notifyArrival(it, min, tripKey) {
   const card = board.querySelector('[data-id="' + cssEscape(id) + '"]');
   scrollRouteDetailToAlarmStop(it);
   disableAlarmAfterArrival(id);
-  const webPlayed = await ringBell({ alarmAuthorized });
+  const webPlayed = await ringBell({ alarmAuthorized, alarmId:id });
   const alert = {card,notification:null}; activeAlarmAlerts.set(id, alert);
   if (card) { card.classList.remove('alert-flash'); void card.offsetWidth; card.classList.add('alert-flash'); alert.timer=setTimeout(() => { card.classList.remove('alert-flash'); if(activeAlarmAlerts.get(id)===alert) activeAlarmAlerts.delete(id); }, 12000); }
   if (prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission === 'granted') {
@@ -2411,7 +2413,7 @@ function updateGetoff(it, coords) {
   const before=Math.max(0,state.targetSeq-nearest.seq);
   const note=document.querySelector('#getoffNote'); if(note) note.textContent=nearest.seq >= state.targetSeq ? '已接近／到達目標站：' + state.targetName : '目前接近第 ' + nearest.seq + ' 站，距離目標約 ' + before + ' 個站';
   const key=state.targetSeq + ':' + nearest.seq;
-  if (before <= 1 && nearest.seq < state.targetSeq && state.alertKey !== key) { state.alertKey=key; saveGetoff(); ringBell({ alarmAuthorized:true }); if(navigator.vibrate) navigator.vibrate([300,120,300,120,500]); const card=board.querySelector('[data-id="'+cssEscape(uid(it))+'"]'); if(card){card.classList.remove('alert-flash');void card.offsetWidth;card.classList.add('alert-flash');setTimeout(()=>card.classList.remove('alert-flash'),12000);} if(prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission==='granted') navigator.serviceWorker?.ready.then(reg=>reg.showNotification('就嚟落車喇',{body:it.route+' 下一個站：'+state.targetName,icon:'./icon-192.png',tag:'getoff-'+uid(it),requireInteraction:true,silent:false})).catch(()=>{}); }
+  if (before <= 1 && nearest.seq < state.targetSeq && state.alertKey !== key) { state.alertKey=key; saveGetoff(); const alarmId=uid(it); if (alarms[alarmId]) { ringBell({ alarmAuthorized:true, alarmId }); if(navigator.vibrate) navigator.vibrate([300,120,300,120,500]); } const card=board.querySelector('[data-id="'+cssEscape(uid(it))+'"]'); if(card){card.classList.remove('alert-flash');void card.offsetWidth;card.classList.add('alert-flash');setTimeout(()=>card.classList.remove('alert-flash'),12000);} if(prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission==='granted') navigator.serviceWorker?.ready.then(reg=>reg.showNotification('就嚟落車喇',{body:it.route+' 下一個站：'+state.targetName,icon:'./icon-192.png',tag:'getoff-'+uid(it),requireInteraction:true,silent:false})).catch(()=>{}); }
 }
 
 function renderPip() {
