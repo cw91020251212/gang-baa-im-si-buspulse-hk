@@ -702,10 +702,14 @@ body.light .stop-row.is-live.is-selected .stop-dot:after{background:#08734d!impo
 <style>
 /* Final light-theme switch treatment: no pink/green fills; preserve + 路線. */
 body.light .notification-toggle,
-body.light .alarm-btn,
-body.light .getoff-btn,
-body.light .toggle,
-body.light .push-state {
+body.light .alarm-btn.on,
+body.light .alarm-btn:not(.on),
+body.light .getoff-btn.on,
+body.light .getoff-btn:not(.on),
+body.light .toggle.on,
+body.light .toggle:not(.on),
+body.light .push-state:not(.off),
+body.light .push-state.off {
   background: transparent !important;
   box-shadow: none !important;
 }
