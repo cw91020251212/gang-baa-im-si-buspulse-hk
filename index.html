@@ -1414,7 +1414,7 @@ function updateInfoBar() {
     const gps = routeDetailState.gpsSource === 'eta' ? '巴士 API ETA 數據推算中' : routeDetailState.gpsSource === 'network' ? '網絡／基站定位中' : routeDetailState.gpsStatus === 'watching' ? 'GPS 定位中' : 'GPS 未開啟';
     lines.push(routeDetailState.item.route + ' 詳情：' + gps);
   }
-  if (items.length && !lines.length) lines.push('小提示：撳路線右側「☷」可睇沿途車站、ETA、GPS 跟車及落車提醒。');
+  if (items.length && !lines.length) lines.push('小提示：撳路線右側嘅四角箭咀按鈕可睇沿途車站、ETA、GPS 跟車及落車提醒。');
   const unique = [...new Set(lines)];
   const paint = (bar, main, details, actions, list, isImportant, allowGps, allowSetup) => {
     if (!bar) return;
@@ -2096,7 +2096,7 @@ function shell() {
       '<button class="alarm-btn ' + (alarms[uid(it)] ? 'on' : '') + '" data-alarm-id="' + id + '" title="開關到站提醒" aria-label="開關到站提醒">🔔</button>' +
       '<button class="map-head-btn" data-map-id="' + id + '" title="查看路線地圖" aria-label="查看路線地圖">⌖</button>' +
       '</div>' +
-      '<div class="stop"><button class="stop-edit" data-edit-stop="' + id + '" title="更改上車站">&#128205; <b>' + esc(it.stopName || '') + '</b></button><a class="fare" data-fare="' + id + '" title="官方全程車資">全程車資：讀取中</a><button class="detail-entry" data-detail-id="' + id + '" type="button" title="查看完整路線及沿途車站" aria-label="查看完整路線及沿途車站">☷</button></div>' +
+      '<div class="stop"><button class="stop-edit" data-edit-stop="' + id + '" title="更改上車站">&#128205; <b>' + esc(it.stopName || '') + '</b></button><a class="fare" data-fare="' + id + '" title="官方全程車資">全程車資：讀取中</a><button class="detail-entry" data-detail-id="' + id + '" type="button" title="查看完整路線及沿途車站" aria-label="查看完整路線及沿途車站"><svg class="detail-expand-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 12 3 3M3 8V3h5"/><path d="M12 12 21 3M16 3h5v5"/><path d="M12 12 3 21M3 16v5h5"/><path d="M12 12 21 21M16 21h5v-5"/></svg></button></div>' +
 	      '<div class="etas" data-slot="' + id + '">' +
         '<div class="eta"><div class="m pulse">··</div><div class="u">載入中</div></div>' +
       '</div>' +

@@ -135,6 +135,36 @@ test('route detail trigger is compact and does not add a text row to the card', 
   await expect(page.locator('text=查看完整路線及沿途車站　›')).toHaveCount(0);
 });
 
+for (const theme of ['dark', 'light']) {
+  test(`four-corner expand icon preserves the route detail button in ${theme} mode`, async ({ page }, testInfo) => {
+    await prepare(page);
+    await page.evaluate(value => document.body.classList.toggle('light', value === 'light'), theme);
+    const entry = page.getByRole('button', { name: '查看完整路線及沿途車站', exact: true });
+    const icon = entry.locator('svg.detail-expand-icon');
+    await expect(icon).toBeVisible();
+    await expect(icon).toHaveAttribute('aria-hidden', 'true');
+    await expect(icon).toHaveAttribute('focusable', 'false');
+    await expect(icon).toHaveAttribute('viewBox', '0 0 24 24');
+    await expect(icon).toHaveCSS('width', '18px');
+    await expect(icon).toHaveCSS('height', '18px');
+    await expect(icon).toHaveAttribute('stroke', 'currentColor');
+    await expect(icon.locator('path')).toHaveCount(4);
+    expect(await icon.locator('path').evaluateAll(paths => paths.map(path => path.getAttribute('d')))).toEqual([
+      'M12 12 3 3M3 8V3h5', 'M12 12 21 3M16 3h5v5',
+      'M12 12 3 21M3 16v5h5', 'M12 12 21 21M16 21h5v-5'
+    ]);
+    await expect(entry).not.toContainText('☷');
+    expect(await icon.evaluate(el => getComputedStyle(el).stroke)).toBe(await entry.evaluate(el => getComputedStyle(el).color));
+    await page.locator('.card').first().screenshot({ path: testInfo.outputPath(`expand-icon-${theme}.png`) });
+    await icon.click();
+    await expect(page.locator('#routeDetail')).toHaveClass(/on/);
+    await page.keyboard.press('Escape');
+    await expect(entry).toBeFocused();
+    await entry.press('Enter');
+    await expect(page.locator('#routeDetail')).toHaveClass(/on/);
+  });
+}
+
 test('reverse direction swaps supported route variants without inventing a GMB variant', async ({ page }) => {
   await page.goto('./?smoke=route-detail-reverse', { waitUntil: 'domcontentloaded' });
   const result = await page.evaluate(kmbItem => ({
