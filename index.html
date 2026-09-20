@@ -1093,27 +1093,32 @@ const ALARM_STEP_MS = 20000;
 const localAlarmScheduled = new Set();
 function localAlarmKey(id, at) { return id + '|' + String(at); }
 async function scheduleNativeLocalAlarm(it, plan) {
-  // Notification Triggers is an experimental browser feature. When present,
-  // the browser stores the due notification locally; no page timer or network
-  // request is needed at the due time. Unsupported browsers use the normal
-  // ETA fallback timer instead.
+  const id = uid(it), session = plan.session || alarmSessions[id];
+  if (!isAlarmSessionActive(id, session) || activeAlarmAlerts.has(id) || prefs.notificationsEnabled === false) return false;
   if (!globalThis.TimestampTrigger || !('Notification' in window) || Notification.permission !== 'granted') return false;
-  const id = uid(it), key = localAlarmKey(id, plan.at);
+  const key = localAlarmKey(id, plan.at) + '|' + session;
   if (localAlarmScheduled.has(key)) return true;
-  const reg = await notificationRegistration();
-  if (!reg?.showNotification) return false;
+  localAlarmScheduled.add(key); // Reserve before awaiting: the same ETA must not schedule twice.
+  const tag = 'buspulse-local-' + encodeURIComponent(id) + '-' + String(plan.at) + '-' + session;
   try {
+    const reg = await notificationRegistration();
+    if (!reg?.showNotification || !isAlarmSessionActive(id, session) || activeAlarmAlerts.has(id) || prefs.notificationsEnabled === false) {
+      localAlarmScheduled.delete(key); return false;
+    }
     await reg.showNotification('巴士就嚟到站', {
       body: it.route + ' 往 ' + (it.dest || '') + '，約 ' + Math.max(0, Math.round((Number(plan.at) - Date.now()) / 60000)) + ' 分鐘到 ' + (it.stopName || ''),
-      icon: './icon-192.png', badge: './icon-192.png',
-      tag: 'buspulse-local-' + encodeURIComponent(id) + '-' + String(plan.at),
+      icon: './icon-192.png', badge: './icon-192.png', tag,
       renotify: true, requireInteraction: true,
-      timestampTrigger: new TimestampTrigger(new Date(Number(plan.at))),
-      data: { url: './', localAlarm: true, id, at: Number(plan.at) }
+      showTrigger: new TimestampTrigger(Math.max(Date.now() + 1000, Number(plan.at) - Number(prefs.lead) * 60000)),
+      data: { url:'./', localAlarm:true, id, alarmId:id, session, at:Number(plan.at) }
     });
-    localAlarmScheduled.add(key);
+    if (!isAlarmSessionActive(id, session) || activeAlarmAlerts.has(id) || prefs.notificationsEnabled === false) {
+      const notifications = await reg.getNotifications({ includeTriggered:true });
+      notifications.filter(n => n.tag === tag).forEach(n => n.close());
+      localAlarmScheduled.delete(key); return false;
+    }
     return true;
-  } catch { return false; }
+  } catch { localAlarmScheduled.delete(key); return false; }
 }
 function loadAlarmPlans() { try { const raw = JSON.parse(localStorage.getItem(ALARM_PLAN_KEY) || '{}'); return raw && typeof raw === 'object' ? raw : {}; } catch { return {}; } }
 let alarmPlans = loadAlarmPlans();
@@ -1122,15 +1127,32 @@ function loadAlarmSessions() { try { const raw = JSON.parse(localStorage.getItem
 let alarmSessions = loadAlarmSessions();
 function saveAlarmSessions() { try { localStorage.setItem(ALARM_SESSION_KEY, JSON.stringify(alarmSessions)); } catch {} }
 function newAlarmSession() { return (globalThis.crypto && typeof crypto.randomUUID === 'function') ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(36).slice(2); }
-function ensureAlarmSession(id) { if (!alarmSessions[id]) { alarmSessions[id] = newAlarmSession(); saveAlarmSessions(); } return alarmSessions[id]; }
+function ensureAlarmSession(id) {
+  if (alarms[id] !== true) return null;
+  if (!alarmSessions[id]) { alarmSessions[id] = newAlarmSession(); saveAlarmSessions(); }
+  return alarmSessions[id];
+}
+// Every automatic side effect must check the live AND persisted manual switch.
+// Session identity prevents old timers/responses from surviving an off/on cycle.
+function isAlarmSessionActive(id, session) {
+  if (!id || !session || alarms[id] !== true || alarmSessions[id] !== session || !items.some(it => uid(it) === id)) return false;
+  try {
+    const stored = JSON.parse(localStorage.getItem(ALARM_KEY) || '{}');
+    const sessions = JSON.parse(localStorage.getItem(ALARM_SESSION_KEY) || '{}');
+    const savedItems = JSON.parse(localStorage.getItem(KEY) || '[]');
+    return stored?.[id] === true && sessions?.[id] === session && Array.isArray(savedItems) && savedItems.some(it => uid(it) === id);
+  } catch { return false; } // Corrupt or inaccessible permission state must fail closed.
+}
 function rememberAlarmPlan(it, e, at) {
-  const id = uid(it), key = String(at);
-  const list = Array.isArray(alarmPlans[id]) ? alarmPlans[id] : [];
-  if (!list.some(x => String(x.key) === key)) {
-    list.push({ key, at, iso:e.iso, min:Number(e.min), rmk:e.rmk || '', route:it.route, stopName:it.stopName });
-    alarmPlans[id] = list.slice(-12); saveAlarmPlans();
-    scheduleNativeLocalAlarm(it, { key, at, iso:e.iso, min:e.min, rmk:e.rmk || '' }).catch(() => {});
+  const id = uid(it), session = alarmSessions[id], key = String(at);
+  if (!isAlarmSessionActive(id, session)) return null;
+  const list = (Array.isArray(alarmPlans[id]) ? alarmPlans[id] : []).filter(p => p.session === session);
+  let plan = list.find(p => String(p.key) === key);
+  if (!plan) {
+    plan = { key, at, iso:e.iso, min:Number(e.min), rmk:e.rmk || '', route:it.route, stopName:it.stopName, session };
+    list.push(plan); alarmPlans[id] = list.slice(-12); saveAlarmPlans();
   }
+  return plan;
 }
 function forgetAlarmPlan(id, key) {
   if (!Array.isArray(alarmPlans[id])) return;
@@ -1139,7 +1161,11 @@ function forgetAlarmPlan(id, key) {
   saveAlarmPlans();
 }
 function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:45000 }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:45000 }; } }
-function loadAlarms() { try { return JSON.parse(localStorage.getItem(ALARM_KEY) || '{}') || {}; } catch { return {}; } }
+function normalizeAlarms(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  return Object.fromEntries(Object.entries(raw).map(([id, enabled]) => [id, enabled === true]));
+}
+function loadAlarms() { try { return normalizeAlarms(JSON.parse(localStorage.getItem(ALARM_KEY) || '{}')); } catch { return {}; } }
 function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} }
 let batteryState = { level:null, charging:null };
 function batteryPathLabel() {
@@ -1303,8 +1329,9 @@ function importBackup(file) {
       const p=JSON.parse(reader.result);
       if (!p || p.format !== 'BusPulse HK backup' || !Array.isArray(p.items)) throw new Error('format');
       if (!confirm('確定要還原呢份備份嗎？目前路線、預設路線及設定會由備份內容取代。')) return;
-      items=p.items; userDefaults=Array.isArray(p.userDefaults)?p.userDefaults:[]; alarms=p.alarms && typeof p.alarms==='object'?p.alarms:{}; getoff=p.getoff && typeof p.getoff==='object'?p.getoff:{}; if(p.prefs && typeof p.prefs==='object') prefs=Object.assign(prefs,p.prefs);
-      save(); saveUserDefaults(); saveAlarms(); saveGetoff(); savePrefs(); applyPrefs(); shell(); refresh(); viewHome();
+      resetArrivalAlarms();
+      items=p.items; userDefaults=Array.isArray(p.userDefaults)?p.userDefaults:[]; alarms=normalizeAlarms(p.alarms); getoff=p.getoff && typeof p.getoff==='object'?p.getoff:{}; if(p.prefs && typeof p.prefs==='object') prefs=Object.assign(prefs,p.prefs);
+      save(); saveUserDefaults(); saveAlarms(); cleanupOrphanAlarms(); saveGetoff(); savePrefs(); applyPrefs(); shell(); refresh(); viewHome();
       alert('備份還原完成。');
     } catch { alert('呢份檔案唔係有效嘅 BusPulse HK 備份。'); }
   }; reader.readAsText(file);
@@ -1369,22 +1396,56 @@ function save() {
   try { localStorage.setItem(KEY, JSON.stringify(items)); } catch {}
 }
 const uid = it => [it.co, it.route, it.dir || it.route_seq, it.stopId || it.seq].join('|');
-function closeArrivalNotifications() {
-  try { navigator.serviceWorker?.getRegistration().then(reg => reg?.getNotifications({ includeTriggered:true }).then(ns => ns.filter(n => n.tag?.startsWith('buspulse-')).forEach(n => n.close()))); } catch {}
+function closeArrivalNotifications(id = null, session = null, inactiveOnly = false) {
+  try {
+    return navigator.serviceWorker?.getRegistration().then(async reg => {
+      const notifications = await reg?.getNotifications({ includeTriggered:true });
+      (notifications || []).filter(n => {
+        if (!n.tag?.startsWith('buspulse-') || n.tag.startsWith('buspulse-test-')) return false;
+        const data = n.data || {}, routeId = data.alarmId || data.id;
+        if (id && routeId !== id && !n.tag.startsWith('buspulse-local-' + encodeURIComponent(id) + '-')) return false;
+        if (session && data.session && data.session !== session) return false;
+        return !inactiveOnly || !isAlarmSessionActive(routeId, data.session);
+      }).forEach(n => n.close());
+    }).catch(() => {});
+  } catch { return Promise.resolve(); }
+}
+function cancelExternalAlarm(id, session, revoke = true) {
+  try { window.AndroidLocalAlarm?.cancelRoute(id); } catch {}
+  for (const key of localAlarmScheduled) if (key.startsWith(id + '|')) localAlarmScheduled.delete(key);
+  closeArrivalNotifications(id, session);
+  if (revoke) { try { navigator.serviceWorker?.getRegistration().then(reg => reg?.active?.postMessage({ type:'CANCEL_ARRIVAL_ALARM', alarmId:id, session })).catch(() => {}); } catch {} }
 }
 function cleanupOrphanAlarms() {
-  const valid = new Set(items.map(uid)); let changed = false;
-  Object.keys(alarms).forEach(id => { if (!valid.has(id)) { delete alarms[id]; delete alarmSessions[id]; alarmSeen.delete(id); changed = true; } });
-  if (changed) { saveAlarms(); saveAlarmSessions(); }
-  closeArrivalNotifications();
+  const valid = new Set(items.map(uid));
+  for (const id of new Set([...Object.keys(alarms), ...Object.keys(alarmSessions), ...Object.keys(alarmPlans)])) {
+    if (!valid.has(id) || alarms[id] !== true) {
+      const session = alarmSessions[id];
+      if (!valid.has(id)) delete alarms[id];
+      delete alarmSessions[id]; delete alarmPlans[id]; alarmSeen.delete(id);
+      clearAlarmFallbackTimers(id); cancelExternalAlarm(id, session);
+    } else {
+      ensureAlarmSession(id); // Preserve a genuinely enabled legacy setting across updates.
+      // Old plans had no session; refresh ETA instead of replaying unauthenticated work.
+      alarmPlans[id] = (Array.isArray(alarmPlans[id]) ? alarmPlans[id] : []).filter(plan => plan.session === alarmSessions[id]);
+    }
+  }
+  saveAlarms(); saveAlarmSessions(); saveAlarmPlans();
+  closeArrivalNotifications(null, null, true);
+}
+function resetArrivalAlarms() {
+  const ids = new Set([...Object.keys(alarms), ...Object.keys(alarmSessions), ...Object.keys(alarmPlans), ...activeAlarmAlerts.keys()]);
+  ids.forEach(id => { const session = alarmSessions[id]; stopAlarmAlert(id); clearAlarmFallbackTimers(id); cancelExternalAlarm(id, session); });
+  alarms = {}; alarmSessions = {}; alarmSeen.clear(); alarmPlans = {};
+  alarmFallbackTimers.forEach(timers => timers.forEach(t => clearTimeout(t.handle || t))); alarmFallbackTimers.clear();
+  saveAlarms(); saveAlarmSessions(); saveAlarmPlans();
 }
 function clearAllArrivalAlarms() {
   if (!confirm('確定要關閉所有路線嘅到站鬧鐘嗎？之後可以逐條重新開啟。')) return;
-  alarms = {}; alarmSeen.clear(); alarmPlans = {}; alarmFallbackTimers.forEach(timers => timers.forEach(t => clearTimeout(t.handle || t))); alarmFallbackTimers.clear(); saveAlarms(); saveAlarmPlans(); closeArrivalNotifications(); shell();
+  resetArrivalAlarms(); shell();
   const n=document.querySelector('#alarmClearNote'); if(n) n.textContent='所有到站鬧鐘已關閉。';
 }
 cleanupOrphanAlarms();
-
 /* ===================================================================
    BOARD RENDER
    =================================================================== */
@@ -2098,7 +2159,7 @@ function shell() {
         '<span class="co ' + it.co + '">' + CO_NAME[it.co] + '</span>' +
         '<span class="dest">往 ' + esc(it.dest || '') + '</span>' +
       '<button class="getoff-btn ' + (getoff[uid(it)]?.active ? 'on' : '') + '" data-getoff-id="' + id + '" title="設定落車提醒">' + (getoff[uid(it)]?.active ? '落車中' : '落車') + '</button>' +
-      '<button class="alarm-btn ' + (alarms[uid(it)] ? 'on' : '') + '" data-alarm-id="' + id + '" title="開關到站提醒" aria-label="開關到站提醒">🔔</button>' +
+      '<button class="alarm-btn ' + (alarms[uid(it)] ? 'on' : '') + '" data-alarm-id="' + id + '" title="' + (alarms[uid(it)] === true ? '關閉到站提醒' : '開啟到站提醒') + '" aria-label="' + (alarms[uid(it)] === true ? '關閉到站提醒' : '開啟到站提醒') + '" aria-pressed="' + String(alarms[uid(it)] === true) + '">🔔</button>' +
       '<button class="map-head-btn" data-map-id="' + id + '" title="查看路線地圖" aria-label="查看路線地圖">⌖</button>' +
       '</div>' +
       '<div class="stop"><button class="stop-edit" data-edit-stop="' + id + '" title="更改上車站">&#128205; <b>' + esc(it.stopName || '') + '</b></button><a class="fare" data-fare="' + id + '" title="官方全程車資">全程車資：讀取中</a><button class="detail-entry" data-detail-id="' + id + '" type="button" title="查看完整路線及沿途車站" aria-label="查看完整路線及沿途車站"><svg class="detail-expand-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 12 3 3M3 8V3h5"/><path d="M12 12 21 3M16 3h5v5"/><path d="M12 12 3 21M3 16v5h5"/><path d="M12 12 21 21M16 21h5v-5"/></svg></button></div>' +
@@ -2133,77 +2194,70 @@ function shell() {
   updateInfoBar();
 }
 
-async function toggleAlarm(id, button) {
-  alarms[id] = !alarms[id];
-  if (alarms[id]) alarmSessions[id] = newAlarmSession();
-  else delete alarmSessions[id];
-  saveAlarmSessions();
-  alarmSeen.delete(id);
-  clearAlarmFallbackTimers(id);
-  if (!alarms[id]) {
-    // Turning the alarm off must also cancel any already planned local reminder and close a notification that may still be on screen.
-    closeArrivalNotifications();
-    if (activeAlarmAlerts.has(id)) stopAlarmAlert(id);
-    delete alarmPlans[id];
-    saveAlarmPlans();
-  }
-  saveAlarms();
-  button.classList.toggle('on', !!alarms[id]);
+function updateAlarmButton(id) {
+  const button = board.querySelector('[data-alarm-id="' + cssEscape(id) + '"]');
+  if (!button) return;
+  const enabled = alarms[id] === true;
+  button.classList.toggle('on', enabled);
   button.textContent = '🔔';
-  if (alarms[id]) {
-    unlockAudio();
-    button.title = '關閉到站提醒';
-    // 以按鈕點擊作為使用者手勢，直接申請系統通知權限。
-    const permission = await requestNotifications();
-    if (permission !== 'granted') alert(permission === 'denied' ? '通知已被封鎖，鬧鐘提醒可能無法顯示。' : '尚未允許系統通知，鬧鐘提醒可能無法顯示。');
-  } else button.title = '開關到站提醒';
+  button.title = enabled ? '關閉到站提醒' : '開啟到站提醒';
+  button.setAttribute('aria-pressed', String(enabled));
+  button.setAttribute('aria-label', enabled ? '關閉到站提醒' : '開啟到站提醒');
+}
+function deactivateAlarm(id) {
+  const session = alarmSessions[id];
+  alarms[id] = false; delete alarmSessions[id]; delete alarmPlans[id]; alarmSeen.delete(id);
+  saveAlarms(); saveAlarmSessions(); saveAlarmPlans();
+  clearAlarmFallbackTimers(id); stopAlarmAlert(id); cancelExternalAlarm(id, session);
+  updateAlarmButton(id); updateInfoBar();
+}
+async function toggleAlarm(id, button) {
+  if (alarms[id] === true) { deactivateAlarm(id); renderDiagnostics(); return; }
+  // Enabling requires this explicit button action. Never infer consent from ETA,
+  // notification permission, appearance settings, refresh, or restored timers.
+  alarms[id] = true; alarmSessions[id] = newAlarmSession();
+  delete alarmPlans[id]; alarmSeen.delete(id); clearAlarmFallbackTimers(id);
+  save(); saveAlarms(); saveAlarmSessions(); saveAlarmPlans(); updateAlarmButton(id); updateInfoBar();
+  const session = alarmSessions[id];
+  unlockAudio();
+  const permission = await requestNotifications();
+  if (!isAlarmSessionActive(id, session)) return;
+  if (permission !== 'granted') alert(permission === 'denied' ? '通知已被封鎖，鬧鐘提醒可能無法顯示。' : '尚未允許系統通知，鬧鐘提醒可能無法顯示。');
   renderDiagnostics();
 }
-function disableAlarmAfterArrival(id) {
-  if (!alarms[id]) return;
-  alarms[id] = false;
-  delete alarmSessions[id];
-  alarmSeen.delete(id);
-  clearAlarmFallbackTimers(id);
-  delete alarmPlans[id];
-  saveAlarmSessions(); saveAlarmPlans(); saveAlarms();
-  const button = board.querySelector('[data-alarm-id="' + cssEscape(id) + '"]');
-  if (button) {
-    button.classList.remove('on');
-    button.textContent = '🔔';
-    button.title = '開關到站提醒';
-  }
-}
+function disableAlarmAfterArrival(id) { deactivateAlarm(id); }
 let audioCtx = null;
 const activeAlarmAlerts = new Map();
 const activeSoundNodes = new Set();
 function stopAlarmAlert(id) {
   const alert = activeAlarmAlerts.get(id);
+  if (alert?.timer) clearTimeout(alert.timer);
   if (alert?.notification) { try { alert.notification.close(); } catch {} }
-  if (alert?.card) { alert.card.classList.remove('alert-flash'); }
+  if (alert?.card) alert.card.classList.remove('alert-flash');
   activeAlarmAlerts.delete(id);
-  activeSoundNodes.forEach(node => { try { node.stop(); } catch {} });
-  activeSoundNodes.clear();
-  document.body.classList.remove('alert-active');
+  activeSoundNodes.forEach(node => {
+    if (node.alarmId !== id) return;
+    try { node.stop(); } catch {}
+    activeSoundNodes.delete(node);
+  });
+  if (!activeSoundNodes.size) document.body.classList.remove('alert-active');
   navigator.vibrate?.(0);
 }
 async function unlockAudio() { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'closed') audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') await audioCtx.resume(); return audioCtx; } catch { return null; } }
 async function ringBell(options = {}) {
-  if (!options.userInitiated && !options.alarmAuthorized) return false;
-  // Automatic sound is never allowed without the specific route's manual speaker switch.
-  if (!options.userInitiated && options.alarmId && !alarms[options.alarmId]) return false;
-  if (prefs.webSound === false) return false;
+  const authorized = () => options.userInitiated === true || isAlarmSessionActive(options.alarmId, options.session);
+  if (!authorized() || prefs.webSound === false) return false;
   try {
     const ctx = await unlockAudio();
-    if (!ctx || ctx.state !== 'running') return false;
+    if (!authorized() || prefs.webSound === false || !ctx || ctx.state !== 'running') return false;
     const now = ctx.currentTime;
     const melodies = { double:[0,.22,.82,1.04], triple:[0,.22,.44,.98,1.20,1.42,1.96,2.18,2.40], alarm:[0,.22,.44,.66,1.20,1.42,1.64,1.86,2.40,2.62,2.84,3.06] };
     const melody = melodies[prefs.sound] || melodies.triple;
     const rounds = prefs.sound === 'alarm' ? 2 : 3;
     const lengthFactor = prefs.soundLen === 'short' ? .72 : prefs.soundLen === 'long' ? 1.18 : 1;
-    for (let round = 0; round < rounds; round++) melody.forEach((offset, i) => { const at = now + round * (melody[melody.length - 1] + .85) * lengthFactor + offset * lengthFactor; const o=ctx.createOscillator(), g=ctx.createGain(); activeSoundNodes.add(o); o.onended=()=>activeSoundNodes.delete(o); o.type='sine'; o.frequency.value=i%3===1?988:740; g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(.28, at+.025); g.gain.exponentialRampToValueAtTime(.0001, at+.3*lengthFactor); o.connect(g).connect(ctx.destination); o.start(at); o.stop(at+.32*lengthFactor); });
+    for (let round = 0; round < rounds; round++) melody.forEach((offset, i) => { const at = now + round * (melody[melody.length - 1] + .85) * lengthFactor + offset * lengthFactor; const o=ctx.createOscillator(), g=ctx.createGain(); o.alarmId=options.alarmId; activeSoundNodes.add(o); o.onended=()=>activeSoundNodes.delete(o); o.type='sine'; o.frequency.value=i%3===1?988:740; g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(.28, at+.025); g.gain.exponentialRampToValueAtTime(.0001, at+.3*lengthFactor); o.connect(g).connect(ctx.destination); o.start(at); o.stop(at+.32*lengthFactor); });
   } catch { return false; }
-  document.body.classList.remove('alert-active'); void document.body.offsetWidth; document.body.classList.add('alert-active'); setTimeout(() => document.body.classList.remove('alert-active'), 9000);
+  document.body.classList.remove('alert-active'); void document.body.offsetWidth; document.body.classList.add('alert-active'); setTimeout(() => { if (!activeSoundNodes.size) document.body.classList.remove('alert-active'); }, 12000);
   if (navigator.vibrate) navigator.vibrate([420,120,420,120,420,280,420,120,420,120,420,500,420,120,420]);
   return true;
 }
@@ -2229,52 +2283,55 @@ function scrollRouteDetailToAlarmStop(it) {
   window.setTimeout(() => routeDetailBody.querySelector('[data-detail-stop="' + cssEscape(String(stop.seq)) + '"]')?.scrollIntoView({ behavior:'smooth', block:'center' }), 80);
 }
 async function notifyArrival(it, min, tripKey) {
-  const id = uid(it);
-  // Defensive guard: a queued timer or an in-flight API response must not
-  // create a new alert after the user has switched this route off.
-  const alarmAuthorized = !!alarms[id];
-  if (!alarmAuthorized) return;
-  const lateMinutes = Math.max(0, Math.round(-Number(min || 0)));
-  const isCatchup = lateMinutes > 0;
-  const body = isCatchup
-    ? it.route + ' 往 ' + (it.dest || '') + '，提醒補發：原定約 ' + lateMinutes + ' 分鐘前到達 ' + (it.stopName || '')
-    : it.route + ' 往 ' + (it.dest || '') + '，約 ' + (Math.max(0,min)) + ' 分鐘到 ' + (it.stopName || '');
+  const id = uid(it), session = alarmSessions[id];
+  if (!isAlarmSessionActive(id, session) || activeAlarmAlerts.has(id)) return false;
   const card = board.querySelector('[data-id="' + cssEscape(id) + '"]');
+  const alert = { card, session, notification:null, timer:null };
+  activeAlarmAlerts.set(id, alert); // Lock before any await to prevent duplicate arrivals.
+  const authorized = () => activeAlarmAlerts.get(id) === alert && isAlarmSessionActive(id, session);
+  alert.timer = setTimeout(() => {
+    if (activeAlarmAlerts.get(id) !== alert) return;
+    if (isAlarmSessionActive(id, session)) disableAlarmAfterArrival(id);
+    else stopAlarmAlert(id);
+  }, 12000);
+  clearAlarmFallbackTimers(id); delete alarmPlans[id]; saveAlarmPlans(); cancelExternalAlarm(id, session, false);
   scrollRouteDetailToAlarmStop(it);
-  disableAlarmAfterArrival(id);
-  const webPlayed = await ringBell({ alarmAuthorized, alarmId:id });
-  const alert = {card,notification:null}; activeAlarmAlerts.set(id, alert);
-  if (card) { card.classList.remove('alert-flash'); void card.offsetWidth; card.classList.add('alert-flash'); alert.timer=setTimeout(() => { card.classList.remove('alert-flash'); if(activeAlarmAlerts.get(id)===alert) activeAlarmAlerts.delete(id); }, 12000); }
-  if (prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission === 'granted') {
-    navigator.setAppBadge?.(1).catch?.(() => {});
-    const notification = {
-        body,
-        icon: './icon-192.png',
-        badge: './icon-192.png',
-        // Give every bus trip its own notification identity.  Reusing only
-        // the route id lets some Android notification managers replace the
-        // previous card without producing a new alert sound/vibration.
-        tag: 'buspulse-' + uid(it) + '-' + encodeURIComponent(String(tripKey || Date.now())),
-        renotify: true,
-        // 「只用系統通知聲」必須明確要求系統播放聲音；唔沿用測試用的靜音偏好。
-        vibrate: [260,100,260,100,260],
-        silent: false,
-        requireInteraction: true,
-        data: { url: './' }
-    };
-    const deliver = async () => {
-      // 前景直接交畀 Edge Notification，避免 SW 更新通知但唔播聲。
-      if (!document.hidden) {
-        try { alert.notification = new Notification('巴士就嚟到站', notification); return true; } catch {}
-      }
-      const reg = await notificationRegistration();
-      if (reg?.active) { reg.active.postMessage({ type:'BUS_ARRIVAL', title:'巴士就嚟到站', badgeNumber:1, ...notification }); return true; }
-      try { alert.notification = new Notification('巴士就嚟到站', notification); return true; } catch { return false; }
-    };
-    deliver().then(ok => {
-      if (!ok && !webPlayed) setTimeout(() => { try { new Notification('巴士就嚟到站', notification); } catch {} }, 300);
-    }).catch(() => { try { new Notification('巴士就嚟到站', notification); } catch {} });
+  if (card) { card.classList.remove('alert-flash'); void card.offsetWidth; card.classList.add('alert-flash'); }
+  // Keep the bell visibly on while it sounds; turning it off must still cancel everything.
+  await ringBell({ alarmId:id, session });
+  if (!authorized()) return false;
+  if (prefs.notificationsEnabled === false || !('Notification' in window) || Notification.permission !== 'granted') return true;
+  const lateMinutes = Math.max(0, Math.round(-Number(min || 0)));
+  const body = lateMinutes > 0
+    ? it.route + ' 往 ' + (it.dest || '') + '，提醒補發：原定約 ' + lateMinutes + ' 分鐘前到達 ' + (it.stopName || '')
+    : it.route + ' 往 ' + (it.dest || '') + '，約 ' + Math.max(0,min) + ' 分鐘到 ' + (it.stopName || '');
+  const notification = {
+    body, icon:'./icon-192.png', badge:'./icon-192.png',
+    tag:'buspulse-' + id + '-' + encodeURIComponent(String(tripKey || Date.now())),
+    renotify:true, vibrate:[260,100,260,100,260], silent:false, requireInteraction:true,
+    data:{ url:'./', alarmId:id, session }
+  };
+  const direct = () => {
+    if (!authorized() || prefs.notificationsEnabled === false) return false;
+    try { alert.notification = new Notification('巴士就嚟到站', notification); return true; } catch { return false; }
+  };
+  if (!document.hidden && direct()) return true;
+  const reg = await notificationRegistration();
+  if (!authorized() || prefs.notificationsEnabled === false) return false;
+  if (reg?.active) {
+    const delivered = await new Promise(resolve => {
+      const channel = new MessageChannel();
+      const finish = ok => { clearTimeout(timeout); channel.port1.close(); resolve(ok); };
+      const timeout = setTimeout(() => finish(false), 1800);
+      channel.port1.onmessage = event => finish(event.data?.delivered === true);
+      try { reg.active.postMessage({ type:'BUS_ARRIVAL_AUTHORIZED', title:'巴士就嚟到站', alarmId:id, session, ...notification }, [channel.port2]); }
+      catch { finish(false); }
+    });
+    // An unknown acknowledgement must not create a second audible notification.
+    return delivered;
   }
+  // Never queue an unguarded retry after the user has switched off.
+  return direct();
 }
 function clearAlarmFallbackTimers(id) {
   const timers = alarmFallbackTimers.get(id);
@@ -2283,6 +2340,7 @@ function clearAlarmFallbackTimers(id) {
 }
 function runAlarmPlan(it, plan) {
   const id = uid(it), now = Date.now(), at = Number(plan.at);
+  if (!isAlarmSessionActive(id, plan.session) || activeAlarmAlerts.has(id)) return;
   if (!Number.isFinite(at)) { forgetAlarmPlan(id, plan.key); return; }
   const mins = Math.round((at - now) / 60000);
   // If the browser was asleep, still deliver a late reminder rather than
@@ -2305,50 +2363,35 @@ function wakeAlarmPlans() {
   });
 }
 function scheduleAlarmFallbacks(it, res, options = {}) {
-  const id = uid(it);
-  if (!alarms[id] || !res || !res.etas?.length) return;
+  const id = uid(it), session = alarmSessions[id];
+  if (!isAlarmSessionActive(id, session) || activeAlarmAlerts.has(id) || !res || !res.etas?.length) return;
   const now = Date.now(), leadMs = Math.max(0, Number(prefs.lead) * 60000);
   const timers = alarmFallbackTimers.get(id) || new Map();
-  // Do not cancel an already scheduled trip on every 25-second refresh.
-  // Live ETA timestamps can move slightly; cancelling here can keep chasing
-  // the moving timestamp forever and miss the actual alarm alert.
   for (const [key, timer] of timers) {
     if (timer.at < now - 2 * 60 * 60 * 1000 || timer.at > now + 3 * 60 * 60 * 1000) {
       clearTimeout(timer.handle); timers.delete(key);
     }
   }
-  res.etas.forEach(e => {
+  for (const e of res.etas) {
+    if (!isAlarmSessionActive(id, session) || activeAlarmAlerts.has(id)) break;
     const at = Date.parse(e.iso || '');
-    if (!Number.isFinite(at)) return;
-    const key = String(at);
-    rememberAlarmPlan(it, e, at);
-    scheduleNativeLocalAlarm(it, { key, at, iso:e.iso, min:e.min, rmk:e.rmk || '' }).catch(() => {});
-    if (timers.has(key)) return;
-    // A small margin helps when the browser wakes a throttled background
-    // timer late. checkAlarms still de-duplicates the same trip.
-    const earlyMargin = 15000;
-    const delay = at - leadMs - earlyMargin - now;
-    // If the first refresh after reopening already sees this trip inside the
-    // alert window (or a few minutes late), do not merely save a past plan:
-    // execute the catch-up path immediately. Previously this returned here,
-    // while wakeAlarmPlans had already run before refresh populated the plan.
-    if (delay <= 0) {
-      runAlarmPlan(it, { key, at, iso:e.iso, min:e.min, rmk:e.rmk || '' });
-      return;
-    }
-    if (delay > (options.stale ? 20 : 120) * 60 * 1000) return;
-    const handle = setTimeout(() => {
-      timers.delete(key);
-      runAlarmPlan(it, { key, at, iso:e.iso, min:e.min, rmk:e.rmk || '' });
-    }, delay);
+    if (!Number.isFinite(at)) continue;
+    const key = String(at), delay = at - leadMs - 15000 - now;
+    const plan = rememberAlarmPlan(it, e, at);
+    if (!plan) break;
+    if (delay <= 0) { runAlarmPlan(it, plan); break; }
+    scheduleNativeLocalAlarm(it, plan).catch(() => {});
+    if (timers.has(key) || delay > (options.stale ? 20 : 120) * 60 * 1000) continue;
+    const handle = setTimeout(() => { timers.delete(key); runAlarmPlan(it, plan); }, delay);
     timers.set(key, { handle, at });
-  });
-  if (timers.size) alarmFallbackTimers.set(id, timers);
+  }
+  if (timers.size && isAlarmSessionActive(id, session) && !activeAlarmAlerts.has(id)) alarmFallbackTimers.set(id, timers);
+  else timers.forEach(t => clearTimeout(t.handle));
   wakeAlarmPlans();
 }
 function checkAlarms(it, res, options = {}) {
-  if (!alarms[uid(it)] || !res || res.err || !res.etas?.length) return;
   const id = uid(it);
+  if (!isAlarmSessionActive(id, alarmSessions[id]) || activeAlarmAlerts.has(id) || !res || res.err || !res.etas?.length) return;
   const lead = Number(prefs.lead);
   // Default keeps the original live-poll behaviour; runAlarmPlan passes a
   // wider floor so a bus missed during sleep can still be announced.
@@ -2470,7 +2513,7 @@ function updateGetoff(it, coords) {
   const before=Math.max(0,state.targetSeq-nearest.seq);
   const note=document.querySelector('#getoffNote'); if(note) note.textContent=nearest.seq >= state.targetSeq ? '已接近／到達目標站：' + state.targetName : '目前接近第 ' + nearest.seq + ' 站，距離目標約 ' + before + ' 個站';
   const key=state.targetSeq + ':' + nearest.seq;
-  if (before <= 1 && nearest.seq < state.targetSeq && state.alertKey !== key) { state.alertKey=key; saveGetoff(); const alarmId=uid(it); if (alarms[alarmId]) { ringBell({ alarmAuthorized:true, alarmId }); if(navigator.vibrate) navigator.vibrate([300,120,300,120,500]); } const card=board.querySelector('[data-id="'+cssEscape(uid(it))+'"]'); if(card){card.classList.remove('alert-flash');void card.offsetWidth;card.classList.add('alert-flash');setTimeout(()=>card.classList.remove('alert-flash'),12000);} if(prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission==='granted') navigator.serviceWorker?.ready.then(reg=>reg.showNotification('就嚟落車喇',{body:it.route+' 下一個站：'+state.targetName,icon:'./icon-192.png',tag:'getoff-'+uid(it),requireInteraction:true,silent:false})).catch(()=>{}); }
+  if (before <= 1 && nearest.seq < state.targetSeq && state.alertKey !== key) { state.alertKey=key; saveGetoff(); const alarmId=uid(it); if (isAlarmSessionActive(alarmId, alarmSessions[alarmId])) { ringBell({ alarmId, session:alarmSessions[alarmId] }); } const card=board.querySelector('[data-id="'+cssEscape(uid(it))+'"]'); if(card){card.classList.remove('alert-flash');void card.offsetWidth;card.classList.add('alert-flash');setTimeout(()=>card.classList.remove('alert-flash'),12000);} if(prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission==='granted') navigator.serviceWorker?.ready.then(reg=>reg.showNotification('就嚟落車喇',{body:it.route+' 下一個站：'+state.targetName,icon:'./icon-192.png',tag:'getoff-'+uid(it),requireInteraction:true,silent:false})).catch(()=>{}); }
 }
 
 function renderPip() {
@@ -3057,7 +3100,8 @@ function viewHome() {
   sBody.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
     const removed = items[+b.dataset.del], id = removed && uid(removed);
     if (id && routeDetailState.open && routeDetailState.routeId === id) closeRouteDetail();
-    items.splice(+b.dataset.del, 1); if (id) { delete alarms[id]; delete alarmPlans[id]; alarmSeen.delete(id); clearAlarmFallbackTimers(id); delete getoff[id]; saveAlarms(); saveAlarmPlans(); saveGetoff(); }
+    if (id) deactivateAlarm(id);
+    items.splice(+b.dataset.del, 1); if (id) { delete alarms[id]; delete getoff[id]; saveAlarms(); saveGetoff(); }
     save(); closeArrivalNotifications(); shell(); refresh(); viewHome();
   }));
   sBody.querySelectorAll('[data-up]').forEach(b => b.addEventListener('click', () => {
@@ -3283,7 +3327,11 @@ function addItem(v, s) {
     const next = {...items[index], seq:s.seq, stopId:s.id, stopName:s.name};
     const newId = uid(next);
     if (oldId !== newId) {
-      if (alarms[oldId] != null) { alarms[newId] = alarms[oldId]; delete alarms[oldId]; }
+      const enabled = alarms[oldId] === true;
+      deactivateAlarm(oldId); delete alarms[oldId];
+      alarms[newId] = enabled;
+      if (enabled) alarmSessions[newId] = newAlarmSession();
+      saveAlarmSessions();
       if (getoff[oldId] != null) { getoff[newId] = getoff[oldId]; delete getoff[oldId]; }
     }
     items[index] = next; save(); saveAlarms(); saveGetoff(); shell(); refresh(); viewHome(); return;
@@ -3321,6 +3369,28 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 
+function syncAlarmStateFromStorage() {
+  const nextAlarms = loadAlarms(), nextSessions = loadAlarmSessions();
+  const savedIds = new Set(load().map(uid));
+  for (const id of new Set([...Object.keys(alarms), ...activeAlarmAlerts.keys()])) {
+    if (!savedIds.has(id) || nextAlarms[id] !== true || nextSessions[id] !== alarmSessions[id]) {
+      const oldSession = alarmSessions[id];
+      stopAlarmAlert(id); clearAlarmFallbackTimers(id); cancelExternalAlarm(id, oldSession);
+    }
+  }
+  alarms = nextAlarms; alarmSessions = nextSessions; alarmPlans = loadAlarmPlans();
+  items.forEach(it => updateAlarmButton(uid(it))); updateInfoBar();
+}
+window.addEventListener('storage', event => {
+  if (event.key === null || [ALARM_KEY, ALARM_SESSION_KEY, ALARM_PLAN_KEY, KEY].includes(event.key)) syncAlarmStateFromStorage();
+});
+if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', event => {
+  const data = event.data || {};
+  if (data.type !== 'VERIFY_ARRIVAL_ALARM') return;
+  const allowed = prefs.notificationsEnabled !== false && isAlarmSessionActive(data.alarmId, data.session)
+    && activeAlarmAlerts.get(data.alarmId)?.session === data.session;
+  event.ports?.[0]?.postMessage({ allowed });
+});
 /* ===================================================================
    BOOT
    =================================================================== */
