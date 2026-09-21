@@ -1509,6 +1509,11 @@ function openTour() {
   if (tourSeen() || sheet?.classList.contains('on')) return;
   tourStep = 0; renderTourStep(); tour.classList.add('on'); tour.setAttribute('aria-hidden', 'false'); tourNext.focus();
 }
+function replayTour() {
+  try { localStorage.removeItem(TOUR_KEY); } catch {}
+  closeSheet();
+  window.setTimeout(openTour, 180);
+}
 tourNext.addEventListener('click', () => { if (tourStep >= tourSteps.length - 1) closeTour(); else { tourStep++; renderTourStep(); } });
 tour.querySelectorAll('[data-tour-action="skip"]').forEach(button => button.addEventListener('click', closeTour));
 document.addEventListener('keydown', event => { if (tour.classList.contains('on') && event.key === 'Escape') closeTour(); });
@@ -3084,6 +3089,7 @@ function viewPrefs() {
   sTitle.textContent = '顯示與提醒設定';
   sBody.innerHTML =
     '<div class="settings-intro">只保留最常用設定喺呢度；其他功能撳下面分組先展開，畫面會清爽好多。</div>' +
+    '<button class="wide" id="replayTourBtn">❔ 重新觀看使用教學</button>' +
     '<div class="lbl">到站提醒</div>' +
     '<div class="pref-row"><div>提早幾多分鐘響鬧<small>揀咗路線卡上方嘅 🔔 後生效；每條路線只提醒一程，響完會自動關閉</small></div><select class="pref-select" id="leadSel"><option value="1">1 分鐘</option><option value="2">2 分鐘</option><option value="3">3 分鐘</option><option value="5">5 分鐘</option></select></div>' +
     '<button class="wide notification-toggle notification-warn" id="notifyBtn" type="button" aria-pressed="false">系統通知：未開啟（撳此允許）</button>' +
@@ -3118,6 +3124,7 @@ function viewPrefs() {
   $('#themeSel').addEventListener('change', e => { prefs.theme=e.target.value; savePrefs(); applyPrefs(); });
   $('#notifyBtn').addEventListener('click', toggleNotificationSetting);
   $('#testNotificationBtn').addEventListener('click', sendTestNotification);
+  $('#replayTourBtn').addEventListener('click', replayTour);
   renderDiagnostics();
   $('#prefsBack').addEventListener('click', viewHome);
 }
