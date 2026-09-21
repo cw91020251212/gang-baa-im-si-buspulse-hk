@@ -139,6 +139,27 @@ test('open service information stays open during detail refreshes', async ({ pag
   await expect(page.locator('.detail-service')).toHaveAttribute('open', '');
 });
 
+test('finds the nearest route stop from the current location before adding a route', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('buspulse.first-use-tour.v1', '1');
+    Object.defineProperty(navigator.geolocation, 'getCurrentPosition', {
+      configurable:true,
+      value:success => success({ coords:{ latitude:22.31002, longitude:114.21002, accuracy:12 } })
+    });
+  });
+  await prepare(page);
+  await page.evaluate(route => { openSheet(); viewStops(route); }, {
+    co:'KMB', route:'74X', bound:'outbound', dir:'O', service_type:'1',
+    origin:'觀塘碼頭', dest:'大埔中心', dirLabel:'觀塘碼頭 → 大埔中心'
+  });
+  await expect(page.locator('#nearbyStopBtn')).toBeVisible();
+  await page.locator('#nearbyStopBtn').click();
+  await expect(page.locator('#nearbyStopResult')).toContainText('最近站：第 2 站「第二站」');
+  await expect(page.locator('#nearbyStopResult')).toContainText('定位誤差約 12 米');
+  await expect(page.locator('[data-s="1"]')).toHaveClass(/nearby-stop/);
+  await expect(page.locator('#confirmNearbyStop')).toHaveText('使用呢個站');
+});
+
 test('schedule validation compares visible ETA count with the official headway', async ({ page }) => {
   await page.goto('./?smoke=route-detail-scheduled-cue', { waitUntil: 'domcontentloaded' });
   const result = await page.evaluate(() => ({

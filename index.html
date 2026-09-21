@@ -307,6 +307,12 @@ input.tin::placeholder{color:#4b5566;font-weight:400;letter-spacing:0}
 }
 .backup-box{margin-top:12px;padding:10px;border:1px solid rgba(255,209,102,.28);border-radius:10px;background:rgba(255,209,102,.07);color:var(--dim);font-size:11px;line-height:1.45}.backup-box .wide{margin-top:7px}.backup-actions{display:flex;gap:7px}.backup-actions .wide{flex:1}.wide.danger{color:#ffaaa5;border-color:rgba(255,98,92,.3);background:rgba(255,98,92,.06)}
 .wide.p{background:linear-gradient(135deg,var(--now),#8af0c5);color:#071a14;border-color:var(--now); box-shadow:0 7px 18px rgba(54,224,160,.18)}
+.nearby-stop-picker{margin:0 0 11px;padding:10px 11px;border:1px solid rgba(54,224,160,.38);border-radius:12px;background:rgba(54,224,160,.07)}
+.nearby-stop-picker .wide{margin-top:0}.nearby-stop-picker .hint{margin-top:7px}
+.nearby-stop-result{margin-top:9px}.nearby-stop-result:not(:empty){padding:9px 10px;border-radius:9px;background:rgba(16,24,39,.38);color:var(--dim);font-size:12px;line-height:1.5}
+.nearby-stop-result b{display:block;color:var(--tx);font-size:14px}.nearby-stop-result small{display:block;color:var(--faint);margin-top:2px}.nearby-stop-result .wide{margin-top:8px}
+.li.nearby-stop{border-color:rgba(54,224,160,.72);box-shadow:0 0 0 2px rgba(54,224,160,.12)}
+body.light .nearby-stop-picker{background:rgba(8,115,77,.06);border-color:rgba(8,115,77,.38)}body.light .nearby-stop-result:not(:empty){background:rgba(255,255,255,.68)}
 .tag{
   display:inline-block; font-size:9.5px; font-weight:800; padding:2px 5px;
   border-radius:4px; letter-spacing:.4px; flex:none;
@@ -2861,11 +2867,66 @@ async function showSetupMap(v, stops, button) {
 }
 let setupMapInstance = null;
 
+function stopDistanceMeters(stop, lat, lng) {
+  const earthRadius = 6371000;
+  const φ1 = Number(lat) * Math.PI / 180, φ2 = Number(stop.lat) * Math.PI / 180;
+  const Δφ = (Number(stop.lat) - Number(lat)) * Math.PI / 180;
+  const Δλ = (Number(stop.lng) - Number(lng)) * Math.PI / 180;
+  const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+  return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function nearestStopMatch(stops, lat, lng) {
+  return stops.filter(st => Number.isFinite(Number(st.lat)) && Number.isFinite(Number(st.lng))).reduce((best, st) => {
+    const distance = stopDistanceMeters(st, lat, lng);
+    return !best || distance < best.distance ? { st, distance } : best;
+  }, null);
+}
+
 function nearestStop(stops, lat, lng) {
-  return stops.reduce((best, st) => {
-    const d = Math.pow(st.lat - lat, 2) + Math.pow(st.lng - lng, 2);
-    return !best || d < best.d ? { st, d } : best;
-  }, null)?.st;
+  return nearestStopMatch(stops, lat, lng)?.st;
+}
+
+function locationErrorText(error) {
+  if (error?.code === 1) return '未獲允許定位。請喺瀏覽器網站設定容許「位置」後再試。';
+  if (error?.code === 2) return '暫時未能取得位置，請到較開揚位置或檢查手機定位服務後再試。';
+  if (error?.code === 3) return '定位逾時，請再試一次。';
+  return '暫時未能定位，請手動揀站頭。';
+}
+
+function findNearestSetupStop(v, stops, button, output) {
+  if (!navigator.geolocation) {
+    output.textContent = '此瀏覽器不支援定位，請手動揀站頭。';
+    return;
+  }
+  const valid = stops.filter(st => Number.isFinite(Number(st.lat)) && Number.isFinite(Number(st.lng)));
+  if (!valid.length) {
+    output.textContent = '呢條路線暫時未有足夠站頭座標資料，請手動揀站頭。';
+    return;
+  }
+  button.disabled = true; button.textContent = '⌖ 定位中…';
+  output.innerHTML = '<span class="spin"></span>正用你目前位置找最近站頭…';
+  navigator.geolocation.getCurrentPosition(pos => {
+    const match = nearestStopMatch(valid, pos.coords.latitude, pos.coords.longitude);
+    button.disabled = false; button.textContent = '⌖ 重新定位最近站頭';
+    if (!match) { output.textContent = '暫時未能比對最近站頭，請手動揀站頭。'; return; }
+    const accuracy = Number(pos.coords.accuracy);
+    const distance = Math.round(match.distance);
+    const caution = distance > Math.max(180, Number.isFinite(accuracy) ? accuracy * 2 : 180)
+      ? '你同呢個站距離較遠，可能係 GPS 漂移、對面站或另一個站；請核對後先用。'
+      : '已按目前位置找出最近站；請核對方向後使用。';
+    output.innerHTML = '<b>最近站：第 ' + esc(match.st.seq) + ' 站「' + esc(match.st.name) + '」</b>' +
+      '<small>約 ' + distance + ' 米' + (Number.isFinite(accuracy) ? ' · 定位誤差約 ' + Math.round(accuracy) + ' 米' : '') + '<br>' + caution + '</small>' +
+      '<button class="wide p" type="button" id="confirmNearbyStop">使用呢個站</button>';
+    const candidate = match.st;
+    sBody.querySelectorAll('.li.nearby-stop').forEach(row => row.classList.remove('nearby-stop'));
+    const row = sBody.querySelector('[data-s="' + cssEscape(String(stops.indexOf(candidate))) + '"]');
+    row?.classList.add('nearby-stop');
+    $('#confirmNearbyStop')?.addEventListener('click', () => addItem(v, candidate));
+  }, error => {
+    button.disabled = false; button.textContent = '⌖ 我喺車站：自動找最近站';
+    output.textContent = locationErrorText(error);
+  }, { enableHighAccuracy:true, timeout:15000, maximumAge:15000 });
 }
 
 function locateOnMap(map, stops, button) {
@@ -3407,9 +3468,10 @@ async function viewStops(v) {
   setupMapInstance = null;
   sBody.innerHTML =
     '<div class="lbl">' + esc(v.dirLabel) + '</div>' +
+    '<div class="nearby-stop-picker"><button class="wide p" type="button" id="nearbyStopBtn">⌖ 我喺車站：自動找最近站</button><div class="hint">只會喺你撳掣後要求手機定位；程式會由呢條路線嘅站頭中找最近一個，再畀你確認。</div><div class="nearby-stop-result" id="nearbyStopResult" aria-live="polite"></div></div>' +
     '<div class="map-actions" style="padding:0 0 10px"><button class="map-toggle" id="setupMapBtn"><span>🗺 先睇全條路線地圖</span><span class="map-arrow">⌄</span></button></div>' +
     '<div class="map-wrap" id="setupMapWrap"><div class="map-tools"><button class="locate-btn" id="locateBtn">⌖ 定位我附近</button></div><div class="route-map"></div><div class="map-note">藍線按道路網絡模擬，撳任何站點可以睇站名。</div></div>' +
-    '<div class="hint" style="margin:0 0 10px">' + (v.editId ? '揀新上車站，會直接更新原有路線卡，不會新增路線。' : '睇完地圖後，揀你上車嗰個站') + '（' + stops.length + ' 個）</div>' +
+    '<div class="hint" style="margin:0 0 10px">' + (v.editId ? '揀新上車站，會直接更新原有路線卡，不會新增路線。' : '唔知站名可以先撳上面「自動找最近站」，或者喺下面手動揀你上車嗰個站。') + '（' + stops.length + ' 個）</div>' +
     '<div class="list">' + stops.map((s, i) =>
       '<button class="li sm" data-s="' + i + '">' +
         '<span class="n">' + s.seq + '</span>' +
@@ -3417,6 +3479,7 @@ async function viewStops(v) {
         '<span class="a">＋</span>' +
       '</button>').join('') + '</div>' +
     '<button class="wide" id="bk">← 返回</button>';
+  $('#nearbyStopBtn').addEventListener('click', () => findNearestSetupStop(v, stops, $('#nearbyStopBtn'), $('#nearbyStopResult')));
   $('#setupMapBtn').addEventListener('click', () => showSetupMap(v, stops, $('#setupMapBtn')));
   $('#bk').addEventListener('click', v.editId ? viewHome : viewSearch);
   sBody.querySelectorAll('[data-s]').forEach(b =>
