@@ -204,6 +204,22 @@ body.light .eta .u,body.light .eta .t{color:#40516a}
 .fab:hover{filter:saturate(1.08) brightness(1.04)}
 .fab:active{transform:translateY(2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,78,51,.28),0 1px 0 #087951,0 4px 12px rgba(0,170,111,.28)}
 .fab:focus-visible{outline:3px solid rgba(115,178,255,.75);outline-offset:3px}
+/* ---------- first-use tour ---------- */
+.tour{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s ease}
+.tour.on{opacity:1;pointer-events:none}
+.tour-backdrop{position:absolute;inset:0;background:rgba(4,9,20,.76);backdrop-filter:blur(3px);pointer-events:none}
+.tour-card{position:relative;width:min(100%,390px);padding:24px 22px 20px;border:1px solid rgba(165,255,218,.48);border-radius:22px;background:linear-gradient(145deg,#203250,#121d31);box-shadow:0 22px 70px rgba(0,0,0,.48),0 0 0 1px rgba(114,240,188,.08);transform:translateY(10px) scale(.98);transition:transform .2s ease;pointer-events:auto}
+.tour.on .tour-card{transform:translateY(0) scale(1)}
+.tour-kicker{color:#72f0bc;font-size:11px;font-weight:800;letter-spacing:1px;margin-bottom:10px}
+.tour-card h2{font-size:22px;line-height:1.25;margin-bottom:9px}
+.tour-card p{color:#c7d4e8;font-size:14px;line-height:1.7;margin-bottom:18px}
+.tour-icon{display:grid;place-items:center;width:48px;height:48px;margin-bottom:13px;border-radius:15px;background:rgba(114,240,188,.13);border:1px solid rgba(114,240,188,.3);font-size:25px}
+.tour-progress{display:flex;gap:6px;margin-bottom:17px}.tour-dot{width:24px;height:4px;border-radius:99px;background:#41516d}.tour-dot.on{background:#72f0bc}
+.tour-actions{display:flex;align-items:center;gap:10px}.tour-actions button{font:700 13px inherit;cursor:pointer;border-radius:10px;padding:10px 13px}.tour-skip{border:1px solid #52637d;background:transparent;color:#aebbd0}.tour-next{border:1px solid #a5ffda;background:#72f0bc;color:#042217;flex:1}.tour-next:active,.tour-skip:active{transform:scale(.97)}
+.tour-target{box-shadow:0 0 0 4px rgba(114,240,188,.72),0 0 28px rgba(114,240,188,.58)!important}
+.tour,.tour *{text-shadow:none!important}
+body.light .tour-card{background:linear-gradient(145deg,#f7fbff,#dfeaf3);border-color:#6b9b9a;box-shadow:0 22px 70px rgba(31,55,78,.28)}
+body.light .tour-card p{color:#40516a}.tour[aria-hidden="true"]{visibility:hidden}
 /* ---------- sheet ---------- */
 .mask{position:fixed;inset:0;background:rgba(0,0,0,.68);z-index:99;
   opacity:0;pointer-events:none;transition:opacity .22s}
@@ -781,6 +797,18 @@ body.light *,
 </section>
 
 <button class="fab" id="fab" aria-label="加入巴士路線">＋ 路線</button>
+
+<div class="tour" id="firstUseTour" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
+  <div class="tour-backdrop" data-tour-action="skip"></div>
+  <div class="tour-card">
+    <div class="tour-kicker" id="tourKicker">初次使用教學 · 1 / 3</div>
+    <div class="tour-icon" id="tourIcon" aria-hidden="true">＋</div>
+    <h2 id="tourTitle">先加入你常坐嘅路線</h2>
+    <p id="tourText">撳右下角「＋ 路線」，搜尋巴士號碼，再揀上車站。完成後，主畫面就會顯示實時到站時間。</p>
+    <div class="tour-progress" aria-hidden="true"><span class="tour-dot on"></span><span class="tour-dot"></span><span class="tour-dot"></span></div>
+    <div class="tour-actions"><button class="tour-skip" type="button" data-tour-action="skip">略過教學</button><button class="tour-next" id="tourNext" type="button">下一步</button></div>
+  </div>
+</div>
 
 <div class="mask" id="mask"></div>
 <div class="sheet" id="sheet">
@@ -1455,6 +1483,35 @@ const infoBar = $('#infoBar'), infoBarMain = $('#infoBarMain'), infoBarDetails =
 const detailInfoBar = $('#detailInfoBar'), detailInfoBarMain = $('#detailInfoBarMain'), detailInfoBarDetails = $('#detailInfoBarDetails'), detailInfoBarActions = $('#detailInfoBarActions');
 const routeDetail = $('#routeDetail'), routeDetailBody = $('#routeDetailBody'), routeDetailTitle = $('#routeDetailTitle'), routeDetailOperator = $('#routeDetailOperator'), routeDetailRoute = $('#routeDetailRoute'), routeDetailSubTitle = $('#routeDetailSubTitle');
 let routeDetailReturnFocus = null;
+const TOUR_KEY = 'buspulse.first-use-tour.v1';
+const tour = $('#firstUseTour'), tourKicker = $('#tourKicker'), tourIcon = $('#tourIcon'), tourTitle = $('#tourTitle'), tourText = $('#tourText'), tourNext = $('#tourNext');
+const tourSteps = [
+  { icon:'＋', title:'先加入你常坐嘅路線', text:'撳右下角「＋ 路線」，搜尋巴士號碼，再揀上車站。完成後，主畫面就會顯示實時到站時間。', target:'#fab' },
+  { icon:'⏱', title:'睇到站時間，按需要開提醒', text:'路線卡會顯示下一班車幾多分鐘到。想收到提示，可以撳卡片上嘅 🔔；撳四角箭咀可查看沿途車站詳情。', target:'#infoBar' },
+  { icon:'⚙', title:'需要時再到設定調整', text:'右上角 ⚙ 可以調整提醒聲、通知、字體、顏色及螢幕保護。所有設定只會保存在你這部裝置。', target:'#prefsBtn' }
+];
+let tourStep = 0;
+function tourSeen() { try { return localStorage.getItem(TOUR_KEY) === '1'; } catch { return false; } }
+function markTourSeen() { try { localStorage.setItem(TOUR_KEY, '1'); } catch {} }
+function clearTourTarget() { document.querySelectorAll('.tour-target').forEach(el => el.classList.remove('tour-target')); }
+function renderTourStep() {
+  const step = tourSteps[tourStep]; if (!step) return;
+  tourKicker.textContent = '初次使用教學 · ' + (tourStep + 1) + ' / ' + tourSteps.length;
+  tourIcon.textContent = step.icon; tourTitle.textContent = step.title; tourText.textContent = step.text;
+  tour.querySelectorAll('.tour-dot').forEach((dot, i) => dot.classList.toggle('on', i === tourStep));
+  tourNext.textContent = tourStep === tourSteps.length - 1 ? '完成教學' : '下一步';
+  clearTourTarget(); document.querySelector(step.target)?.classList.add('tour-target');
+}
+function closeTour() {
+  markTourSeen(); clearTourTarget(); tour.classList.remove('on'); tour.setAttribute('aria-hidden', 'true');
+}
+function openTour() {
+  if (tourSeen() || sheet?.classList.contains('on')) return;
+  tourStep = 0; renderTourStep(); tour.classList.add('on'); tour.setAttribute('aria-hidden', 'false'); tourNext.focus();
+}
+tourNext.addEventListener('click', () => { if (tourStep >= tourSteps.length - 1) closeTour(); else { tourStep++; renderTourStep(); } });
+tour.querySelectorAll('[data-tour-action="skip"]').forEach(button => button.addEventListener('click', closeTour));
+document.addEventListener('keydown', event => { if (tour.classList.contains('on') && event.key === 'Escape') closeTour(); });
 const esc = s => String(s == null ? '' : s)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const cssEscape = s => (globalThis.CSS && typeof CSS.escape === 'function') ? CSS.escape(String(s)) : String(s).replace(/[^a-zA-Z0-9_-]/g, ch => '\\' + ch.charCodeAt(0).toString(16) + ' ');
@@ -3005,8 +3062,8 @@ function openSheet() { mask.classList.add('on'); sheet.classList.add('on'); }
 function closeSheet() { mask.classList.remove('on'); sheet.classList.remove('on'); }
 mask.addEventListener('click', closeSheet);
 $('#closeBtn').addEventListener('click', closeSheet);
-$('#fab').addEventListener('click', () => { viewHome(); openSheet(); });
-$('#prefsBtn').addEventListener('click', () => { viewPrefs(); openSheet(); });
+$('#fab').addEventListener('click', () => { if (!tourSeen()) markTourSeen(); if (tour.classList.contains('on')) closeTour(); viewHome(); openSheet(); });
+$('#prefsBtn').addEventListener('click', () => { if (!tourSeen()) markTourSeen(); if (tour.classList.contains('on')) closeTour(); viewPrefs(); openSheet(); });
 $('#routeDetailBack').addEventListener('click', () => closeRouteDetail());
 window.addEventListener('popstate', () => { if (routeDetailState.open) closeRouteDetail({ history:false }); });
 document.addEventListener('keydown', e => { if (routeDetailState.open && e.key === 'Escape') { e.preventDefault(); closeRouteDetail(); } });
@@ -3397,6 +3454,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('mess
 shell();
 startLoop();
 scheduleBusSaver();
+window.setTimeout(openTour, 450);
 </script>
 </body>
 </html>
