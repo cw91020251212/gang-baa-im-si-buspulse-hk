@@ -1621,7 +1621,7 @@ const routeDetailState = {
   stopsError:null, selectedSeq:null, selectedStopId:null, etaByStop:new Map(),
   etaHistory:new Map(), detailEtaLoading:false, detailLastFetchAt:0,
   vehicleInference:{ status:'hidden', fromStopId:null, toStopId:null, reason:null, observedAt:null },
-  generation:0, abortController:null, etaRequest:null, fareLabel:null, scheduleLabel:null, detailTicker:null, detailLastOK:null, sweepStatus:'idle',
+  generation:0, abortController:null, etaRequest:null, fareLabel:null, scheduleLabel:null, serviceOpen:false, detailTicker:null, detailLastOK:null, sweepStatus:'idle',
   gpsWatch:null, gpsNetworkWatch:null, gpsSeq:null, gpsPosition:null, gpsPositionAccuracy:null, gpsSource:null, gpsPositionTime:0, gpsStatus:'idle', gpsError:null, gpsErrorCount:0
 };
 function beginRouteDetailGeneration() {
@@ -1878,7 +1878,7 @@ function detailOfficialUpdateUrl(it) {
 function detailClock(iso) {
   const d = new Date(iso); return Number.isFinite(d.getTime()) ? d.toLocaleTimeString('zh-HK', { hour:'2-digit', minute:'2-digit', hour12:false }) : '—';
 }
-function detailServiceBlock(it) {
+function detailServiceBlock(it, isOpen = false) {
   const url = detailOfficialServiceUrl(it);
   const updateUrl = detailOfficialUpdateUrl(it);
   const provider = it?.co === 'KMB' ? '九巴官方路線及時間表' : it?.co === 'CTB' ? '城巴官方路線搜尋' : '運輸署專線小巴資料';
@@ -1889,7 +1889,7 @@ function detailServiceBlock(it) {
   const rows = etas.length ? etas.map((e, i) => '<div class="detail-timetable-row ' + (!i ? 'current' : '') + '"><b>' + (i === 0 ? '即將一班' : '之後一班 ' + i) + '</b><span>' + esc(detailClock(e.iso)) + '</span><small>' + esc(detailEtaLabel(e)) + '</small></div>').join('') : '<div class="detail-timetable-empty">此站暫未收到即時班次</div>';
   const validation = detailScheduleValidation(schedule, etas);
   const frequencyRows = schedule?.ranges?.length ? schedule.ranges.map(r => '<div class="detail-frequency-row"><span>' + esc(scheduleDayLabel(r.day)) + '</span><b>' + esc(scheduleClock(r.start)) + '–' + esc(scheduleClock(r.end)) + '</b><small>' + esc(scheduleFrequencyText(r.freq)) + '</small></div>').join('') : '<div class="detail-timetable-empty">官方班距讀取中或未提供</div>';
-  return '<details class="detail-service"><summary><span class="detail-service-summary-copy"><span class="detail-service-title">營運時間表及服務資料</span><small>官方班次、服務更新</small></span></summary><div class="detail-service-body"><div class="detail-timetable-head">目前時間 <b>' + esc(now) + '</b> · ' + esc(stop?.name || '所選車站') + '</div><div class="detail-timetable-head detail-schedule-head"><b>' + scheduleText + '</b></div><div class="detail-frequency-title">官方班次頻率表</div><div class="detail-frequency-table" aria-label="官方班次頻率表">' + frequencyRows + '</div><div class="detail-schedule-check ' + validation.className + '"><strong>班次參考核對：</strong>' + esc(validation.text) + '</div><div class="detail-timetable" aria-live="polite">' + rows + '</div><p class="detail-service-note"><strong>即時資料：</strong>以上係此站目前收到嘅官方 ETA，畫面會隨時間及更新結果改變；首班／尾班及班距請以官方時間表為準。</p><p class="detail-service-note"><strong>核對限制：</strong>ETA API 通常只回傳目前可見的數班車，未必等於完整發車紀錄；班次參考核對只作提示，不代表巴士公司已保證實際班次。</p><p class="detail-service-note"><strong>巴士位置估計：</strong>系統會用沿線 ETA 時間斷層及各班 ETA 順序，估計現時有幾多個行駛波段，以及每個波段大約位於邊兩個站之間；板頭數字與下方已顯示嘅估計位置同步更新。</p><a class="detail-official-update-link" href="' + esc(updateUrl) + '" target="_blank" rel="noopener">查看官方最新消息／臨時改道 ↗</a><a class="detail-service-link" href="' + esc(url) + '" target="_blank" rel="noopener">開啟 ' + esc(provider) + ' ↗</a></div></details>';
+  return '<details class="detail-service"' + (isOpen ? ' open' : '') + '><summary><span class="detail-service-summary-copy"><span class="detail-service-title">營運時間表及服務資料</span><small>官方班次、服務更新</small></span></summary><div class="detail-service-body"><div class="detail-timetable-head">目前時間 <b>' + esc(now) + '</b> · ' + esc(stop?.name || '所選車站') + '</div><div class="detail-timetable-head detail-schedule-head"><b>' + scheduleText + '</b></div><div class="detail-frequency-title">官方班次頻率表</div><div class="detail-frequency-table" aria-label="官方班次頻率表">' + frequencyRows + '</div><div class="detail-schedule-check ' + validation.className + '"><strong>班次參考核對：</strong>' + esc(validation.text) + '</div><div class="detail-timetable" aria-live="polite">' + rows + '</div><p class="detail-service-note"><strong>即時資料：</strong>以上係此站目前收到嘅官方 ETA，畫面會隨時間及更新結果改變；首班／尾班及班距請以官方時間表為準。</p><p class="detail-service-note"><strong>核對限制：</strong>ETA API 通常只回傳目前可見的數班車，未必等於完整發車紀錄；班次參考核對只作提示，不代表巴士公司已保證實際班次。</p><p class="detail-service-note"><strong>巴士位置估計：</strong>系統會用沿線 ETA 時間斷層及各班 ETA 順序，估計現時有幾多個行駛波段，以及每個波段大約位於邊兩個站之間；板頭數字與下方已顯示嘅估計位置同步更新。</p><a class="detail-official-update-link" href="' + esc(updateUrl) + '" target="_blank" rel="noopener">查看官方最新消息／臨時改道 ↗</a><a class="detail-service-link" href="' + esc(url) + '" target="_blank" rel="noopener">開啟 ' + esc(provider) + ' ↗</a></div></details>';
 }
 function detailScheduleSummary() {
   const s = routeDetailState.scheduleLabel;
@@ -2142,6 +2142,8 @@ routeDetail.addEventListener('scroll', updateRouteDetailCompact, { passive:true 
 function renderRouteDetail() {
   const it = routeDetailState.item;
   if (!it || !routeDetailBody) return;
+  const currentService = routeDetailBody.querySelector('.detail-service');
+  if (currentService) routeDetailState.serviceOpen = currentService.open;
   const selected = routeDetailState.gpsSeq || routeDetailState.selectedSeq;
   const selectedStop = routeDetailState.stops.find(s => s.seq === selected) || routeDetailState.stops[0];
   if (selectedStop) { routeDetailState.selectedSeq = selectedStop.seq; routeDetailState.selectedStopId = selectedStop.id; }
@@ -2181,7 +2183,7 @@ function renderRouteDetail() {
     '<div class="detail-section-title"><span>沿途車站列表</span><small>共 ' + routeDetailState.stops.length + ' 個站</small></div>' +
     '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const isLive = routeDetailState.gpsSeq === st.seq;
     const isTarget = getoff[uid(it)]?.active && getoff[uid(it)].targetSeq === st.seq;
-    const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected ' : '') + (isLive ? 'is-live ' : '') + (isTarget ? 'is-getoff-target' : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (isLive ? '，你而家接近呢度' : st.seq === selected ? '，已選' : '，按兩下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-content"><span class="stop-copy"><strong>' + esc(st.seq) + '　' + detailStopNameMarkup(st.name) + '</strong><small>' + esc(st.name_en || '') + '</small></span>' + '<span class="stop-state">' + (isLive ? '你而家喺呢度' : isTarget ? '落車站' : state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></span></button>'; const near = nearStation === st.seq ? '<div class="detail-between-bus" role="img" aria-label="巴士即將到站" title="巴士即將到站"><span class="bus-front-marker"></span><span class="bus-status-label">' + (nearStationEta?.sched ? '原定班次接近' : '巴士接近中') + '</span></div>' : ''; return row + near + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it);
+    const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected ' : '') + (isLive ? 'is-live ' : '') + (isTarget ? 'is-getoff-target' : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (isLive ? '，你而家接近呢度' : st.seq === selected ? '，已選' : '，按兩下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-content"><span class="stop-copy"><strong>' + esc(st.seq) + '　' + detailStopNameMarkup(st.name) + '</strong><small>' + esc(st.name_en || '') + '</small></span>' + '<span class="stop-state">' + (isLive ? '你而家喺呢度' : isTarget ? '落車站' : state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></span></button>'; const near = nearStation === st.seq ? '<div class="detail-between-bus" role="img" aria-label="巴士即將到站" title="巴士即將到站"><span class="bus-front-marker"></span><span class="bus-status-label">' + (nearStationEta?.sched ? '原定班次接近' : '巴士接近中') + '</span></div>' : ''; return row + near + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it, routeDetailState.serviceOpen);
   updateRouteDetailCompact();
   routeDetailBody.querySelector('[data-detail-gps]')?.addEventListener('click', () => startRouteDetailGps(it));
   routeDetailBody.querySelector('[data-detail-gps-stop]')?.addEventListener('click', stopRouteDetailGps);
@@ -2211,12 +2213,13 @@ function renderRouteDetail() {
     loadRouteDetailEtas(routeDetailState.item, request, routeDetailState.selectedStopId).catch(() => {}).finally(() => { if (button.isConnected) { button.disabled = false; button.textContent = '立即更新全部車站 ETA'; } });
   });
   routeDetailBody.querySelector('[data-detail-reverse]')?.addEventListener('click', switchRouteDetailDirection);
+  routeDetailBody.querySelector('.detail-service')?.addEventListener('toggle', event => { routeDetailState.serviceOpen = event.currentTarget.open; });
   updateInfoBar();
 }
 async function openRouteDetail(it, trigger) {
   routeDetailReturnFocus = trigger || document.activeElement;
   routeDetailReturnFocusId = routeDetailReturnFocus?.getAttribute?.('data-detail-id') || uid(it);
-  routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.etaHistory.clear(); routeDetailState.detailEtaLoading = false; routeDetailState.detailLastFetchAt = 0; routeDetailState.fareLabel = null; routeDetailState.sweepStatus = 'loading';
+  routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.etaHistory.clear(); routeDetailState.detailEtaLoading = false; routeDetailState.detailLastFetchAt = 0; routeDetailState.fareLabel = null; routeDetailState.scheduleLabel = null; routeDetailState.serviceOpen = false; routeDetailState.sweepStatus = 'loading';
   const request = beginRouteDetailGeneration();
   routeDetail.classList.add('on'); routeDetail.setAttribute('aria-hidden', 'false'); document.body.classList.add('detail-open'); startRouteDetailTicker();
   routeDetailBody.innerHTML = '<div class="detail-loading">載入路線站點…</div>';

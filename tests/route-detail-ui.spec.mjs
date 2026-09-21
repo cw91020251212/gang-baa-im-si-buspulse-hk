@@ -126,6 +126,19 @@ test('service accordion keeps a clear, single-line mobile heading', async ({ pag
   expect(hierarchy.titleRight).toBeLessThan(hierarchy.summaryRight - 28);
 });
 
+test('open service information stays open during detail refreshes', async ({ page }) => {
+  await prepare(page);
+  await page.locator('[data-detail-id]').click();
+  const service = page.locator('.detail-service');
+  await expect(service).toBeVisible();
+  await service.locator('summary').click();
+  await expect(service).toHaveAttribute('open', '');
+  await page.evaluate(() => renderRouteDetail());
+  await expect(page.locator('.detail-service')).toHaveAttribute('open', '');
+  await page.evaluate(() => renderRouteDetail());
+  await expect(page.locator('.detail-service')).toHaveAttribute('open', '');
+});
+
 test('schedule validation compares visible ETA count with the official headway', async ({ page }) => {
   await page.goto('./?smoke=route-detail-scheduled-cue', { waitUntil: 'domcontentloaded' });
   const result = await page.evaluate(() => ({
