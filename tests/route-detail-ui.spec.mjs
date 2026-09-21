@@ -86,7 +86,7 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('.detail-inference').first()).toContainText('估計位置');
   await expect(page.locator('.detail-reverse')).toHaveCSS('position', 'absolute');
   await expect(page.locator('.detail-service')).toContainText('營運時間表及服務資料');
-  await expect(page.locator('.detail-service')).toContainText('官方來源');
+  await expect(page.locator('.detail-service')).toContainText('官方班次、服務更新');
   await expect(page.locator('.detail-service-link')).toHaveAttribute('href', /search\.kmb\.hk/);
   await expect(page.locator('.detail-official-update-link')).toContainText('查看官方最新消息／臨時改道');
   await expect(page.locator('.detail-official-update-link')).toHaveAttribute('href', /search\.kmb\.hk/);
@@ -96,6 +96,34 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('.detail-schedule-check')).toContainText('班次參考核對');
   await expect(page.locator('.detail-meta')).toContainText('首班車：05:30');
   await expect(page.locator('.detail-meta')).toContainText('尾班車：24:20');
+});
+
+test('service accordion keeps a clear, single-line mobile heading', async ({ page }) => {
+  await page.setViewportSize({ width:375, height:812 });
+  await prepare(page);
+  await page.locator('[data-detail-id]').click();
+  await expect(page.locator('.detail-service summary')).toBeVisible();
+  const hierarchy = await page.locator('.detail-service summary').evaluate(summary => {
+    const title = summary.querySelector('.detail-service-title');
+    const subtitle = summary.querySelector('small');
+    const titleBox = title.getBoundingClientRect();
+    const subtitleBox = subtitle.getBoundingClientRect();
+    const summaryBox = summary.getBoundingClientRect();
+    return {
+      title:title.textContent, subtitle:subtitle.textContent,
+      titleHeight:titleBox.height,
+      subtitleHeight:subtitleBox.height,
+      titleTop:titleBox.top, subtitleTop:subtitleBox.top,
+      titleRight:titleBox.right, summaryRight:summaryBox.right
+    };
+  });
+  expect(hierarchy).toMatchObject({
+    title:'營運時間表及服務資料', subtitle:'官方班次、服務更新'
+  });
+  expect(hierarchy.titleHeight).toBeLessThan(26);
+  expect(hierarchy.titleHeight).toBeGreaterThan(hierarchy.subtitleHeight);
+  expect(hierarchy.subtitleTop).toBeGreaterThan(hierarchy.titleTop);
+  expect(hierarchy.titleRight).toBeLessThan(hierarchy.summaryRight - 28);
 });
 
 test('schedule validation compares visible ETA count with the official headway', async ({ page }) => {
@@ -125,6 +153,15 @@ test('Escape and browser Back close the overlay and restore the entry focus', as
   await entry.click();
   await page.goBack();
   await expect(page.locator('#routeDetail')).not.toHaveClass(/on/);
+});
+
+test('detail close restores focus after the originating card is rerendered', async ({ page }) => {
+  await prepare(page);
+  const entry = page.locator('[data-detail-id]').first();
+  await entry.click();
+  await page.evaluate(() => shell());
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name:'查看完整路線及沿途車站', exact:true })).toBeFocused();
 });
 
 test('route detail trigger is compact and does not add a text row to the card', async ({ page }) => {
