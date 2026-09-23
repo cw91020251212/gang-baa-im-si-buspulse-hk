@@ -699,18 +699,18 @@ body:not(.light) .toggle.on {
   color:#7df0b4!important;
   border-color:#36e0a0!important;
 }
-/* The floating GPS control sits on a busy map: keep its original dark family,
-   but give it an opaque surface so the label never disappears into the tiles. */
+/* The floating GPS control is deliberately separate from the map-pin button:
+   use a solid dark surface so its label stays visible over every map tile. */
 body:not(.light) .map-tools .locate-btn {
-  background:#d7dde1!important;
-  color:#17222c!important;
-  border:2px solid #08734d!important;
+  background:#182536!important;
+  color:#f4f7fb!important;
+  border:2px solid #36e0a0!important;
   box-shadow:0 2px 9px rgba(0,0,0,.5)!important;
 }
 body.light .map-tools .locate-btn {
-  background:#d7dde1!important;
-  color:#17222c!important;
-  border:2px solid #08734d!important;
+  background:#3a4652!important;
+  color:#f4f7fb!important;
+  border:2px solid #36e0a0!important;
   box-shadow:0 2px 8px rgba(30,45,58,.3)!important;
 }
 body:not(.light) .wide.danger,
@@ -725,6 +725,14 @@ body:not(.light) .detail-entry,
 body:not(.light) .pref-select {
   color:#c9d5ff!important;
   border-color:rgba(133,169,255,.72)!important;
+}
+/* The route-card map marker uses the requested light-gray button surface. */
+body:not(.light) .map-head-btn,
+body.light .map-head-btn {
+  background:#d7dde1!important;
+  color:#ed1c2b!important;
+  border:2px solid #53636e!important;
+  box-shadow:0 2px 7px rgba(0,0,0,.3)!important;
 }
 body:not(.light) .toggle{border-color:var(--line)!important;}
 body:not(.light) .toggle.on{border-color:#36e0a0!important;}
