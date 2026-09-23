@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('custom route segment uses fresh endpoint ETAs', async ({ page }) => {
+test('custom route segment uses fixed station-to-station distance timing', async ({ page }) => {
   await page.goto('./?smoke=route-detail-custom', { waitUntil: 'domcontentloaded' });
   const result = await page.evaluate(() => {
     const now = Date.now();
@@ -18,7 +18,7 @@ test('custom route segment uses fresh endpoint ETAs', async ({ page }) => {
     const invalid = customTripResult(stops, etaByStop, 3, 1, now);
     return { status:live.status, minutes:live.minutes, invalid:invalid.status };
   });
-  expect(result).toEqual({ status:'live', minutes:15, invalid:'invalid' });
+  expect(result).toEqual({ status:'estimate', minutes:18, invalid:'invalid' });
 });
 
 test('custom route segment falls back to distance estimate when ETA is unavailable', async ({ page }) => {
@@ -33,7 +33,7 @@ test('custom route segment falls back to distance estimate when ETA is unavailab
   });
   expect(result.status).toBe('estimate');
   expect(result.minutes).toBe(30);
-  expect(result.text).toContain('非即時行車時間');
+  expect(result.text).toContain('按站與站之間距離估算');
 });
 
 test('route detail shows custom origin and destination controls', async ({ page }) => {
@@ -56,14 +56,17 @@ test('route detail shows custom origin and destination controls', async ({ page 
     routeDetailBody.querySelector('[data-custom-pick-seq="1"]')?.click();
     const switchedToDestination = routeDetailBody.querySelector('[data-custom-mode="to"]')?.classList.contains('active');
     routeDetailBody.querySelector('[data-custom-pick-seq="2"]')?.click();
+    const remainsOpenAfterPick = Boolean(routeDetailBody.querySelector('.custom-picker-drawer'));
+    routeDetailBody.querySelector('.custom-picker-close')?.click();
     return {
       from:routeDetailState.customFromSeq,
       to:routeDetailState.customToSeq,
       opened,
       title,
       switchedToDestination,
+      remainsOpenAfterPick,
       closed:!routeDetailBody.querySelector('.custom-picker-drawer')
     };
   });
-  expect(result).toEqual({ from:1, to:2, opened:true, title:'車程', switchedToDestination:true, closed:true });
+  expect(result).toEqual({ from:1, to:2, opened:true, title:'車程', switchedToDestination:true, remainsOpenAfterPick:true, closed:true });
 });
