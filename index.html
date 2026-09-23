@@ -2251,8 +2251,18 @@ function centerDetailStop(seq) {
   if (!button || !routeDetail) return;
   const viewport = routeDetail.getBoundingClientRect();
   const target = button.getBoundingClientRect();
-  const top = routeDetail.scrollTop + target.top - viewport.top - (routeDetail.clientHeight - target.height) / 2;
-  routeDetail.scrollTo({ top: Math.max(0, top), behavior:'smooth' });
+  const targetCenter = target.top - viewport.top + target.height / 2;
+  const viewportCenter = routeDetail.clientHeight / 2;
+  const delta = targetCenter - viewportCenter;
+  if (Math.abs(delta) < 8) return;
+  const maxTop = Math.max(0, routeDetail.scrollHeight - routeDetail.clientHeight);
+  routeDetail.scrollTo({ top: Math.max(0, Math.min(maxTop, routeDetail.scrollTop + delta)), behavior:'smooth' });
+}
+function scheduleCenterDetailStop(seq) {
+  [0, 80, 220, 500].forEach(delay => window.setTimeout(() => centerDetailStop(seq), delay));
+  window.setTimeout(() => {
+    if (routeDetailState.pendingCenterStopSeq === seq) routeDetailState.pendingCenterStopSeq = null;
+  }, 700);
 }
 routeDetail.addEventListener('scroll', updateRouteDetailCompact, { passive:true });
 function renderRouteDetail() {
@@ -2322,10 +2332,9 @@ function renderRouteDetail() {
   routeDetailBody.querySelectorAll('[data-detail-stop]').forEach(button => button.addEventListener('click', () => {
     const stop = routeDetailState.stops.find(s => String(s.seq) === button.dataset.detailStop);
     if (!stop) return;
-    routeDetailState.selectedSeq = stop.seq; routeDetailState.selectedStopId = stop.id; renderRouteDetail();
+    routeDetailState.selectedSeq = stop.seq; routeDetailState.selectedStopId = stop.id; routeDetailState.pendingCenterStopSeq = stop.seq; renderRouteDetail();
     const selectedButton = routeDetailBody.querySelector('[data-detail-stop="' + cssEscape(String(stop.seq)) + '"]');
     selectedButton?.focus({ preventScroll:true });
-    requestAnimationFrame(() => centerDetailStop(stop.seq));
   }));
   routeDetailBody.querySelectorAll('[data-detail-stop]').forEach(button => button.addEventListener('keydown', event => {
     if (!['ArrowDown','ArrowUp'].includes(event.key)) return;
@@ -2348,6 +2357,7 @@ function renderRouteDetail() {
   });
   routeDetailBody.querySelector('[data-detail-reverse]')?.addEventListener('click', switchRouteDetailDirection);
   routeDetailBody.querySelector('.detail-service')?.addEventListener('toggle', event => { routeDetailState.serviceOpen = event.currentTarget.open; });
+  if (routeDetailState.pendingCenterStopSeq != null) scheduleCenterDetailStop(routeDetailState.pendingCenterStopSeq);
   updateInfoBar();
 }
 async function openRouteDetail(it, trigger) {
@@ -2397,7 +2407,7 @@ function shell() {
       '<span class="chead-actions">' +
       '<button class="getoff-btn ' + (getoff[uid(it)]?.active ? 'on' : '') + '" data-getoff-id="' + id + '" title="設定落車提醒">' + (getoff[uid(it)]?.active ? '落車中' : '落車') + '</button>' +
       '<button class="alarm-btn ' + (alarms[uid(it)] ? 'on' : '') + '" data-alarm-id="' + id + '" title="' + (alarms[uid(it)] === true ? '關閉到站提醒' : '開啟到站提醒') + '" aria-label="' + (alarms[uid(it)] === true ? '關閉到站提醒' : '開啟到站提醒') + '" aria-pressed="' + String(alarms[uid(it)] === true) + '">🔔</button>' +
-      '<button class="map-head-btn" data-map-id="' + id + '" title="查看路線地圖" aria-label="查看路線地圖"><svg class="map-pin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z"/></svg></button>' +
+      '<button class="map-head-btn" data-map-id="' + id + '" title="查看路線地圖" aria-label="查看路線地圖" style="background:#000!important;color:#ff7182!important;border-color:#ff7182!important"><svg class="map-pin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z"/></svg></button>' +
       '</span>' +
       '</div>' +
       '<div class="stop"><button class="stop-edit" data-edit-stop="' + id + '" title="更改上車站">&#128205; <b>' + esc(it.stopName || '') + '</b></button><a class="fare" data-fare="' + id + '" title="官方全程車資">全程車資：讀取中</a><button class="detail-entry" data-detail-id="' + id + '" type="button" title="查看完整路線及沿途車站" aria-label="查看完整路線及沿途車站"><svg class="detail-expand-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 12 3 3M3 8V3h5"/><path d="M12 12 21 3M16 3h5v5"/><path d="M12 12 3 21M3 16v5h5"/><path d="M12 12 21 21M16 21h5v-5"/></svg></button></div>' +
