@@ -699,6 +699,20 @@ body:not(.light) .toggle.on {
   color:#7df0b4!important;
   border-color:#36e0a0!important;
 }
+/* The floating GPS control sits on a busy map: keep its original dark family,
+   but give it an opaque surface so the label never disappears into the tiles. */
+body:not(.light) .map-tools .locate-btn {
+  background:#182536!important;
+  color:#7df0b4!important;
+  border:2px solid #36e0a0!important;
+  box-shadow:0 2px 9px rgba(0,0,0,.5)!important;
+}
+body.light .map-tools .locate-btn {
+  background:#dbe7ef!important;
+  color:#075f3d!important;
+  border:2px solid #08734d!important;
+  box-shadow:0 2px 8px rgba(30,45,58,.3)!important;
+}
 body:not(.light) .wide.danger,
 body:not(.light) .notification-toggle.notification-off,
 body:not(.light) .notification-toggle.notification-warn,
