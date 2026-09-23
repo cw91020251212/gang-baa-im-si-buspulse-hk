@@ -174,7 +174,7 @@ body.light .alarm-btn.on{color:#704b00;background:#fff7df;border-color:#b58b20}
 body.light .map-head-btn,body.light .detail-entry{color:#244f91;background:#e4edff;border-color:#6f94c5}
 body.light .eta .u,body.light .eta .t{color:#40516a}
 .map-actions{padding:0 13px 12px 15px}
-.map-toggle{width:100%;border:1px solid rgba(133,169,255,.28);background:rgba(108,140,255,.1);color:#b9c9ff;border-radius:10px;padding:9px 11px;font:700 11.5px inherit;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between}.map-head-btn{width:28px;height:28px;border:1px solid rgba(133,169,255,.28);background:rgba(108,140,255,.1);color:#b9c9ff;border-radius:8px;font:700 14px inherit;cursor:pointer;flex:none;display:grid;place-items:center}.map-head-btn:active{transform:scale(.94)}.map-pin-icon{display:block;width:16px;height:20px;fill:#ed1c2b}
+.map-toggle{width:100%;border:1px solid rgba(133,169,255,.28);background:rgba(108,140,255,.1);color:#b9c9ff;border-radius:10px;padding:9px 11px;font:700 11.5px inherit;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between}.map-head-btn{width:28px;height:28px;border:1px solid #ff7182;background:#3f474d;color:#ff7182;border-radius:8px;font:700 14px inherit;cursor:pointer;flex:none;display:grid;place-items:center}.map-head-btn:active{transform:scale(.94)}.map-pin-icon{display:block;width:16px;height:20px;fill:#ff7182}
 .map-toggle:active{transform:scale(.99);background:rgba(108,140,255,.18)}
 .map-toggle .map-arrow{font-size:15px;line-height:1;transition:transform .2s ease}.map-toggle.open .map-arrow{transform:rotate(180deg)}
 .map-wrap{display:none;position:relative;margin:0 13px 12px 15px;border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#dbe7ef}
@@ -734,8 +734,9 @@ body:not(.light) .pref-select {
 body:not(.light) .map-head-btn,
 body.light .map-head-btn {
   background:#3f474d!important;
-  color:#ed1c2b!important;
-  border:2px solid #ff625c!important;
+  color:#ff7182!important;
+  border:1px solid #ff7182!important;
+  font-weight:700!important;
   box-shadow:0 2px 7px rgba(0,0,0,.3)!important;
 }
 body:not(.light) .toggle{border-color:var(--line)!important;}
