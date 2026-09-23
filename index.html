@@ -170,7 +170,7 @@ body.light .alarm-btn.on{color:#704b00;background:#fff7df;border-color:#b58b20}
 body.light .map-head-btn,body.light .detail-entry{color:#244f91;background:#e4edff;border-color:#6f94c5}
 body.light .eta .u,body.light .eta .t{color:#40516a}
 .map-actions{padding:0 13px 12px 15px}
-.map-toggle{width:100%;border:1px solid rgba(133,169,255,.28);background:rgba(108,140,255,.1);color:#b9c9ff;border-radius:10px;padding:9px 11px;font:700 11.5px inherit;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between}.map-head-btn{width:28px;height:28px;border:1px solid rgba(133,169,255,.28);background:rgba(108,140,255,.1);color:#b9c9ff;border-radius:8px;font:700 14px inherit;cursor:pointer;flex:none}.map-head-btn:active{transform:scale(.94)}
+.map-toggle{width:100%;border:1px solid rgba(133,169,255,.28);background:rgba(108,140,255,.1);color:#b9c9ff;border-radius:10px;padding:9px 11px;font:700 11.5px inherit;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between}.map-head-btn{width:28px;height:28px;border:1px solid rgba(133,169,255,.28);background:rgba(108,140,255,.1);color:#b9c9ff;border-radius:8px;font:700 14px inherit;cursor:pointer;flex:none;display:grid;place-items:center}.map-head-btn:active{transform:scale(.94)}.map-pin-icon{display:block;width:16px;height:20px;fill:#ed1c2b}
 .map-toggle:active{transform:scale(.99);background:rgba(108,140,255,.18)}
 .map-toggle .map-arrow{font-size:15px;line-height:1;transition:transform .2s ease}.map-toggle.open .map-arrow{transform:rotate(180deg)}
 .map-wrap{display:none;margin:0 13px 12px 15px;border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#dbe7ef}
@@ -2350,7 +2350,7 @@ function shell() {
         '<span class="dest">往 ' + esc(it.dest || '') + '</span>' +
       '<button class="getoff-btn ' + (getoff[uid(it)]?.active ? 'on' : '') + '" data-getoff-id="' + id + '" title="設定落車提醒">' + (getoff[uid(it)]?.active ? '落車中' : '落車') + '</button>' +
       '<button class="alarm-btn ' + (alarms[uid(it)] ? 'on' : '') + '" data-alarm-id="' + id + '" title="' + (alarms[uid(it)] === true ? '關閉到站提醒' : '開啟到站提醒') + '" aria-label="' + (alarms[uid(it)] === true ? '關閉到站提醒' : '開啟到站提醒') + '" aria-pressed="' + String(alarms[uid(it)] === true) + '">🔔</button>' +
-      '<button class="map-head-btn" data-map-id="' + id + '" title="查看路線地圖" aria-label="查看路線地圖">⌖</button>' +
+      '<button class="map-head-btn" data-map-id="' + id + '" title="查看路線地圖" aria-label="查看路線地圖"><svg class="map-pin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z"/></svg></button>' +
       '</div>' +
       '<div class="stop"><button class="stop-edit" data-edit-stop="' + id + '" title="更改上車站">&#128205; <b>' + esc(it.stopName || '') + '</b></button><a class="fare" data-fare="' + id + '" title="官方全程車資">全程車資：讀取中</a><button class="detail-entry" data-detail-id="' + id + '" type="button" title="查看完整路線及沿途車站" aria-label="查看完整路線及沿途車站"><svg class="detail-expand-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 12 3 3M3 8V3h5"/><path d="M12 12 21 3M16 3h5v5"/><path d="M12 12 3 21M3 16v5h5"/><path d="M12 12 21 21M16 21h5v-5"/></svg></button></div>' +
 	      '<div class="etas" data-slot="' + id + '">' +
