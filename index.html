@@ -173,8 +173,8 @@ body.light .eta .u,body.light .eta .t{color:#40516a}
 .map-toggle{width:100%;border:1px solid rgba(133,169,255,.28);background:rgba(108,140,255,.1);color:#b9c9ff;border-radius:10px;padding:9px 11px;font:700 11.5px inherit;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between}.map-head-btn{width:28px;height:28px;border:1px solid rgba(133,169,255,.28);background:rgba(108,140,255,.1);color:#b9c9ff;border-radius:8px;font:700 14px inherit;cursor:pointer;flex:none;display:grid;place-items:center}.map-head-btn:active{transform:scale(.94)}.map-pin-icon{display:block;width:16px;height:20px;fill:#ed1c2b}
 .map-toggle:active{transform:scale(.99);background:rgba(108,140,255,.18)}
 .map-toggle .map-arrow{font-size:15px;line-height:1;transition:transform .2s ease}.map-toggle.open .map-arrow{transform:rotate(180deg)}
-.map-wrap{display:none;margin:0 13px 12px 15px;border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#dbe7ef}
-.map-wrap.open{display:block}.map-tools{display:flex;gap:7px;padding:8px;background:rgba(16,24,39,.95)}.locate-btn{border:1px solid rgba(99,216,137,.35);background:rgba(99,216,137,.12);color:#a7f1bf;border-radius:9px;padding:8px 10px;font:700 11px inherit;cursor:pointer}.locate-btn:active{transform:scale(.98)}.route-map{height:250px;width:100%;z-index:1}.map-live-note{padding:7px 10px;background:rgba(0,229,138,.08);color:#a7f1bf;font-size:10.5px;line-height:1.45;border-top:1px solid rgba(99,216,137,.2)}.map-note{padding:7px 10px;background:rgba(16,24,39,.94);color:var(--faint);font-size:10px;line-height:1.4}
+.map-wrap{display:none;position:relative;margin:0 13px 12px 15px;border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#dbe7ef}
+.map-wrap.open{display:block}.map-tools{position:absolute;top:10px;right:10px;z-index:500;padding:0;background:transparent}.locate-btn{border:1px solid rgba(99,216,137,.35);background:rgba(99,216,137,.12);color:#a7f1bf;border-radius:9px;padding:8px 10px;font:700 11px inherit;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.24)}.locate-btn:active{transform:scale(.98)}.route-map{height:320px;width:100%;z-index:1}.map-live-note,.map-note{display:none!important}
 .map-loading{height:250px;display:grid;place-items:center;color:#53657e;font-size:12px}
 .leaflet-container{font-family:inherit}.route-map .leaflet-tile-pane{filter:grayscale(1) contrast(.82) brightness(1.08)}.route-map .leaflet-control-zoom{margin:14px 0 0 14px;border:0;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.25)}.route-map .leaflet-control-zoom a{width:44px;height:44px;line-height:42px;color:#202020;background:rgba(224,224,224,.94);border:0;border-bottom:1px solid rgba(60,60,60,.2);font-size:28px;font-weight:700}.route-map .leaflet-control-zoom a:last-child{border-bottom:0}.route-map .leaflet-control-zoom a:hover{background:#f2f2f2}.route-map .leaflet-control-attribution{background:rgba(235,235,235,.72);color:#4c4c4c;font-size:8px}.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#17233a;color:#f4f7fb}.leaflet-popup-content{font-size:12px;line-height:1.5}.popup-select{margin-top:5px;border:0;border-radius:7px;padding:6px 9px;background:var(--now);color:#071a14;font:700 11px inherit;cursor:pointer}.image-stop-marker-wrap{background:transparent;border:0}.image-stop-marker{display:block;position:relative;width:30px;height:25px;border:2px solid #151515;border-radius:8px;background:#3b3b3b;box-shadow:0 2px 3px rgba(0,0,0,.42)}.image-stop-marker:before{content:"";position:absolute;left:5px;right:5px;top:7px;height:5px;border-radius:2px;background:#c9c9c9}.image-stop-marker:after{content:"";position:absolute;left:11px;bottom:-8px;width:5px;height:8px;background:#222}.image-stop-marker.selected{background:#262626;border-color:#e51f2d;box-shadow:0 0 0 2px rgba(229,31,45,.45),0 2px 4px rgba(0,0,0,.48)}.image-stop-marker.selected:before{background:#f4d27a}
 	.detail-entry{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border:1px solid rgba(108,140,255,.35);background:rgba(108,140,255,.1);color:#bdcaff;border-radius:8px;padding:0;margin:0;font:800 15px/1 inherit;cursor:pointer}.detail-entry:active{transform:scale(.92)}
@@ -771,10 +771,11 @@ body .stop-copy small,
 body .stop-copy small * {
   color: #8f98a3 !important;
 }
-/* Dark mode readability: colored text gets a restrained shadow; near-black text remains clean. */
+/* Dark mode keeps the existing display-text treatment; map labels override it below. */
 body:not(.light) * {
   text-shadow: 0 1px 2px rgba(0,0,0,.78);
 }
+.route-map,.route-map *,.map-tools,.map-tools * { text-shadow:none !important; }
 /* Black/near-black labels must stay crisp, including nested label elements.
    Keep the colored-text shadow above, but never apply it to dark-on-light controls. */
 body.light *,
@@ -2638,7 +2639,7 @@ async function openGetoffSetup(it) {
     sBody.innerHTML = '<div class="lbl">' + esc(it.route) + ' · ' + esc(it.dest || '') + '</div>' +
       '<div class="hint">揀你想落車嘅站。開始後，手機會用 GPS 判斷你接近目標站；GPS 只會喺你主動開始後使用。</div>' +
       '<button class="wide" id="getoffMapBtn">🗺 地圖揀站</button>' +
-      '<div class="map-wrap" id="getoffMapWrap"><div class="route-map"></div><div class="map-note">撳地圖上任何圓圈，再撳「用呢個站」即可開始落車提醒。</div></div>' +
+      '<div class="map-wrap" id="getoffMapWrap"><div class="route-map"></div></div>' +
       '<div class="list">' + stops.map((st, i) => '<button class="li sm" data-getoff-stop="' + i + '"><span class="n">' + st.seq + '</span><span class="d">' + esc(st.name) + '</span><span class="a">' + (getoff[uid(it)]?.targetSeq === st.seq ? '✓' : '›') + '</span></button>').join('') + '</div>' +
       (getoff[uid(it)]?.active ? '<button class="wide" id="stopGetoff">停止落車提醒</button>' : '') +
       '<button class="wide" id="cancelGetoff">← 返回</button>';
@@ -2917,8 +2918,6 @@ async function toggleMap(it, button) {
       marker.addTo(map);
     });
     map.fitBounds(L.latLngBounds(points), { padding: [18, 18], maxZoom: 15 });
-    const note = document.createElement('div'); note.className = 'map-note'; note.textContent = '撳「開啟 GPS」可持續顯示你嘅位置、最近站及下一站；地圖唔會自動彈出。'; wrap.appendChild(note);
-    const liveNote = document.createElement('div'); liveNote.className = 'map-live-note'; liveNote.dataset.liveNote = id; liveNote.textContent = '需要時先撳上面「開啟 GPS」，定位權限只會喺你主動撳掣後詢問。'; wrap.appendChild(liveNote);
     const locateBtn = wrap.querySelector('[data-locate-id="' + cssEscape(id) + '"]');
     if (locateBtn) locateBtn.addEventListener('click', () => toggleLiveRouteGPS(it, map, stops, locateBtn));
     mapCache.set(id, map);
@@ -3559,7 +3558,7 @@ async function viewStops(v) {
     '<div class="lbl">' + esc(v.dirLabel) + '</div>' +
     '<div class="nearby-stop-picker"><button class="wide p" type="button" id="nearbyStopBtn">⌖ 我喺車站：自動找最近站</button><div class="hint">只會喺你撳掣後要求手機定位；程式會由呢條路線嘅站頭中找最近一個，再畀你確認。</div><div class="nearby-stop-result" id="nearbyStopResult" aria-live="polite"></div></div>' +
     '<div class="map-actions" style="padding:0 0 10px"><button class="map-toggle" id="setupMapBtn"><span>🗺 先睇全條路線地圖</span><span class="map-arrow">⌄</span></button></div>' +
-    '<div class="map-wrap" id="setupMapWrap"><div class="map-tools"><button class="locate-btn" id="locateBtn">⌖ 定位我附近</button></div><div class="route-map"></div><div class="map-note">藍線按道路網絡模擬，撳任何站點可以睇站名。</div></div>' +
+    '<div class="map-wrap" id="setupMapWrap"><div class="map-tools"><button class="locate-btn" id="locateBtn">⌖ 定位我附近</button></div><div class="route-map"></div></div>' +
     '<div class="hint" style="margin:0 0 10px">' + (v.editId ? '揀新上車站，會直接更新原有路線卡，不會新增路線。' : '唔知站名可以先撳上面「自動找最近站」，或者喺下面手動揀你上車嗰個站。') + '（' + stops.length + ' 個）</div>' +
     '<div class="list">' + stops.map((s, i) =>
       '<button class="li sm" data-s="' + i + '">' +
