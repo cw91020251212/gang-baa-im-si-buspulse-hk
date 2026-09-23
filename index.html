@@ -352,8 +352,9 @@ body.light .nearby-stop-picker{background:rgba(8,115,77,.06);border-color:rgba(8
 .detail-eta small{font-size:9px;margin-top:3px;}
 .detail-live-dock .detail-status{margin-top:6px;padding:7px 9px;font-size:10px;}
 .detail-live-dock.compact{top:57px;padding:5px 4px 7px;background:color-mix(in srgb,var(--bg-deep) 99%,transparent);box-shadow:0 5px 14px rgba(0,0,0,.12);}
-.detail-live-dock.compact .detail-current,.detail-live-dock.compact .detail-status{display:none;}
-.detail-live-dock.compact .detail-gps-panel{display:none;}
+.detail-live-dock .detail-current,.detail-live-dock .detail-status,.detail-live-dock .detail-gps-panel{max-height:420px;overflow:hidden;opacity:1;visibility:visible;transform:translateY(0);transition:max-height .38s ease,opacity .3s ease,visibility 0s linear 0s,transform .38s ease,margin .38s ease,padding .38s ease;}
+.detail-live-dock.compact .detail-current,.detail-live-dock.compact .detail-status{max-height:0;margin-top:0;margin-bottom:0;padding-top:0;padding-bottom:0;opacity:0;visibility:hidden;transform:translateY(-14px);pointer-events:none;transition-delay:0s,.08s,.38s,0s,0s,0s;}
+.detail-live-dock.compact .detail-gps-panel{max-height:0;margin-top:0;margin-bottom:0;padding-top:0;padding-bottom:0;opacity:0;visibility:hidden;transform:translateY(-14px);pointer-events:none;transition-delay:0s,.08s,.38s,0s,0s,0s;}
 .detail-live-dock.compact .detail-eta{min-height:62px;padding:7px 4px;}
 .detail-live-dock.compact .detail-eta strong{font-size:18px;}
 .detail-live-dock.compact .detail-eta-panel{gap:5px;margin:0;}
@@ -800,6 +801,7 @@ body.light *,
 .detail-service-title{font-size:16px;font-weight:900;line-height:1.35;white-space:nowrap}
 .detail-service summary small{display:block;font-size:12px !important;line-height:1.35;color:var(--faint);font-weight:650}
 .detail-service summary:after{flex:0 0 auto;margin-left:auto}
+.custom-trip-control{display:inline-flex;vertical-align:middle;margin-top:10px}.custom-trip-open{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid rgba(255,211,90,.48);border-radius:999px;background:rgba(255,211,90,.09);color:#ffd35a;font:800 10px inherit;cursor:pointer}.custom-trip-open span{display:inline-flex;align-items:center;gap:5px;min-width:0}.custom-trip-open b{font-size:11px}.custom-trip-open small{display:none}.custom-trip-open strong{font-size:10px}.custom-trip-open:focus-visible{outline:3px solid #ffd35a;outline-offset:2px}
 </style>
 </head>
 <body>
@@ -1852,7 +1854,7 @@ function customTripPanel(stops) {
     : result.status === 'estimate'
       ? '<strong>' + esc(result.text) + '</strong><small>固定按站點間距離估算，並非即時 API 到站時間。</small>'
       : '<strong>' + esc(result.text) + '</strong>';
-  return '<section class="custom-trip-panel" aria-labelledby="customTripTitle"><div class="detail-section-title" id="customTripTitle"><span>自訂起點／終點</span><small>點擊時間線選擇</small></div><button class="custom-trip-open" type="button" data-custom-open aria-label="開啟自訂起點及終點選擇"><span><b>' + esc(from.name) + '</b><small>起點　→　' + esc(to.name) + '　終點</small></span><strong>選擇</strong></button><div class="custom-trip-result ' + esc(result.status) + '" role="status" aria-live="polite">' + details + '</div>' + (routeDetailState.customPickerOpen ? customTripPickerDrawer(ordered, firstSeq, toSeq) : '') + '</section>';
+  return '<div class="custom-trip-control"><button class="custom-trip-open" type="button" data-custom-open aria-label="開啟車程起點及終點選擇" title="' + esc(from.name) + ' → ' + esc(to.name) + '"><span><b>↔ 車程</b></span><strong>設定</strong></button>' + (routeDetailState.customPickerOpen ? customTripPickerDrawer(ordered, firstSeq, toSeq) : '') + '</div>';
 }
 function customTripPickerDrawer(stops, fromSeq, toSeq) {
   const mode = routeDetailState.customPickerMode === 'to' ? 'to' : 'from';
@@ -2244,12 +2246,11 @@ function renderRouteDetail() {
   }
   routeDetailBody.classList.remove('detail-loading');
   routeDetailBody.innerHTML =
-    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><div class="detail-meta-row"><span class="summary-count">共 ' + routeDetailState.stops.length + ' 個站</span><span class="summary-buses" title="按同一輪 ETA 逐段推算">ETA 推算行駛中：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 部' : '讀取中') + '</span></div><div class="detail-meta-row"><span class="summary-coverage">' + detailEtaCoverageText() + '</span></div><div class="detail-meta-row"><span class="summary-schedule">' + detailScheduleSummary() + '</span></div><div class="detail-meta-row"><span class="summary-fare">全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + '</div>' +
+    '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><div class="detail-meta-row"><span class="summary-count">共 ' + routeDetailState.stops.length + ' 個站</span><span class="summary-buses" title="按同一輪 ETA 逐段推算">ETA 推算行駛中：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 部' : '讀取中') + '</span></div><div class="detail-meta-row"><span class="summary-coverage">' + detailEtaCoverageText() + '</span></div><div class="detail-meta-row"><span class="summary-schedule">' + detailScheduleSummary() + '</span></div><div class="detail-meta-row"><span class="summary-fare">全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + customTripPanel(routeDetailState.stops) + '</div>' +
     '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
     detailGpsPanel(it, current) +
     detailEtaPanel(current) +
     '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +
-    customTripPanel(routeDetailState.stops) +
     '<div class="detail-section-title"><span>沿途車站列表</span><small>共 ' + routeDetailState.stops.length + ' 個站</small></div>' +
     '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const isLive = routeDetailState.gpsSeq === st.seq;
     const isTarget = getoff[uid(it)]?.active && getoff[uid(it)].targetSeq === st.seq;
