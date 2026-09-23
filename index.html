@@ -176,7 +176,7 @@ body.light .eta .u,body.light .eta .t{color:#40516a}
 .map-wrap{display:none;margin:0 13px 12px 15px;border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#dbe7ef}
 .map-wrap.open{display:block}.map-tools{display:flex;gap:7px;padding:8px;background:rgba(16,24,39,.95)}.locate-btn{border:1px solid rgba(99,216,137,.35);background:rgba(99,216,137,.12);color:#a7f1bf;border-radius:9px;padding:8px 10px;font:700 11px inherit;cursor:pointer}.locate-btn:active{transform:scale(.98)}.route-map{height:250px;width:100%;z-index:1}.map-live-note{padding:7px 10px;background:rgba(0,229,138,.08);color:#a7f1bf;font-size:10.5px;line-height:1.45;border-top:1px solid rgba(99,216,137,.2)}.map-note{padding:7px 10px;background:rgba(16,24,39,.94);color:var(--faint);font-size:10px;line-height:1.4}
 .map-loading{height:250px;display:grid;place-items:center;color:#53657e;font-size:12px}
-.leaflet-container{font-family:inherit}.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#17233a;color:#f4f7fb}.leaflet-popup-content{font-size:12px;line-height:1.5}.leaflet-control-zoom a{color:#23344e}.popup-select{margin-top:5px;border:0;border-radius:7px;padding:6px 9px;background:var(--now);color:#071a14;font:700 11px inherit;cursor:pointer}
+.leaflet-container{font-family:inherit}.route-map .leaflet-tile-pane{filter:grayscale(1) contrast(.82) brightness(1.08)}.route-map .leaflet-control-zoom{margin:14px 0 0 14px;border:0;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.25)}.route-map .leaflet-control-zoom a{width:44px;height:44px;line-height:42px;color:#202020;background:rgba(224,224,224,.94);border:0;border-bottom:1px solid rgba(60,60,60,.2);font-size:28px;font-weight:700}.route-map .leaflet-control-zoom a:last-child{border-bottom:0}.route-map .leaflet-control-zoom a:hover{background:#f2f2f2}.route-map .leaflet-control-attribution{background:rgba(235,235,235,.72);color:#4c4c4c;font-size:8px}.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#17233a;color:#f4f7fb}.leaflet-popup-content{font-size:12px;line-height:1.5}.popup-select{margin-top:5px;border:0;border-radius:7px;padding:6px 9px;background:var(--now);color:#071a14;font:700 11px inherit;cursor:pointer}.image-stop-marker-wrap{background:transparent;border:0}.image-stop-marker{display:block;position:relative;width:30px;height:25px;border:2px solid #151515;border-radius:8px;background:#3b3b3b;box-shadow:0 2px 3px rgba(0,0,0,.42)}.image-stop-marker:before{content:"";position:absolute;left:5px;right:5px;top:7px;height:5px;border-radius:2px;background:#c9c9c9}.image-stop-marker:after{content:"";position:absolute;left:11px;bottom:-8px;width:5px;height:8px;background:#222}.image-stop-marker.selected{background:#262626;border-color:#e51f2d;box-shadow:0 0 0 2px rgba(229,31,45,.45),0 2px 4px rgba(0,0,0,.48)}.image-stop-marker.selected:before{background:#f4d27a}
 	.detail-entry{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border:1px solid rgba(108,140,255,.35);background:rgba(108,140,255,.1);color:#bdcaff;border-radius:8px;padding:0;margin:0;font:800 15px/1 inherit;cursor:pointer}.detail-entry:active{transform:scale(.92)}
 .route-detail{position:fixed;inset:0;z-index:120;background:var(--bg);color:var(--tx);display:none;overflow:auto;overscroll-behavior:contain;padding-bottom:calc(24px + var(--safe-b))}.route-detail.on{display:block}.route-detail-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:calc(8px + var(--safe-t)) 13px 9px;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}.route-detail-head h2{font-size:16px;line-height:1.15;flex:1;min-width:0}.route-detail-head small{display:block;color:var(--faint);font-size:10px;margin-top:3px;font-weight:600}.detail-back{width:40px;height:40px;border:1px solid var(--line);background:var(--card);color:var(--tx);border-radius:11px;font:800 20px inherit;cursor:pointer}.route-detail-inner{max-width:680px;margin:0 auto;padding:0 13px}.detail-summary{padding:14px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(135deg,var(--card),var(--card2));margin-bottom:10px}.detail-live-dock{position:sticky;top:57px;z-index:3;padding:4px 0 8px;background:color-mix(in srgb,var(--bg) 99%,transparent);backdrop-filter:blur(14px);margin:0 -2px 4px;isolation:isolate}.detail-live-dock .detail-current{margin:0 0 7px}.detail-live-dock .detail-eta-panel{margin:0 0 7px}.detail-live-dock .detail-status{box-shadow:0 4px 14px rgba(0,0,0,.12)}.detail-route-line{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:850}.detail-route-line .arrow{color:var(--dim)}.detail-meta{display:flex;flex-wrap:wrap;gap:6px 13px;margin-top:8px;color:var(--dim);font-size:11.5px}.detail-reverse{margin-top:10px;border:1px solid rgba(54,224,160,.36);border-radius:9px;background:rgba(54,224,160,.08);color:var(--now);padding:8px 11px;font:800 11px inherit;cursor:pointer}.detail-reverse:focus-visible{outline:3px solid var(--now);outline-offset:2px}.detail-current{padding:11px 13px;border:1px solid rgba(54,224,160,.36);border-radius:13px;background:rgba(54,224,160,.08);margin:10px 0}.detail-current-label{font-size:10px;color:var(--now);font-weight:800;letter-spacing:.04em}.detail-current-name{font-size:16px;font-weight:800;margin-top:4px}.detail-bus-status{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:4px 8px;border-radius:999px;background:rgba(54,224,160,.12);color:var(--now);font-size:10.5px;font-weight:800}.detail-bus-status b{font-size:14px}.detail-eta-panel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:10px 0}.detail-eta{min-width:0;min-height:84px;padding:9px 6px;border:1px solid var(--line);border-radius:12px;background:var(--card);text-align:center}.detail-eta strong{display:block;font-size:19px;line-height:1.1;font-variant-numeric:tabular-nums}.detail-eta span{display:block;color:var(--faint);font-size:10px;margin-top:5px}.detail-eta small{display:block;color:var(--dim);font-size:9.5px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.detail-eta:first-child{border-color:rgba(54,224,160,.45);background:rgba(54,224,160,.08)}.detail-status{padding:8px 10px;border-radius:9px;background:var(--card);color:var(--dim);font-size:11px;line-height:1.45}.detail-retry{display:block;margin-top:7px;border:1px solid var(--line);border-radius:8px;background:var(--card2);color:var(--tx);padding:6px 8px;font:700 10.5px inherit;cursor:pointer}.detail-refresh{display:block;margin-top:7px;border:1px solid rgba(108,140,255,.35);border-radius:8px;background:rgba(108,140,255,.08);color:var(--dim);padding:6px 8px;font:700 10.5px inherit;cursor:pointer}.detail-refresh:disabled{opacity:.55;cursor:wait}.detail-retry:focus-visible,.stop-row:focus-visible,.detail-back:focus-visible{outline:3px solid var(--now);outline-offset:2px}.detail-section-title{display:flex;justify-content:space-between;align-items:baseline;margin:17px 2px 8px;font-weight:850}.detail-section-title small{color:var(--faint);font-size:10px;font-weight:600}.stop-timeline{position:relative;z-index:0;padding:3px 0 10px}.stop-timeline:before{content:"";position:absolute;left:18px;top:18px;bottom:18px;width:2px;background:var(--line)}.stop-row{position:relative;display:flex;align-items:stretch;gap:11px;width:100%;min-height:66px;padding:7px 7px 7px 0;border:1px solid transparent;border-radius:13px;background:transparent;color:var(--tx);text-align:left;font:inherit;cursor:pointer}.stop-row:active{transform:scale(.995)}.stop-row.is-selected{border-color:rgba(54,224,160,.42);background:rgba(54,224,160,.08)}.stop-dot{position:relative;z-index:1;flex:0 0 38px;display:grid;place-items:center}.stop-dot:after{content:"";width:15px;height:15px;border:2px solid var(--faint);border-radius:50%;background:var(--bg)}.stop-row.is-selected .stop-dot:after{width:19px;height:19px;border-color:var(--now);background:var(--now);box-shadow:0 0 0 5px rgba(54,224,160,.14)}.stop-copy{min-width:0;flex:1;padding-top:1px}.stop-copy strong{display:block;font-size:14px;line-height:1.25}.stop-copy small{display:block;color:var(--faint);font-size:10.5px;margin-top:4px;line-height:1.3}.stop-state{align-self:center;color:var(--faint);font-size:10px;white-space:nowrap}.stop-row.is-selected .stop-state{color:var(--now);font-weight:800}.stop-bus-state{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;padding:4px 6px;border-radius:999px;background:rgba(54,224,160,.12);color:var(--now);font-size:10px;font-weight:800;white-space:nowrap}.stop-bus-state b{font-size:14px}.stop-bus-state.enroute{background:rgba(108,140,255,.14);color:#b9c6ff}.bus-front-marker{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:20px;height:15px;border-radius:4px 4px 3px 3px;background:var(--now);box-shadow:0 0 0 3px color-mix(in srgb,var(--now) 18%,transparent);z-index:3}.bus-front-marker:before{content:"";position:absolute;left:3px;right:3px;top:3px;height:5px;border-radius:2px;background:var(--bg-deep);box-shadow:0 7px 0 -1px var(--bg-deep)}.bus-front-marker:after{content:"";position:absolute;left:2px;right:2px;bottom:-3px;height:4px;border-radius:50%;background:linear-gradient(90deg,var(--bg-deep) 0 25%,transparent 25% 75%,var(--bg-deep) 75%)}.bus-front-marker.enroute{background:#8094ff;box-shadow:0 0 0 3px rgba(128,148,255,.18)}.stop-dot.has-bus:after{opacity:.25}.detail-inference{margin:4px 0 8px 42px;padding:6px 9px;display:flex;align-items:center;gap:6px}.detail-inference .bus-front-marker{position:relative;left:auto;top:auto;transform:none;display:inline-block;flex:0 0 20px}.detail-inference small{margin:0;color:var(--faint)}.stop-row{min-height:78px;padding-top:10px;padding-bottom:10px}.stop-dot{position:relative}.stop-row .stop-bus-state{display:none}.detail-loading{padding:35px 12px;text-align:center;color:var(--faint)}.detail-inference{position:relative;margin:0 0 2px 38px;padding:8px 10px;border:1px solid rgba(108,140,255,.35);border-radius:10px;background:rgba(108,140,255,.1);color:#c5d0ff;font-size:10.5px;line-height:1.4}.detail-inference:before{content:"🚌";display:inline-grid;place-items:center;width:22px;height:22px;margin-right:6px;border-radius:50%;background:var(--accent);font-size:12px;vertical-align:middle}.detail-inference b{color:#d7ddff}.detail-inference small{display:block;margin:3px 0 0 28px;color:var(--faint);font-size:9.5px}body.detail-open{overflow:hidden}@media(min-width:620px){.route-detail-inner{padding-left:18px;padding-right:18px}}@media(prefers-reduced-motion:reduce){.detail-entry,.stop-row{transition:none}}
 .rmk{
@@ -2647,6 +2647,16 @@ async function openGetoffSetup(it) {
     $('#cancelGetoff').addEventListener('click', viewHome);
   } catch { sBody.innerHTML = '<div class="msg">讀取站頭失敗，請檢查網絡</div><button class="wide" id="cancelGetoff">← 返回</button>'; $('#cancelGetoff').addEventListener('click', viewHome); }
 }
+function imageStyleStopMarker(st, selected = false) {
+  return L.marker([st.lat, st.lng], {
+    title: st.name,
+    icon: L.divIcon({ className:'image-stop-marker-wrap', html:'<span class="image-stop-marker' + (selected ? ' selected' : '') + '"></span>', iconSize:[30,25], iconAnchor:[15,13], popupAnchor:[0,-13] })
+  });
+}
+function addImageStyleRouteLine(map, road) {
+  L.polyline(road, { color:'#171717', weight:9, opacity:.92, lineCap:'round', lineJoin:'round' }).addTo(map);
+  L.polyline(road, { color:'#e52635', weight:5, opacity:.98, lineCap:'round', lineJoin:'round' }).addTo(map);
+}
 let getoffMapInstance = null;
 async function showGetoffMap(it, stops, button) {
   const wrap = $('#getoffMapWrap');
@@ -2660,15 +2670,14 @@ async function showGetoffMap(it, stops, button) {
   const valid = stops.filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
   if (!valid.length) { mapEl.innerHTML = '<div class="map-loading">呢條路線暫時未有站頭座標資料</div>'; return; }
   mapEl.innerHTML = '';
-  const map = L.map(mapEl, { zoomControl:false, attributionControl:true });
+  const map = L.map(mapEl, { zoomControl:true, attributionControl:true });
   getoffMapInstance = map;
-  L.control.zoom({ position:'topright' }).addTo(map);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap contributors' }).addTo(map);
   const points = valid.map(x => [x.lat, x.lng]);
   const road = await roadPath(valid);
-  L.polyline(road, { color:'#6c8cff', weight:5, opacity:.82 }).addTo(map);
+  addImageStyleRouteLine(map, road);
   valid.forEach(st => {
-    const marker=L.circleMarker([st.lat,st.lng], { radius:7, color:'#6c8cff', weight:2, fillColor:'#a9baff', fillOpacity:.95 });
+    const marker=imageStyleStopMarker(st, getoff[uid(it)]?.targetSeq === st.seq);
     marker.bindPopup('<b>第 '+st.seq+' 站</b><br>'+esc(st.name)+'<br><button class="popup-select getoff-select">用呢個站</button>');
     marker.on('popupopen', e => { const b=e.popup.getElement().querySelector('.getoff-select'); if(b) b.addEventListener('click', () => startGetoff(it, st)); });
     marker.addTo(map);
@@ -2895,15 +2904,14 @@ async function toggleMap(it, button) {
     const stops = (await getRouteStopsCached(it)).filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
     if (!stops.length) throw new Error('no-coordinates');
     mapEl.innerHTML = '';
-    const map = L.map(mapEl, { zoomControl: false, attributionControl: true });
-    L.control.zoom({ position: 'topright' }).addTo(map);
+    const map = L.map(mapEl, { zoomControl: true, attributionControl: true });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(map);
     const points = stops.map(x => [x.lat, x.lng]);
     const road = await roadPath(stops);
-    L.polyline(road, { color: '#6c8cff', weight: 5, opacity: .82 }).addTo(map);
+    addImageStyleRouteLine(map, road);
     stops.forEach((st, i) => {
       const here = st.id === it.stopId;
-      const marker = L.circleMarker([st.lat, st.lng], { radius: here ? 9 : 5, color: here ? '#ff625c' : '#6c8cff', weight: here ? 3 : 2, fillColor: here ? '#ffbe55' : '#a9baff', fillOpacity: .95 });
+      const marker = imageStyleStopMarker(st, here);
       marker.bindPopup('<b>' + (here ? '📍 目前選擇站頭' : '第 ' + st.seq + ' 站') + '</b><br>' + esc(st.name));
       marker.addTo(map);
     });
@@ -2928,15 +2936,14 @@ async function showSetupMap(v, stops, button) {
   const valid = stops.filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
   if (!valid.length) { mapEl.innerHTML = '<div class="map-loading">呢條路線暫時未有站頭座標資料</div>'; return; }
   mapEl.innerHTML = '';
-  const map = L.map(mapEl, { zoomControl: false, attributionControl: true });
+  const map = L.map(mapEl, { zoomControl: true, attributionControl: true });
   setupMapInstance = map;
-  L.control.zoom({ position: 'topright' }).addTo(map);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(map);
   const points = valid.map(x => [x.lat, x.lng]);
   const road = await roadPath(valid);
-  L.polyline(road, { color: '#6c8cff', weight: 5, opacity: .82 }).addTo(map);
+  addImageStyleRouteLine(map, road);
   valid.forEach(st => {
-    const marker = L.circleMarker([st.lat, st.lng], { radius: 6, color: '#6c8cff', weight: 2, fillColor: '#a9baff', fillOpacity: .95 });
+    const marker = imageStyleStopMarker(st);
     marker.bindPopup('<b>第 ' + st.seq + ' 站</b><br>' + esc(st.name) + '<br><button class="popup-select" data-stop-id="' + esc(st.id) + '">用呢個站</button>');
     marker.on('popupopen', e => { const b = e.popup.getElement().querySelector('.popup-select'); if (b) b.addEventListener('click', () => { const chosen = stops.find(x => String(x.id) === b.dataset.stopId); if (chosen) addItem(v, chosen); closeSheet(); }); });
     marker.addTo(map);
