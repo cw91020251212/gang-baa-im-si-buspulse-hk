@@ -1,5 +1,5 @@
 /* BusPulse HK service worker: app shell cache and authorized local notifications only. */
-const SHELL = 'buspulse-hk-shell-v47-gps-light-button';
+const SHELL = 'buspulse-hk-shell-v48-dark-map-button';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './fare-index.json', './place-index.json'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(SHELL).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
