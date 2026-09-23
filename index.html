@@ -1854,7 +1854,7 @@ function customTripPanel(stops) {
     : result.status === 'estimate'
       ? '<strong>' + esc(result.text) + '</strong><small>固定按站點間距離估算，並非即時 API 到站時間。</small>'
       : '<strong>' + esc(result.text) + '</strong>';
-  return '<div class="custom-trip-control"><button class="custom-trip-open" type="button" data-custom-open aria-label="開啟車程起點及終點選擇" title="' + esc(from.name) + ' → ' + esc(to.name) + '"><span><b>↔ 車程</b></span><strong>設定</strong></button>' + (routeDetailState.customPickerOpen ? customTripPickerDrawer(ordered, firstSeq, toSeq) : '') + '</div>';
+  return '<div class="custom-trip-control"><button class="custom-trip-open" type="button" data-custom-open aria-label="開啟車程起點及終點選擇" title="' + esc(from.name) + ' → ' + esc(to.name) + '"><span><b>↔ 車程</b></span></button>' + (routeDetailState.customPickerOpen ? customTripPickerDrawer(ordered, firstSeq, toSeq) : '') + '</div>';
 }
 function customTripPickerDrawer(stops, fromSeq, toSeq) {
   const mode = routeDetailState.customPickerMode === 'to' ? 'to' : 'from';
