@@ -834,6 +834,12 @@ body.light *,
 .detail-service summary:after{flex:0 0 auto;margin-left:auto}
 .custom-trip-control{position:absolute;right:52px;bottom:11px;display:inline-flex;margin:0}.custom-trip-open{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid rgba(255,211,90,.48);border-radius:999px;background:rgba(255,211,90,.09);color:#ffd35a;font:800 10px inherit;cursor:pointer}.custom-trip-open span{display:inline-flex;align-items:center;gap:5px;min-width:0}.custom-trip-open b{font-size:11px}.custom-trip-open small{display:none}.custom-trip-open strong{font-size:10px}.custom-trip-open:focus-visible{outline:3px solid #ffd35a;outline-offset:2px}
 </style>
+<style id="final-route-control-fixes">
+.chead-actions .getoff-btn{font-size:13px!important;line-height:1!important}
+.chead-actions .alarm-btn:not(.on)::after{left:1px!important;right:1px!important;top:13px!important;height:2px!important}
+.chead-actions .map-head-btn,body.light .chead-actions .map-head-btn{background:#000!important;color:#ff7182!important;border-color:#ff7182!important}
+.detail-summary .custom-trip-control .custom-trip-open{color:#36e0a0!important;border-color:#36e0a0!important;background:rgba(54,224,160,.1)!important}
+</style>
 </head>
 <body>
 <div class="top">
@@ -2240,6 +2246,14 @@ function updateRouteDetailCompact(){
   const dock = routeDetail.querySelector('.detail-live-dock');
   if (dock) dock.classList.toggle('compact', routeDetail.scrollTop > 52);
 }
+function centerDetailStop(seq) {
+  const button = routeDetailBody?.querySelector('[data-detail-stop="' + cssEscape(String(seq)) + '"]');
+  if (!button || !routeDetail) return;
+  const viewport = routeDetail.getBoundingClientRect();
+  const target = button.getBoundingClientRect();
+  const top = routeDetail.scrollTop + target.top - viewport.top - (routeDetail.clientHeight - target.height) / 2;
+  routeDetail.scrollTo({ top: Math.max(0, top), behavior:'smooth' });
+}
 routeDetail.addEventListener('scroll', updateRouteDetailCompact, { passive:true });
 function renderRouteDetail() {
   const it = routeDetailState.item;
@@ -2311,7 +2325,7 @@ function renderRouteDetail() {
     routeDetailState.selectedSeq = stop.seq; routeDetailState.selectedStopId = stop.id; renderRouteDetail();
     const selectedButton = routeDetailBody.querySelector('[data-detail-stop="' + cssEscape(String(stop.seq)) + '"]');
     selectedButton?.focus({ preventScroll:true });
-    requestAnimationFrame(() => selectedButton?.scrollIntoView({ behavior:'smooth', block:'center', inline:'nearest' }));
+    requestAnimationFrame(() => centerDetailStop(stop.seq));
   }));
   routeDetailBody.querySelectorAll('[data-detail-stop]').forEach(button => button.addEventListener('keydown', event => {
     if (!['ArrowDown','ArrowUp'].includes(event.key)) return;
@@ -2504,7 +2518,7 @@ function scrollRouteDetailToAlarmStop(it) {
   routeDetailState.selectedSeq = stop.seq;
   routeDetailState.selectedStopId = stop.id;
   renderRouteDetail();
-  window.setTimeout(() => routeDetailBody.querySelector('[data-detail-stop="' + cssEscape(String(stop.seq)) + '"]')?.scrollIntoView({ behavior:'smooth', block:'center' }), 80);
+  window.setTimeout(() => centerDetailStop(stop.seq), 80);
 }
 async function notifyArrival(it, min, tripKey) {
   const id = uid(it), session = alarmSessions[id];
