@@ -40,6 +40,7 @@ test('route detail shows custom origin and destination controls', async ({ page 
   await page.goto('./?smoke=route-detail-custom-ui', { waitUntil: 'domcontentloaded' });
   const result = await page.evaluate(() => {
     routeDetailState.open = true;
+    routeDetailState.stopsStatus = 'ready';
     routeDetailState.item = { co:'KMB', route:'E41', origin:'起點', dest:'終點' };
     routeDetailState.stops = [
       { seq:1, id:'a', name:'第一站', name_en:'First', cumulativeDistanceMeters:0 },
@@ -49,11 +50,20 @@ test('route detail shows custom origin and destination controls', async ({ page 
     routeDetailState.customToSeq = 2;
     routeDetailState.etaByStop = new Map();
     renderRouteDetail();
+    routeDetailBody.querySelector('[data-custom-open]')?.click();
+    const opened = Boolean(routeDetailBody.querySelector('.custom-picker-drawer'));
+    const title = routeDetailBody.querySelector('#customPickerTitle')?.textContent.trim();
+    routeDetailBody.querySelector('[data-custom-pick-seq="1"]')?.click();
+    const switchedToDestination = routeDetailBody.querySelector('[data-custom-mode="to"]')?.classList.contains('active');
+    routeDetailBody.querySelector('[data-custom-pick-seq="2"]')?.click();
     return {
-      from:routeDetailBody.querySelector('[data-custom-from]')?.value,
-      to:routeDetailBody.querySelector('[data-custom-to]')?.value,
-      title:routeDetailBody.querySelector('#customTripTitle')?.textContent.trim()
+      from:routeDetailState.customFromSeq,
+      to:routeDetailState.customToSeq,
+      opened,
+      title,
+      switchedToDestination,
+      closed:!routeDetailBody.querySelector('.custom-picker-drawer')
     };
   });
-  expect(result).toEqual({ from:'1', to:'2', title:'自訂起點／終點同一路線站點' });
+  expect(result).toEqual({ from:1, to:2, opened:true, title:'車程', switchedToDestination:true, closed:true });
 });

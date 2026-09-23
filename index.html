@@ -746,7 +746,7 @@ body.light .stop-row.is-live.is-selected .stop-dot:after{background:#08734d!impo
 .detail-inference.virtual{margin-left:0!important;padding-left:68px!important;}
 .detail-inference.virtual .virtual-bus-card{left:-7px!important;}
 
-.custom-trip-panel{margin:14px 0 18px;padding:14px;border:1px solid rgba(145,170,205,.3);border-radius:16px;background:rgba(20,35,58,.72)}
+.custom-trip-panel{margin:14px 0 18px;padding:14px;border:1px solid rgba(145,170,205,.3);border-radius:16px;background:rgba(20,35,58,.72)}.custom-trip-open{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid rgba(145,170,205,.4);border-radius:12px;background:rgba(10,20,35,.5);color:var(--text);text-align:left;cursor:pointer}.custom-trip-open span{display:flex;flex-direction:column;gap:4px;min-width:0}.custom-trip-open b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.custom-trip-open small{color:var(--faint);font-size:11px}.custom-trip-open strong{flex:none;color:#ffd35a;font-size:12px}.custom-picker-backdrop{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.58)}.custom-picker-drawer{position:fixed;z-index:81;top:0;right:0;bottom:0;width:min(92vw,430px);padding:calc(18px + var(--safe-t)) 16px calc(18px + var(--safe-b));background:#050505;color:#f5f5f5;box-shadow:-10px 0 28px rgba(0,0,0,.4);overflow:auto}.custom-picker-drawer header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.custom-picker-drawer header div{display:flex;flex-direction:column;gap:4px}.custom-picker-drawer header b{font-size:25px;color:#ffd900}.custom-picker-drawer header small{color:#aaa;font-size:12px}.custom-picker-close{width:36px;height:36px;border:0;background:transparent;color:#fff;font-size:30px;cursor:pointer}.custom-picker-tabs{display:flex;border-bottom:1px solid #444;margin-bottom:12px}.custom-picker-tabs button{flex:1;padding:11px 6px;border:0;border-bottom:4px solid transparent;background:transparent;color:#aaa;font:700 16px inherit;cursor:pointer}.custom-picker-tabs button.active{border-bottom-color:#ffd900;color:#ffd900}.custom-picker-hint{margin:6px 0 12px;color:#bbb;font-size:13px}.custom-picker-timeline{position:relative;padding:0 0 20px 12px}.custom-picker-timeline:before{content:"";position:absolute;left:23px;top:12px;bottom:18px;width:2px;background:#777}.custom-picker-stop{position:relative;display:flex;align-items:center;width:100%;min-height:82px;padding:10px 8px 10px 0;border:0;background:transparent;color:#fff;text-align:left;cursor:pointer}.custom-picker-dot{z-index:1;flex:none;width:28px;height:28px;margin-right:18px;border:5px solid #aaa;border-radius:50%;background:#050505}.custom-picker-stop.selected .custom-picker-dot{border-color:#fff;background:#fff}.custom-picker-stop.origin .custom-picker-dot,.custom-picker-stop.destination .custom-picker-dot{box-shadow:0 0 0 2px #ffd900}.custom-picker-copy{display:flex;flex-direction:column;gap:5px;min-width:0}.custom-picker-copy b{font-size:16px;line-height:1.35}.custom-picker-copy b small{color:#929292;font-size:12px;font-weight:600}.custom-picker-copy em{color:#aaa;font-size:13px;font-style:normal}.custom-picker-stop.selected .custom-picker-copy em,.custom-picker-stop.has-duration .custom-picker-copy em{color:#ffd900;font-weight:800}.custom-picker-stop:active{background:#171717}@media(max-width:430px){.custom-picker-drawer{width:94vw}.custom-picker-copy b{font-size:15px}}
 .custom-trip-fields{display:flex;align-items:end;gap:8px}.custom-trip-fields label{display:flex;flex:1;flex-direction:column;gap:5px;color:var(--faint);font-size:12px;font-weight:800}.custom-trip-fields select{width:100%;min-width:0;padding:10px 8px;border:1px solid rgba(145,170,205,.45);border-radius:10px;background:var(--bg-deep);color:var(--text);font:inherit}.custom-trip-arrow{padding:0 0 10px;color:var(--accent);font-size:20px;font-weight:900}.custom-trip-result{display:flex;flex-direction:column;gap:3px;margin-top:12px;padding:10px 11px;border-radius:10px;background:rgba(10,20,35,.48);color:var(--text)}.custom-trip-result strong{font-size:14px}.custom-trip-result small{color:var(--faint);line-height:1.45}.custom-trip-result.live strong{color:#ffd35a}.custom-trip-result.estimate strong{color:#9fc2ff}.custom-trip-result.unavailable strong,.custom-trip-result.invalid strong{color:#ffb4a8}@media(max-width:430px){.custom-trip-fields{gap:5px}.custom-trip-fields select{font-size:12px;padding-left:5px;padding-right:2px}}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -1632,7 +1632,7 @@ const routeDetailState = {
   vehicleInference:{ status:'hidden', fromStopId:null, toStopId:null, reason:null, observedAt:null },
   generation:0, abortController:null, etaRequest:null, fareLabel:null, scheduleLabel:null, serviceOpen:false, detailTicker:null, detailLastOK:null, sweepStatus:'idle',
   gpsWatch:null, gpsNetworkWatch:null, gpsSeq:null, gpsPosition:null, gpsPositionAccuracy:null, gpsSource:null, gpsPositionTime:0, gpsStatus:'idle', gpsError:null, gpsErrorCount:0,
-  customFromSeq:null, customToSeq:null
+  customFromSeq:null, customToSeq:null, customPickerOpen:false, customPickerMode:'from'
 };
 function beginRouteDetailGeneration() {
   routeDetailState.generation += 1;
@@ -1856,14 +1856,28 @@ function customTripPanel(stops) {
   const firstSeq = Number(routeDetailState.customFromSeq) || Number(ordered[0].seq);
   const defaultTo = ordered.find(stop => Number(stop.seq) > firstSeq) || ordered[ordered.length - 1];
   const toSeq = Number(routeDetailState.customToSeq) || Number(defaultTo.seq);
-  const option = (stop, selected) => '<option value="' + esc(stop.seq) + '"' + (Number(stop.seq) === Number(selected) ? ' selected' : '') + '>第 ' + esc(stop.seq) + ' 站 · ' + esc(stop.name) + '</option>';
+  const from = ordered.find(stop => Number(stop.seq) === firstSeq) || ordered[0];
+  const to = ordered.find(stop => Number(stop.seq) === toSeq) || defaultTo;
   const result = customTripResult(ordered, routeDetailState.etaByStop, firstSeq, toSeq);
   const details = result.status === 'live'
     ? '<strong>' + esc(result.text) + '</strong><small>即時 ETA：' + esc(detailClock(result.fromTime)) + ' → ' + esc(detailClock(result.toTime)) + (result.distanceMeters > 0 ? ' · 約 ' + (result.distanceMeters / 1000).toFixed(1) + ' 公里' : '') + '</small>'
     : result.status === 'estimate'
       ? '<strong>' + esc(result.text) + '</strong><small>目前未能取得兩站同步 ETA，請以實際路況為準。</small>'
       : '<strong>' + esc(result.text) + '</strong>';
-  return '<section class="custom-trip-panel" aria-labelledby="customTripTitle"><div class="detail-section-title" id="customTripTitle"><span>自訂起點／終點</span><small>同一路線站點</small></div><div class="custom-trip-fields"><label>起點<select data-custom-from aria-label="自訂起點">' + ordered.map(stop => option(stop, firstSeq)).join('') + '</select></label><span class="custom-trip-arrow" aria-hidden="true">→</span><label>終點<select data-custom-to aria-label="自訂終點">' + ordered.map(stop => option(stop, toSeq)).join('') + '</select></label></div><div class="custom-trip-result ' + esc(result.status) + '" role="status" aria-live="polite">' + details + '</div></section>';
+  return '<section class="custom-trip-panel" aria-labelledby="customTripTitle"><div class="detail-section-title" id="customTripTitle"><span>自訂起點／終點</span><small>點擊時間線選擇</small></div><button class="custom-trip-open" type="button" data-custom-open aria-label="開啟自訂起點及終點選擇"><span><b>' + esc(from.name) + '</b><small>起點　→　' + esc(to.name) + '　終點</small></span><strong>選擇</strong></button><div class="custom-trip-result ' + esc(result.status) + '" role="status" aria-live="polite">' + details + '</div>' + (routeDetailState.customPickerOpen ? customTripPickerDrawer(ordered, firstSeq, toSeq) : '') + '</section>';
+}
+function customTripPickerDrawer(stops, fromSeq, toSeq) {
+  const mode = routeDetailState.customPickerMode === 'to' ? 'to' : 'from';
+  const row = stop => {
+    const seq = Number(stop.seq), state = detailEtaStateFor(stop), eta = detailFirstLiveEta(stop);
+    const selected = seq === Number(fromSeq) || seq === Number(toSeq);
+    const role = seq === Number(fromSeq) ? '起點' : seq === Number(toSeq) ? '終點' : '';
+    const segment = seq > Number(fromSeq) ? customTripResult(stops, routeDetailState.etaByStop, fromSeq, seq) : null;
+    const durationText = segment?.status === 'live' ? segment.minutes + ' 分鐘' : segment?.status === 'estimate' ? '約 ' + segment.minutes + ' 分鐘' : null;
+    const etaText = durationText || (eta ? detailEtaLabel(eta) : state.status === 'loading' ? '讀取中' : '未有班次');
+    return '<button type="button" class="custom-picker-stop ' + (selected ? 'selected ' : '') + (durationText ? 'has-duration ' : '') + (seq === Number(fromSeq) ? 'origin ' : '') + (seq === Number(toSeq) ? 'destination' : '') + '" data-custom-pick-seq="' + esc(seq) + '" aria-label="第 ' + esc(seq) + ' 站 ' + esc(stop.name) + (role ? '，' + role : durationText ? '，由起點約 ' + durationText : '') + '"><span class="custom-picker-dot" aria-hidden="true"></span><span class="custom-picker-copy"><b>' + esc(stop.name) + ' <small>(' + esc(stop.id) + ')</small></b><em>' + (role || etaText) + '</em></span></button>';
+  };
+  return '<div class="custom-picker-backdrop" data-custom-close></div><aside class="custom-picker-drawer" role="dialog" aria-modal="true" aria-labelledby="customPickerTitle"><header><div><b id="customPickerTitle">車程</b><small>點選站點設定起點及終點</small></div><button type="button" class="custom-picker-close" data-custom-close aria-label="關閉選擇視窗">×</button></header><div class="custom-picker-tabs"><button type="button" class="' + (mode === 'from' ? 'active' : '') + '" data-custom-mode="from">起點</button><button type="button" class="' + (mode === 'to' ? 'active' : '') + '" data-custom-mode="to">終點</button></div><p class="custom-picker-hint">' + (mode === 'from' ? '請點選上車起點' : '請點選落車終點') + '</p><div class="custom-picker-timeline" role="list">' + stops.map(row).join('') + '</div></aside>';
 }
 function detailEtaCoverageText() {
   let ready = 0, near = 0;
@@ -2254,17 +2268,23 @@ function renderRouteDetail() {
   updateRouteDetailCompact();
   routeDetailBody.querySelector('[data-detail-gps]')?.addEventListener('click', () => startRouteDetailGps(it));
   routeDetailBody.querySelector('[data-detail-gps-stop]')?.addEventListener('click', stopRouteDetailGps);
-  routeDetailBody.querySelector('[data-custom-from]')?.addEventListener('change', event => {
-    const fromSeq = Number(event.currentTarget.value);
-    const later = routeDetailState.stops.find(stop => Number(stop.seq) > fromSeq);
-    routeDetailState.customFromSeq = fromSeq;
-    if (!later || Number(routeDetailState.customToSeq) <= fromSeq) routeDetailState.customToSeq = later?.seq || null;
+  routeDetailBody.querySelector('[data-custom-open]')?.addEventListener('click', () => { routeDetailState.customPickerOpen = true; routeDetailState.customPickerMode = 'from'; renderRouteDetail(); });
+  routeDetailBody.querySelectorAll('[data-custom-close]').forEach(button => button.addEventListener('click', () => { routeDetailState.customPickerOpen = false; renderRouteDetail(); }));
+  routeDetailBody.querySelectorAll('[data-custom-mode]').forEach(button => button.addEventListener('click', () => { routeDetailState.customPickerMode = button.dataset.customMode === 'to' ? 'to' : 'from'; renderRouteDetail(); }));
+  routeDetailBody.querySelectorAll('[data-custom-pick-seq]').forEach(button => button.addEventListener('click', () => {
+    const seq = Number(button.dataset.customPickSeq);
+    if (routeDetailState.customPickerMode === 'to') {
+      if (seq <= Number(routeDetailState.customFromSeq)) return;
+      routeDetailState.customToSeq = seq;
+      routeDetailState.customPickerOpen = false;
+    } else {
+      routeDetailState.customFromSeq = seq;
+      const later = routeDetailState.stops.find(stop => Number(stop.seq) > seq);
+      if (!later || Number(routeDetailState.customToSeq) <= seq) routeDetailState.customToSeq = later?.seq || null;
+      routeDetailState.customPickerMode = 'to';
+    }
     renderRouteDetail();
-  });
-  routeDetailBody.querySelector('[data-custom-to]')?.addEventListener('change', event => {
-    routeDetailState.customToSeq = Number(event.currentTarget.value);
-    renderRouteDetail();
-  });
+  }));
   routeDetailBody.querySelectorAll('[data-detail-stop]').forEach(button => button.addEventListener('click', () => {
     const stop = routeDetailState.stops.find(s => String(s.seq) === button.dataset.detailStop);
     if (!stop) return;
@@ -2297,7 +2317,7 @@ function renderRouteDetail() {
 async function openRouteDetail(it, trigger) {
   routeDetailReturnFocus = trigger || document.activeElement;
   routeDetailReturnFocusId = routeDetailReturnFocus?.getAttribute?.('data-detail-id') || uid(it);
-  routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.etaHistory.clear(); routeDetailState.detailEtaLoading = false; routeDetailState.detailLastFetchAt = 0; routeDetailState.fareLabel = null; routeDetailState.scheduleLabel = null; routeDetailState.serviceOpen = false; routeDetailState.sweepStatus = 'loading';
+  routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.etaHistory.clear(); routeDetailState.detailEtaLoading = false; routeDetailState.detailLastFetchAt = 0; routeDetailState.fareLabel = null; routeDetailState.scheduleLabel = null; routeDetailState.serviceOpen = false; routeDetailState.customPickerOpen = false; routeDetailState.customPickerMode = 'from'; routeDetailState.sweepStatus = 'loading';
   const request = beginRouteDetailGeneration();
   routeDetail.classList.add('on'); routeDetail.setAttribute('aria-hidden', 'false'); document.body.classList.add('detail-open'); startRouteDetailTicker();
   routeDetailBody.innerHTML = '<div class="detail-loading">載入路線站點…</div>';
