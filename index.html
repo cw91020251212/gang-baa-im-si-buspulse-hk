@@ -178,7 +178,7 @@ body.light .eta .u,body.light .eta .t{color:#40516a}
 .map-toggle:active{transform:scale(.99);background:rgba(108,140,255,.18)}
 .map-toggle .map-arrow{font-size:15px;line-height:1;transition:transform .2s ease}.map-toggle.open .map-arrow{transform:rotate(180deg)}
 .map-wrap{display:none;position:relative;z-index:0;isolation:isolate;margin:0 13px 12px 15px;border:1px solid #56616b;border-radius:13px;overflow:hidden;background:#dbe7ef}
-.map-wrap.open{display:block}.map-wrap.fullscreen{position:fixed;top:var(--map-focus-top,0px);right:0;bottom:0;left:0;width:auto;height:auto;min-height:0;margin:0;border:0;border-radius:0;z-index:70;background:#dbe7ef}.map-wrap.fullscreen .route-map{height:100%;min-height:0}.map-wrap.fullscreen .map-tools{top:calc(10px + var(--safe-t));right:calc(10px + var(--safe-r))}.map-fullscreen-close{position:absolute;top:calc(10px + var(--safe-t));left:calc(10px + var(--safe-l));z-index:3;border:1px solid rgba(255,255,255,.6);border-radius:9px;padding:8px 11px;background:rgba(24,35,58,.88);color:#fff;font:700 12px inherit;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3)}.map-focus-open #board>.card:not(.map-focus-card){display:none}.map-focus-card{order:-1}.map-focus-card .map-wrap.fullscreen{position:relative;inset:auto;width:auto;height:var(--map-focus-height,calc(100dvh - 300px));min-height:180px;margin:0;border:0;border-radius:0;z-index:1}.map-focus-card .map-wrap.fullscreen .route-map{height:100%;min-height:0}.map-tools{position:absolute;top:10px;right:10px;z-index:2;padding:0;background:transparent;pointer-events:none}.locate-btn{border:1px solid rgba(99,216,137,.35);background:rgba(99,216,137,.12);color:#a7f1bf;border-radius:9px;padding:8px 10px;font:700 11px inherit;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.24);pointer-events:auto}.locate-btn:active{transform:scale(.98)}.route-map{height:320px;width:100%;position:relative;z-index:1}.map-live-note,.map-note{display:none!important}
+.map-wrap.open{display:block}.map-tools{position:absolute;top:10px;right:10px;z-index:2;padding:0;background:transparent;pointer-events:none}.locate-btn{border:1px solid rgba(99,216,137,.35);background:rgba(99,216,137,.12);color:#a7f1bf;border-radius:9px;padding:8px 10px;font:700 11px inherit;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.24);pointer-events:auto}.locate-btn:active{transform:scale(.98)}.route-map{height:auto;aspect-ratio:9/16;width:100%;position:relative;z-index:1}.map-live-note,.map-note{display:none!important}
 .map-loading{height:250px;display:grid;place-items:center;color:#53657e;font-size:12px}
 .leaflet-container{font-family:inherit}.route-map .leaflet-tile-pane{filter:none}.route-map .leaflet-control-zoom{margin:8px 0 0 10px;border:0;border-radius:8px;overflow:hidden;box-shadow:0 2px 7px rgba(0,0,0,.22)}.route-map .leaflet-control-zoom a{width:36px;height:36px;line-height:34px;color:#202020;background:rgba(224,224,224,.94);border:0;border-bottom:1px solid rgba(60,60,60,.2);font-size:22px;font-weight:700}.route-map .leaflet-control-zoom a:last-child{border-bottom:0}.route-map .leaflet-control-zoom a:hover{background:#f2f2f2}.route-map .leaflet-control-attribution{background:rgba(235,235,235,.72);color:#4c4c4c;font-size:8px}.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#17233a;color:#f4f7fb}.leaflet-popup-content{font-size:12px;line-height:1.5}.popup-select{margin-top:5px;border:0;border-radius:7px;padding:6px 9px;background:var(--now);color:#071a14;font:700 11px inherit;cursor:pointer}.image-stop-marker-wrap{background:transparent;border:0}.image-stop-marker{display:block;position:relative;width:18px;height:18px;border:1px solid #2b5878;border-radius:50%;background:#4f94c6;box-shadow:0 1px 2px rgba(34,67,91,.25)}.image-stop-marker:before{content:"";position:absolute;left:50%;top:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;background:#eef8ff}.image-stop-marker:after{display:none}.image-stop-marker.selected{background:#2f78ad;border-color:#1f4d70;box-shadow:0 0 0 1px rgba(47,120,173,.34),0 1px 2px rgba(34,67,91,.3)}.image-stop-marker.selected:before{background:#ffffff}
 .route-map .image-stop-marker{width:18px!important;height:18px!important;border:1px solid #2b5878!important;border-radius:50%!important;background:#4f94c6!important}
@@ -2387,7 +2387,7 @@ function shell() {
 	      '<div class="etas" data-slot="' + id + '">' +
         '<div class="eta"><div class="m pulse">··</div><div class="u">載入中</div></div>' +
       '</div>' +
-      '<div class="map-wrap" data-map-wrap="' + id + '"><button class="map-fullscreen-close" type="button" aria-label="收起地圖">× 收起地圖</button><div class="map-tools"><button class="locate-btn" data-locate-id="' + id + '">⌖ 開啟 GPS</button></div><div class="route-map"></div></div>' +
+      '<div class="map-wrap" data-map-wrap="' + id + '"><div class="map-tools"><button class="locate-btn" data-locate-id="' + id + '">⌖ 開啟 GPS</button></div><div class="route-map"></div></div>' +
     '</div>';
   }).join('');
   board.querySelectorAll('[data-getoff-id]').forEach(button => {
@@ -2921,44 +2921,15 @@ async function roadPath(stops) {
   return valid.map(x => [x.lat, x.lng]);
 }
 
-let mapFocusCard = null;
-let mapFocusNext = null;
-function updateMapFocusHeight(wrap) {
-  if (!wrap?.classList.contains('fullscreen')) return;
-  const top = Math.max(0, Math.round(wrap.getBoundingClientRect().top));
-  document.documentElement.style.setProperty('--map-focus-height', Math.max(180, window.innerHeight - top) + 'px');
-}
 async function toggleMap(it, button) {
   const id = uid(it);
   const wrap = board.querySelector('[data-map-wrap="' + cssEscape(id) + '"]');
   if (!wrap) return;
   const open = wrap.classList.toggle('open');
-  const card = wrap.closest('.card');
-  if (open && card) {
-    mapFocusCard = card;
-    mapFocusNext = card.nextElementSibling;
-    board.prepend(card);
-    card.classList.add('map-focus-card');
-  } else if (!open && card) {
-    card.classList.remove('map-focus-card');
-    if (mapFocusNext && mapFocusNext.parentNode === board) board.insertBefore(card, mapFocusNext);
-    else board.append(card);
-    mapFocusCard = null;
-    mapFocusNext = null;
-    document.documentElement.style.removeProperty('--map-focus-height');
-  }
-  wrap.classList.toggle('fullscreen', open);
-  document.body.classList.toggle('map-focus-open', open);
-  document.body.style.overflow = open ? 'hidden' : '';
   button.classList.toggle('open', open);
-  const closeButton = wrap.querySelector('.map-fullscreen-close');
-  if (closeButton && closeButton.dataset.bound !== '1') {
-    closeButton.dataset.bound = '1';
-    closeButton.addEventListener('click', () => button.click());
-  }
   if (!open) { const label = button.querySelector('span'); if (label) label.textContent = '🗺 查看站頭與路線地圖'; return; }
   const label = button.querySelector('span'); if (label) label.textContent = '🗺 收起地圖';
-  if (mapCache.has(id)) { setTimeout(() => { updateMapFocusHeight(wrap); mapCache.get(id).invalidateSize(); }, 80); return; }
+  if (mapCache.has(id)) { setTimeout(() => mapCache.get(id).invalidateSize(), 80); return; }
   const mapEl = wrap.querySelector('.route-map');
   mapEl.innerHTML = '<div class="map-loading"><span class="spin"></span>載入站頭位置…</div>';
   try {
@@ -2980,10 +2951,9 @@ async function toggleMap(it, button) {
     const locateBtn = wrap.querySelector('[data-locate-id="' + cssEscape(id) + '"]');
     if (locateBtn) locateBtn.addEventListener('click', () => toggleLiveRouteGPS(it, map, stops, locateBtn));
     mapCache.set(id, map);
-    setTimeout(() => { updateMapFocusHeight(wrap); map.invalidateSize(); }, 80);
   } catch { mapEl.innerHTML = '<div class="map-loading">暫時未有站頭座標資料</div>'; }
 }
-window.addEventListener('resize', () => { if (mapFocusCard) updateMapFocusHeight(mapFocusCard.querySelector('.map-wrap.fullscreen')); });
+
 async function showSetupMap(v, stops, button) {
   const wrap = $('#setupMapWrap');
   if (!wrap) return;
