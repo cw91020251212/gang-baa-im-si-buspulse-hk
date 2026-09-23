@@ -2696,10 +2696,10 @@ async function openGetoffSetup(it) {
     const stops = await getRouteStopsCached(it);
     sBody.innerHTML = '<div class="lbl">' + esc(it.route) + ' · ' + esc(it.dest || '') + '</div>' +
       '<div class="hint">揀你想落車嘅站。開始後，手機會用 GPS 判斷你接近目標站；GPS 只會喺你主動開始後使用。</div>' +
+      (getoff[uid(it)]?.active ? '<button class="wide danger" id="stopGetoff">停止落車提醒</button>' : '') +
       '<button class="wide" id="getoffMapBtn">🗺 地圖揀站</button>' +
       '<div class="map-wrap" id="getoffMapWrap"><div class="route-map"></div></div>' +
       '<div class="list">' + stops.map((st, i) => '<button class="li sm" data-getoff-stop="' + i + '"><span class="n">' + st.seq + '</span><span class="d">' + esc(st.name) + '</span><span class="a">' + (getoff[uid(it)]?.targetSeq === st.seq ? '✓' : '›') + '</span></button>').join('') + '</div>' +
-      (getoff[uid(it)]?.active ? '<button class="wide" id="stopGetoff">停止落車提醒</button>' : '') +
       '<button class="wide" id="cancelGetoff">← 返回</button>';
     sBody.querySelectorAll('[data-getoff-stop]').forEach(b => b.addEventListener('click', () => startGetoff(it, stops[+b.dataset.getoffStop])));
     $('#getoffMapBtn').addEventListener('click', () => showGetoffMap(it, stops, $('#getoffMapBtn')));
