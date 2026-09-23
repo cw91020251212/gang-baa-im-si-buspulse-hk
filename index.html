@@ -2355,7 +2355,7 @@ function closeRouteDetail(options = {}) {
   const useHistory = options.history !== false;
   closeRouteDetailState(); routeDetailState.item = null; routeDetail.classList.remove('on'); routeDetail.setAttribute('aria-hidden', 'true'); document.body.classList.remove('detail-open');
   updateInfoBar();
-  const returnTarget = routeDetailReturnFocus?.isConnected ? routeDetailReturnFocus : (routeDetailReturnFocusId ? board.querySelector('[data-detail-id="' + cssEscape(routeDetailReturnFocusId) + '"]') : null);
+  const returnTarget = routeDetailReturnFocusId ? board.querySelector('[data-detail-id="' + cssEscape(routeDetailReturnFocusId) + '"]') : (routeDetailReturnFocus?.isConnected ? routeDetailReturnFocus : null);
   returnTarget?.focus?.();
   routeDetailReturnFocus = null; routeDetailReturnFocusId = null;
   if (useHistory && history.state?.buspulseRouteDetail) history.back();
