@@ -745,6 +745,9 @@ body.light .stop-row.is-live.is-selected .stop-dot:after{background:#08734d!impo
 .detail-inference.virtual .bus-front-marker:after{bottom:-4px!important;}
 .detail-inference.virtual{margin-left:0!important;padding-left:68px!important;}
 .detail-inference.virtual .virtual-bus-card{left:-7px!important;}
+
+.custom-trip-panel{margin:14px 0 18px;padding:14px;border:1px solid rgba(145,170,205,.3);border-radius:16px;background:rgba(20,35,58,.72)}
+.custom-trip-fields{display:flex;align-items:end;gap:8px}.custom-trip-fields label{display:flex;flex:1;flex-direction:column;gap:5px;color:var(--faint);font-size:12px;font-weight:800}.custom-trip-fields select{width:100%;min-width:0;padding:10px 8px;border:1px solid rgba(145,170,205,.45);border-radius:10px;background:var(--bg-deep);color:var(--text);font:inherit}.custom-trip-arrow{padding:0 0 10px;color:var(--accent);font-size:20px;font-weight:900}.custom-trip-result{display:flex;flex-direction:column;gap:3px;margin-top:12px;padding:10px 11px;border-radius:10px;background:rgba(10,20,35,.48);color:var(--text)}.custom-trip-result strong{font-size:14px}.custom-trip-result small{color:var(--faint);line-height:1.45}.custom-trip-result.live strong{color:#ffd35a}.custom-trip-result.estimate strong{color:#9fc2ff}.custom-trip-result.unavailable strong,.custom-trip-result.invalid strong{color:#ffb4a8}@media(max-width:430px){.custom-trip-fields{gap:5px}.custom-trip-fields select{font-size:12px;padding-left:5px;padding-right:2px}}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <style>
@@ -1628,7 +1631,8 @@ const routeDetailState = {
   etaHistory:new Map(), detailEtaLoading:false, detailLastFetchAt:0,
   vehicleInference:{ status:'hidden', fromStopId:null, toStopId:null, reason:null, observedAt:null },
   generation:0, abortController:null, etaRequest:null, fareLabel:null, scheduleLabel:null, serviceOpen:false, detailTicker:null, detailLastOK:null, sweepStatus:'idle',
-  gpsWatch:null, gpsNetworkWatch:null, gpsSeq:null, gpsPosition:null, gpsPositionAccuracy:null, gpsSource:null, gpsPositionTime:0, gpsStatus:'idle', gpsError:null, gpsErrorCount:0
+  gpsWatch:null, gpsNetworkWatch:null, gpsSeq:null, gpsPosition:null, gpsPositionAccuracy:null, gpsSource:null, gpsPositionTime:0, gpsStatus:'idle', gpsError:null, gpsErrorCount:0,
+  customFromSeq:null, customToSeq:null
 };
 function beginRouteDetailGeneration() {
   routeDetailState.generation += 1;
@@ -1808,6 +1812,59 @@ function detailEtaIsApproaching(eta) {
 function detailFirstLiveEta(stop) {
   return (detailEtaStateFor(stop).etas || []).find(eta => !eta.sched && eta.iso && Number.isFinite(Date.parse(eta.iso)));
 }
+function customTripResult(stops, etaByStop, fromSeq, toSeq, now = Date.now()) {
+  const ordered = [...(stops || [])].sort((a,b) => Number(a.seq) - Number(b.seq));
+  const fromIndex = ordered.findIndex(stop => Number(stop.seq) === Number(fromSeq));
+  const toIndex = ordered.findIndex(stop => Number(stop.seq) === Number(toSeq));
+  if (fromIndex < 0 || toIndex < 0 || toIndex <= fromIndex) return { status:'invalid', text:'請選擇正確的行車方向：終點必須在起點之後。' };
+  const from = ordered[fromIndex], to = ordered[toIndex];
+  const fromState = etaByStop?.get(String(from.id)), toState = etaByStop?.get(String(to.id));
+  const firstLiveEta = stop => (etaByStop?.get(String(stop.id))?.etas || []).find(eta => !eta.sched && eta.iso && Number.isFinite(Date.parse(eta.iso)));
+  const fromEta = firstLiveEta(from), toEta = firstLiveEta(to);
+  const fromTime = fromEta?.iso ? Date.parse(fromEta.iso) : NaN;
+  const toTime = toEta?.iso ? Date.parse(toEta.iso) : NaN;
+  const etaFresh = fromState?.status === 'ready' && toState?.status === 'ready' && !fromState.stale && !toState.stale
+    && Number.isFinite(fromTime) && Number.isFinite(toTime) && fromTime >= now - 2 * 60000 && toTime > fromTime;
+  if (etaFresh) {
+    const minutes = Math.max(1, Math.round((toTime - fromTime) / 60000));
+    return { status:'live', from, to, minutes, distanceMeters:routeSegmentDistance(ordered, fromIndex, toIndex), fromTime, toTime,
+      text:'按兩站最新 ETA 計算，約 ' + minutes + ' 分鐘' };
+  }
+  const distanceMeters = routeSegmentDistance(ordered, fromIndex, toIndex);
+  if (distanceMeters > 0) {
+    const minutes = Math.max(1, Math.round(distanceMeters / 1000 / 12 * 60));
+    return { status:'estimate', from, to, minutes, distanceMeters,
+      text:'約 ' + minutes + ' 分鐘（按站點距離估算，非即時行車時間）' };
+  }
+  return { status:'unavailable', from, to, text:'暫時未有足夠資料計算行車時間。' };
+}
+function routeSegmentDistance(stops, fromIndex, toIndex) {
+  const fromCumulative = Number(stops[fromIndex]?.cumulativeDistanceMeters);
+  const toCumulative = Number(stops[toIndex]?.cumulativeDistanceMeters);
+  if (Number.isFinite(fromCumulative) && Number.isFinite(toCumulative) && toCumulative >= fromCumulative) return toCumulative - fromCumulative;
+  let metres = 0;
+  for (let i = fromIndex; i < toIndex; i++) {
+    const a = stops[i], b = stops[i + 1];
+    if (![a?.lat, a?.lng, b?.lat, b?.lng].every(Number.isFinite)) return 0;
+    metres += gpsDistanceMeters(a, b);
+  }
+  return metres;
+}
+function customTripPanel(stops) {
+  const ordered = [...(stops || [])].sort((a,b) => Number(a.seq) - Number(b.seq));
+  if (ordered.length < 2) return '';
+  const firstSeq = Number(routeDetailState.customFromSeq) || Number(ordered[0].seq);
+  const defaultTo = ordered.find(stop => Number(stop.seq) > firstSeq) || ordered[ordered.length - 1];
+  const toSeq = Number(routeDetailState.customToSeq) || Number(defaultTo.seq);
+  const option = (stop, selected) => '<option value="' + esc(stop.seq) + '"' + (Number(stop.seq) === Number(selected) ? ' selected' : '') + '>第 ' + esc(stop.seq) + ' 站 · ' + esc(stop.name) + '</option>';
+  const result = customTripResult(ordered, routeDetailState.etaByStop, firstSeq, toSeq);
+  const details = result.status === 'live'
+    ? '<strong>' + esc(result.text) + '</strong><small>即時 ETA：' + esc(detailClock(result.fromTime)) + ' → ' + esc(detailClock(result.toTime)) + (result.distanceMeters > 0 ? ' · 約 ' + (result.distanceMeters / 1000).toFixed(1) + ' 公里' : '') + '</small>'
+    : result.status === 'estimate'
+      ? '<strong>' + esc(result.text) + '</strong><small>目前未能取得兩站同步 ETA，請以實際路況為準。</small>'
+      : '<strong>' + esc(result.text) + '</strong>';
+  return '<section class="custom-trip-panel" aria-labelledby="customTripTitle"><div class="detail-section-title" id="customTripTitle"><span>自訂起點／終點</span><small>同一路線站點</small></div><div class="custom-trip-fields"><label>起點<select data-custom-from aria-label="自訂起點">' + ordered.map(stop => option(stop, firstSeq)).join('') + '</select></label><span class="custom-trip-arrow" aria-hidden="true">→</span><label>終點<select data-custom-to aria-label="自訂終點">' + ordered.map(stop => option(stop, toSeq)).join('') + '</select></label></div><div class="custom-trip-result ' + esc(result.status) + '" role="status" aria-live="polite">' + details + '</div></section>';
+}
 function detailEtaCoverageText() {
   let ready = 0, near = 0;
   routeDetailState.stops.forEach(stop => {
@@ -1936,7 +1993,10 @@ async function switchRouteDetailDirection() {
   try {
     const stops = await getRouteStopsCached(next, { signal:request.signal });
     if (!isCurrentRouteDetailGeneration(request.generation)) return;
-    routeDetailState.stops = stops; routeDetailState.stopsStatus = 'ready'; routeDetailState.etaRequest = request; renderRouteDetail(); loadDetailFare(next, request.generation);
+    routeDetailState.stops = stops; routeDetailState.stopsStatus = 'ready'; routeDetailState.etaRequest = request;
+    routeDetailState.customFromSeq = Number(stops[0]?.seq) || null;
+    routeDetailState.customToSeq = Number(stops[stops.length - 1]?.seq) || null;
+    renderRouteDetail(); loadDetailFare(next, request.generation);
     loadRouteDetailEtas(next, request, routeDetailState.selectedStopId).then(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'ready'; }).catch(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'error'; });
   } catch (e) { if (isCurrentRouteDetailGeneration(request.generation)) { routeDetailState.stopsStatus = 'error'; renderRouteDetail(); } }
 }
@@ -2186,6 +2246,7 @@ function renderRouteDetail() {
     detailGpsPanel(it, current) +
     detailEtaPanel(current) +
     '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +
+    customTripPanel(routeDetailState.stops) +
     '<div class="detail-section-title"><span>沿途車站列表</span><small>共 ' + routeDetailState.stops.length + ' 個站</small></div>' +
     '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const isLive = routeDetailState.gpsSeq === st.seq;
     const isTarget = getoff[uid(it)]?.active && getoff[uid(it)].targetSeq === st.seq;
@@ -2193,6 +2254,17 @@ function renderRouteDetail() {
   updateRouteDetailCompact();
   routeDetailBody.querySelector('[data-detail-gps]')?.addEventListener('click', () => startRouteDetailGps(it));
   routeDetailBody.querySelector('[data-detail-gps-stop]')?.addEventListener('click', stopRouteDetailGps);
+  routeDetailBody.querySelector('[data-custom-from]')?.addEventListener('change', event => {
+    const fromSeq = Number(event.currentTarget.value);
+    const later = routeDetailState.stops.find(stop => Number(stop.seq) > fromSeq);
+    routeDetailState.customFromSeq = fromSeq;
+    if (!later || Number(routeDetailState.customToSeq) <= fromSeq) routeDetailState.customToSeq = later?.seq || null;
+    renderRouteDetail();
+  });
+  routeDetailBody.querySelector('[data-custom-to]')?.addEventListener('change', event => {
+    routeDetailState.customToSeq = Number(event.currentTarget.value);
+    renderRouteDetail();
+  });
   routeDetailBody.querySelectorAll('[data-detail-stop]').forEach(button => button.addEventListener('click', () => {
     const stop = routeDetailState.stops.find(s => String(s.seq) === button.dataset.detailStop);
     if (!stop) return;
