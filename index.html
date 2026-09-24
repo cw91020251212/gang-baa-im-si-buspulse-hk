@@ -52,6 +52,7 @@ body{
   .top .brandcopy{flex:1;min-width:0}
   .top .clock{font-size:12px}
   .top .iconbtn{width:32px;height:32px;flex:none}
+  .top .top-add-route{height:40px;padding:0 10px;font-size:22px;flex:none}
 }
 /* ---------- board ---------- */
 .board{padding:12px 12px 0; display:flex; flex-direction:column; gap:10px}
@@ -210,6 +211,8 @@ body.light .eta .u,body.light .eta .t{color:#40516a}
 .fab:hover{filter:saturate(1.08) brightness(1.04)}
 .fab:active{transform:translateY(2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,78,51,.28),0 1px 0 #087951,0 4px 12px rgba(0,170,111,.28)}
 .fab:focus-visible{outline:3px solid rgba(115,178,255,.75);outline-offset:3px}
+.top-add-route{height:40px;padding:0 15px;border:1px solid #a5ffda;border-radius:999px;background:linear-gradient(180deg,#72f0bc 0%,#16c887 54%,#0aa66f 100%);color:#042217;font:900 22px/1 inherit;white-space:nowrap;cursor:pointer;box-shadow:0 2px 0 #087951,0 4px 10px rgba(0,170,111,.25)}
+.top-add-route,.top-add-route *{text-shadow:none!important}.top-add-route:active{transform:translateY(1px)}.top-add-route:focus-visible{outline:3px solid rgba(115,178,255,.75);outline-offset:2px}
 /* ---------- first-use tour ---------- */
 .tour{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s ease}
 .tour.on{opacity:1;pointer-events:none}
@@ -877,9 +880,7 @@ body.light *,
     </aside>
   </div>
 </section>
-
 <button class="fab" id="fab" aria-label="加入巴士路線">＋ 路線</button>
-
 <div class="tour" id="firstUseTour" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
   <div class="tour-backdrop" data-tour-action="skip"></div>
   <div class="tour-card">
@@ -1569,7 +1570,7 @@ let routeDetailReturnFocusId = null;
 const TOUR_KEY = 'buspulse.first-use-tour.v1';
 const tour = $('#firstUseTour'), tourKicker = $('#tourKicker'), tourIcon = $('#tourIcon'), tourTitle = $('#tourTitle'), tourText = $('#tourText'), tourNext = $('#tourNext');
 const tourSteps = [
-  { icon:'＋', title:'先加入你常坐嘅路線', text:'撳右下角「＋ 路線」，搜尋巴士號碼，再揀上車站。完成後，主畫面就會顯示實時到站時間。', target:'#fab' },
+  { icon:'＋', title:'先加入你常坐嘅路線', text:'撳頂部「＋ 路線」，搜尋巴士號碼，再揀上車站。完成後，主畫面就會顯示實時到站時間。', target:'#fab' },
   { icon:'⏱', title:'睇到站時間，按需要開提醒', text:'路線卡會顯示下一班車幾多分鐘到。想收到提示，可以撳卡片上嘅 🔔；撳四角箭咀可查看沿途車站詳情。', target:'#infoBar' },
   { icon:'⚙', title:'需要時再到設定調整', text:'右上角 ⚙ 可以調整提醒聲、通知、字體、顏色及螢幕保護。所有設定只會保存在你這部裝置。', target:'#prefsBtn' }
 ];
@@ -3379,7 +3380,7 @@ function viewPrefs() {
 /* ---------- view 1: home (saved list + add) ---------- */
 function viewHome() {
   sTitle.textContent = '設定路線';
-  let h = '<div class="lbl">我嘅路線牌（' + items.length + '）</div>';
+  let h = '<button class="wide p" id="addBtn">＋ 加新路線</button><div class="lbl">我嘅路線牌（' + items.length + '）</div>';
   if (!items.length) {
     h += '<div class="msg">仲未加任何路線</div>';
   } else {
@@ -3393,7 +3394,6 @@ function viewHome() {
         '<button class="x" data-del="' + i + '">&times;</button>' +
       '</div>').join('') + '</div>';
   }
-  h += '<button class="wide p" id="addBtn">＋ 加新路線</button>';
   h += '<div class="lbl">工具與資料</div>';
   h += '<details class="settings-group utility-group"><summary>資料備份與還原</summary><div class="group-body"><div class="backup-box"><b>資料備份</b><br><span id="backupNote">' + backupReminder() + '</span><div class="backup-actions"><button class="wide" id="exportBtn">⬇ 下載備份</button><button class="wide" id="shareBtn">↗ 分享備份</button></div><button class="wide" id="importBtn">⬆ 還原備份</button><input type="file" id="backupFile" accept="application/json,.json" style="display:none"></div>';
   h += '</div></details>';
@@ -3544,7 +3544,7 @@ function viewSearch() {
         (c === 'KMB' ? '九巴／龍運' : c === 'CTB' ? '城巴／新巴' : '綠色小巴') +
         '</button>').join('') +
     '</div>' +
-    '<button class="wide" id="placeModeBtn">⌖ 由起點／終點搵路線</button>' +
+    '<button class="wide p" id="addBtn">⌖ 由起點／終點搵路線</button>' +
     '<div class="lbl">路線號碼</div>' +
     '<input class="tin" id="rIn" placeholder="例如 1A、89、往 108…" autocomplete="off" ' +
       'autocapitalize="characters" enterkeyhint="search">' +
@@ -3560,7 +3560,7 @@ function viewSearch() {
     $('#rOut').innerHTML = '';
   }));
   $('#backBtn').addEventListener('click', viewHome);
-  $('#placeModeBtn').addEventListener('click', viewPlaceSearch);
+  $('#addBtn').addEventListener('click', viewPlaceSearch);
   const inp = $('#rIn');
   $('#goBtn').addEventListener('click', () => doSearch(inp.value.trim()));
   let searchTimer;
