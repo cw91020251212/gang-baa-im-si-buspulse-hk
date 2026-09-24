@@ -3495,15 +3495,62 @@ function routeResultsAtCoordinates(from, to, idx) {
   results.sort((a,b)=>a.placeScore-b.placeScore);
   return {from,to,results:results.slice(0,60)};
 }
+function journeyRouteKey(r){ return r ? String(r.route||'')+'|'+String(r.bound||'')+'|'+String(r.service_type||'') : ''; }
+function nearestRouteStop(r, point, mode='any') {
+  let best=null;
+  for(const st of r.stops||[]){ if(!Number.isFinite(st.lat)||!Number.isFinite(st.lng)) continue; const d=distanceKm(point,st); if(!best||d<best.d) best={...st,d}; }
+  return best;
+}
+function buildTransferResults(from,to,idx,directResults) {
+  const byKey=new Map(), origins=[], destinations=[];
+  for(const r of idx){
+    const key=journeyRouteKey(r); if(byKey.has(key)) continue; byKey.set(key,r);
+    const start=nearestRouteStop(r,from), end=nearestRouteStop(r,to);
+    if(start?.d<=5) origins.push({r,start}); if(end?.d<=5) destinations.push({r,end});
+  }
+  const grid=new Map(), cell=.008;
+  const gridKey=(lat,lng)=>Math.floor(lat/cell)+','+Math.floor(lng/cell);
+  for(const item of destinations) for(const st of item.r.stops||[]){
+    if(!Number.isFinite(st.lat)||!Number.isFinite(st.lng)) continue;
+    const k=gridKey(st.lat,st.lng); if(!grid.has(k)) grid.set(k,[]); grid.get(k).push({...item,transfer:st});
+  }
+  const out=[], seen=new Set();
+  for(const first of origins){
+    for(const a of first.r.stops||[]){
+      if(a.seq<=first.start.seq||!Number.isFinite(a.lat)||!Number.isFinite(a.lng)) continue;
+      const baseLat=Math.floor(a.lat/cell), baseLng=Math.floor(a.lng/cell);
+      for(let di=-1;di<=1;di++) for(let dj=-1;dj<=1;dj++) for(const second of grid.get((baseLat+di)+','+(baseLng+dj))||[]){
+        if(second.r.route===first.r.route || second.transfer.seq>=second.end.seq) continue;
+        const walk=distanceKm(a,second.transfer); if(walk>.8) continue;
+        const key=first.r.route+'>'+second.r.route+'|'+first.start.id+'|'+second.transfer.id+'|'+second.end.id; if(seen.has(key)) continue; seen.add(key);
+        out.push({kind:'transfer',route:first.r.route+' → '+second.r.route,transfers:1,routeSegments:[first.r,second.r],origin:first.r.orig_tc,dest:second.r.dest_tc,dirLabel:first.r.orig_tc+' → '+second.r.dest_tc,placeStart:first.start,placeEnd:second.end,transfer:{from:a,to:second.transfer,d:walk},placeScore:first.start.d+walk+second.end.d,extra:'上車距離 '+first.start.d.toFixed(1)+' km · 轉車步行 '+walk.toFixed(1)+' km · 落車距離 '+second.end.d.toFixed(1)+' km'});
+      }
+    }
+  }
+  out.sort((a,b)=>a.placeScore-b.placeScore); return out.slice(0,40);
+}
+function buildTwoTransferResults(from,to,idx) {
+  const destinations=[], origins=[], routeMap=new Map(), grid=new Map(), cell=.008;
+  const gk=(lat,lng)=>Math.floor(lat/cell)+','+Math.floor(lng/cell);
+  for(const r of idx){ const key=journeyRouteKey(r); if(routeMap.has(key)) continue; routeMap.set(key,r); const start=nearestRouteStop(r,from), end=nearestRouteStop(r,to); if(start?.d<=5) origins.push({r,start}); if(end?.d<=5) destinations.push({r,end}); for(const st of r.stops||[]){if(!Number.isFinite(st.lat)||!Number.isFinite(st.lng))continue;const k=gk(st.lat,st.lng);if(!grid.has(k))grid.set(k,[]);grid.get(k).push({r,st});} }
+  const destByKey=new Map(destinations.map(x=>[journeyRouteKey(x.r),x])), out=[], seen=new Set();
+  const nearby=(st)=>{const a=Math.floor(st.lat/cell),b=Math.floor(st.lng/cell),v=[];for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++)v.push(...(grid.get((a+i)+','+(b+j))||[]));return v;};
+  for(const first of origins){ if(!first?.r?.route)continue; for(const a of first.r.stops||[]){ if(a.seq<=first.start.seq)continue; for(const e1 of nearby(a)){ if(!e1?.r?.route||!e1?.st||e1.r.route===first.r.route)continue; const middle=e1.r; for(const b of middle.stops||[]){if(b.seq<=e1.st.seq)continue; for(const e2 of nearby(b)){if(!e2?.r?.route||!e2?.st)continue;const last=destByKey.get(journeyRouteKey(e2.r)); if(!last?.r?.route||!last.end||last.r.route===first.r.route||last.r.route===middle.route||e2.st.seq>=last.end.seq)continue; const d1=distanceKm(a,e1.st),d2=distanceKm(b,e2.st);if(d1>.8||d2>.8)continue;const key=first.r.route+'>'+middle.route+'>'+last.r.route+'|'+first.start.id+'|'+e1.st.id+'|'+e2.st.id; if(seen.has(key))continue;seen.add(key);out.push({kind:'transfer',route:first.r.route+' → '+middle.route+' → '+last.r.route,transfers:2,origin:first.r.orig_tc,dest:last.r.dest_tc,dirLabel:first.r.orig_tc+' → '+last.r.dest_tc,placeStart:first.start,placeEnd:last.end,transfer:{from:a,to:e1.st,d:d1},transfer2:{from:b,to:e2.st,d:d2},placeScore:first.start.d+d1+d2+last.end.d,extra:'上車 '+first.start.d.toFixed(1)+' km · 兩次轉車步行 '+(d1+d2).toFixed(1)+' km · 落車 '+last.end.d.toFixed(1)+' km'}); if(out.length>=40)return out;} } } } }
+  out.sort((a,b)=>a.placeScore-b.placeScore); return out.slice(0,40);
+}
+async function searchJourneyOptions(from,to,idx) {
+  const direct=routeResultsAtCoordinates(from,to,idx); const one=buildTransferResults(from,to,idx,direct.results), two=buildTwoTransferResults(from,to,idx);
+  return {from,to,directResults:direct.results,transferResults:one.concat(two),results:direct.results.concat(one,two)};
+}
 async function searchPlaceRoutes(fromQ, toQ) {
   const [from,to] = await Promise.all([geocodeHK(fromQ), geocodeHK(toQ)]);
   const idx = (await cached('place-index', () => getJSON('./place-index.json'))).routes || [];
-  return routeResultsAtCoordinates(from, to, idx);
+  return searchJourneyOptions(from,to,idx);
 }
 async function searchCoordinateRoutes(lat, lng, toQ) {
   const [to, idx] = await Promise.all([geocodeHK(toQ), cached('place-index', () => getJSON('./place-index.json'))]);
   const from = { lat:Number(lat), lng:Number(lng), label:'座標 '+Number(lat).toFixed(6)+', '+Number(lng).toFixed(6) };
-  return routeResultsAtCoordinates(from, to, idx.routes || []);
+  return searchJourneyOptions(from,to,idx.routes || []);
 }
 function viewPlaceSearch() {
   sTitle.textContent='由起點搵終點';
@@ -3536,13 +3583,17 @@ function renderPlaceResults(results) {
     return '<div class="place-route-group"><div class="lbl"><b>'+esc(g.route)+'</b> <small>'+ (oneWay?'單一方向':'兩個方向') +'</small></div><div class="list">'+rows.join('')+'</div></div>';
   }).join('');
 }
+function renderTransferResults(results) {
+  if(!results.length) return '';
+  return '<div class="place-route-group"><div class="lbl"><b>轉車方案（一至兩次）</b></div><div class="list">'+results.map(v=>'<div class="li"><span class="n">'+esc(v.route)+'</span><span class="d">'+esc(v.dirLabel)+'<br><small>第一程上車：'+esc(v.placeStart.name)+'（距離 '+v.placeStart.d.toFixed(1)+' km）<br>第一次轉車：'+esc(v.transfer.from.name)+' → '+esc(v.transfer.to.name)+'（步行約 '+v.transfer.d.toFixed(1)+' km）'+(v.transfer2?'<br>第二次轉車：'+esc(v.transfer2.from.name)+' → '+esc(v.transfer2.to.name)+'（步行約 '+v.transfer2.d.toFixed(1)+' km）':'')+'<br>最後落車：'+esc(v.placeEnd.name)+'（距離 '+v.placeEnd.d.toFixed(1)+' km）</small></span></div>').join('')+'</div></div>';
+}
 async function doPlaceSearch(fromQ,toQ) {
   const out=$('#placeOut'); if(!fromQ||!toQ){out.innerHTML='<div class="msg">請輸入起點及終點</div>';return;}
   out.innerHTML='<div class="msg"><span class="spin"></span>掃描官方站點及路線…</div>';
   try {
     const x=await searchPlaceRoutes(fromQ,toQ);
-    if(!x.results.length){out.innerHTML='<div class="msg">暫時搵唔到符合條件嘅直達路線。可以改用更具體嘅地區／地標，或者改用路線號碼搜尋。</div>';return;}
-    out.innerHTML='<div class="lbl">可能路線（'+x.results.length+' 個方向）</div><div class="hint">起點：'+esc(x.from.label)+'<br>終點：'+esc(x.to.label)+'<br>相同路線號碼已經分組；每個方向仍然可以獨立選擇。</div>'+renderPlaceResults(x.results);
+    if(!x.results.length){out.innerHTML='<div class="msg">暫時搵唔到直達或一程轉車方案。可以改用更近嘅地標再試。</div>';return;}
+    out.innerHTML='<div class="lbl">直達路線（'+x.directResults.length+' 個方向）</div><div class="hint">起點：'+esc(x.from.label)+'<br>終點：'+esc(x.to.label)+'<br>每個距離係由地點／座標到最近巴士站嘅直線估算，方便你預留步行時間。</div>'+renderPlaceResults(x.directResults)+renderTransferResults(x.transferResults);
     out.querySelectorAll('[data-place-v]').forEach(b=>b.addEventListener('click',()=>viewStops(window.__placeVs[+b.dataset.placeV])));
   } catch(e){out.innerHTML='<div class="msg">地區搜尋暫時失敗，請檢查網絡或改用較具體名稱再試。</div>';}
 }
@@ -3552,8 +3603,8 @@ async function doCoordinateSearch(latText,lngText,toQ) {
   out.innerHTML='<div class="msg"><span class="spin"></span>按你嘅座標掃描附近巴士站…</div>';
   try {
     const x=await searchCoordinateRoutes(lat,lng,toQ);
-    if(!x.results.length){out.innerHTML='<div class="msg">暫時搵唔到直達路線；可以試下較近嘅終點地標，或者之後使用轉車搜尋。</div>';return;}
-    out.innerHTML='<div class="lbl">附近可能路線（'+x.results.length+' 個方向）</div><div class="hint">起點：'+esc(x.from.label)+'<br>終點：'+esc(x.to.label)+'<br>程式會先列出同一條路線嘅直達結果；站點距離越短，越適合步行接駁。</div>'+renderPlaceResults(x.results);
+    if(!x.results.length){out.innerHTML='<div class="msg">暫時搵唔到直達或一程轉車方案；可以試下較近嘅終點地標。</div>';return;}
+    out.innerHTML='<div class="lbl">附近可能路線（'+x.directResults.length+' 個直達方向）</div><div class="hint">起點：'+esc(x.from.label)+'<br>終點：'+esc(x.to.label)+'<br>距離係由你嘅座標到最近站嘅直線估算；轉車方案會另外列出轉車步行距離。</div>'+renderPlaceResults(x.directResults)+renderTransferResults(x.transferResults);
     out.querySelectorAll('[data-place-v]').forEach(b=>b.addEventListener('click',()=>viewStops(window.__placeVs[+b.dataset.placeV])));
   } catch(e){out.innerHTML='<div class="msg">座標搜尋暫時失敗，請檢查終點名稱或網絡後再試。</div>';}
 }
