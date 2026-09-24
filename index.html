@@ -3472,9 +3472,7 @@ async function geocodeHK(q) {
   return { lat:Number(x.lat), lng:Number(x.lon), label:x.display_name.split(',').slice(0,2).join(',') };
 }
 function distanceKm(a,b) { return Math.hypot((a.lat-b.lat)*111, (a.lng-b.lng)*102); }
-async function searchPlaceRoutes(fromQ, toQ) {
-  const [from,to] = await Promise.all([geocodeHK(fromQ), geocodeHK(toQ)]);
-  const idx = (await cached('place-index', () => getJSON('./place-index.json'))).routes || [];
+function routeResultsAtCoordinates(from, to, idx) {
   const results=[];
   for (const r of idx) {
     let start=null, end=null;
@@ -3497,15 +3495,31 @@ async function searchPlaceRoutes(fromQ, toQ) {
   results.sort((a,b)=>a.placeScore-b.placeScore);
   return {from,to,results:results.slice(0,60)};
 }
+async function searchPlaceRoutes(fromQ, toQ) {
+  const [from,to] = await Promise.all([geocodeHK(fromQ), geocodeHK(toQ)]);
+  const idx = (await cached('place-index', () => getJSON('./place-index.json'))).routes || [];
+  return routeResultsAtCoordinates(from, to, idx);
+}
+async function searchCoordinateRoutes(lat, lng, toQ) {
+  const [to, idx] = await Promise.all([geocodeHK(toQ), cached('place-index', () => getJSON('./place-index.json'))]);
+  const from = { lat:Number(lat), lng:Number(lng), label:'座標 '+Number(lat).toFixed(6)+', '+Number(lng).toFixed(6) };
+  return routeResultsAtCoordinates(from, to, idx.routes || []);
+}
 function viewPlaceSearch() {
   sTitle.textContent='由起點搵終點';
-  sBody.innerHTML='<div class="lbl">起點地區／地標</div><input class="tin" id="fromPlace" placeholder="例如 大埔、沙田站、旺角" autocomplete="off">'+
+  sBody.innerHTML='<div class="segs" id="placeModes"><button class="seg on" id="placeNameMode" type="button">輸入地名</button><button class="seg" id="placeCoordMode" type="button">輸入座標／GPS</button></div>'+
+    '<div id="placeNameFields"><div class="lbl">起點地區／地標</div><input class="tin" id="fromPlace" placeholder="例如 大埔、沙田站、旺角" autocomplete="off"></div>'+
+    '<div id="placeCoordFields" style="display:none"><div class="lbl">我而家位置：緯度</div><input class="tin" id="fromLat" inputmode="decimal" placeholder="例如 22.4515" autocomplete="off"><div class="lbl">經度</div><input class="tin" id="fromLng" inputmode="decimal" placeholder="例如 114.1674" autocomplete="off"><button class="wide" id="useGps" type="button">⌖ 使用目前 GPS 位置</button><div class="hint">你可以直接貼 Google Maps 顯示嘅緯度、經度；唔需要知道地名。</div></div>'+
     '<div class="lbl">終點地區／地標</div><input class="tin" id="toPlace" placeholder="例如 沙田、荃灣、觀塘" autocomplete="off">'+
-    '<div class="hint">程式會將地區／地標轉成位置，再按最近巴士站及步行距離配對路線；起點及終點附近約 5 公里內、方向順序正確嘅巴士都會列出。</div>'+
+    '<div class="hint">程式會將地名或座標轉成位置，再按最近巴士站及步行距離配對路線；起點及終點附近約 5 公里內、方向順序正確嘅巴士都會列出。</div>'+
     '<button class="wide p" id="placeGo">搜尋可能路線</button><div id="placeOut"></div><button class="wide" id="placeBack">← 返回</button>';
   sBody.scrollTop=0;
   $('#placeBack').addEventListener('click',viewSearch);
-  $('#placeGo').addEventListener('click',()=>doPlaceSearch($('#fromPlace').value.trim(),$('#toPlace').value.trim()));
+  const nameMode=$('#placeNameMode'), coordMode=$('#placeCoordMode'), nameFields=$('#placeNameFields'), coordFields=$('#placeCoordFields');
+  nameMode.addEventListener('click',()=>{nameMode.classList.add('on');coordMode.classList.remove('on');nameFields.style.display='block';coordFields.style.display='none';});
+  coordMode.addEventListener('click',()=>{coordMode.classList.add('on');nameMode.classList.remove('on');nameFields.style.display='none';coordFields.style.display='block';});
+  $('#useGps').addEventListener('click',()=>{const b=$('#useGps');if(!navigator.geolocation){b.textContent='此裝置不支援 GPS';return;}b.textContent='定位中…';navigator.geolocation.getCurrentPosition(p=>{ $('#fromLat').value=p.coords.latitude.toFixed(6); $('#fromLng').value=p.coords.longitude.toFixed(6); b.textContent='⌖ 已帶入目前位置'; },()=>{b.textContent='未能取得位置，請手動輸入座標';},{enableHighAccuracy:true,timeout:10000,maximumAge:60000});});
+  $('#placeGo').addEventListener('click',()=>coordFields.style.display!=='none' ? doCoordinateSearch($('#fromLat').value.trim(),$('#fromLng').value.trim(),$('#toPlace').value.trim()) : doPlaceSearch($('#fromPlace').value.trim(),$('#toPlace').value.trim()));
 }
 function renderPlaceResults(results) {
   window.__placeVs=results;
@@ -3531,6 +3545,17 @@ async function doPlaceSearch(fromQ,toQ) {
     out.innerHTML='<div class="lbl">可能路線（'+x.results.length+' 個方向）</div><div class="hint">起點：'+esc(x.from.label)+'<br>終點：'+esc(x.to.label)+'<br>相同路線號碼已經分組；每個方向仍然可以獨立選擇。</div>'+renderPlaceResults(x.results);
     out.querySelectorAll('[data-place-v]').forEach(b=>b.addEventListener('click',()=>viewStops(window.__placeVs[+b.dataset.placeV])));
   } catch(e){out.innerHTML='<div class="msg">地區搜尋暫時失敗，請檢查網絡或改用較具體名稱再試。</div>';}
+}
+async function doCoordinateSearch(latText,lngText,toQ) {
+  const out=$('#placeOut'); const lat=Number(latText), lng=Number(lngText);
+  if(!Number.isFinite(lat)||!Number.isFinite(lng)||lat<-90||lat>90||lng<-180||lng>180||!toQ){out.innerHTML='<div class="msg">請輸入有效緯度、經度及終點地名。</div>';return;}
+  out.innerHTML='<div class="msg"><span class="spin"></span>按你嘅座標掃描附近巴士站…</div>';
+  try {
+    const x=await searchCoordinateRoutes(lat,lng,toQ);
+    if(!x.results.length){out.innerHTML='<div class="msg">暫時搵唔到直達路線；可以試下較近嘅終點地標，或者之後使用轉車搜尋。</div>';return;}
+    out.innerHTML='<div class="lbl">附近可能路線（'+x.results.length+' 個方向）</div><div class="hint">起點：'+esc(x.from.label)+'<br>終點：'+esc(x.to.label)+'<br>程式會先列出同一條路線嘅直達結果；站點距離越短，越適合步行接駁。</div>'+renderPlaceResults(x.results);
+    out.querySelectorAll('[data-place-v]').forEach(b=>b.addEventListener('click',()=>viewStops(window.__placeVs[+b.dataset.placeV])));
+  } catch(e){out.innerHTML='<div class="msg">座標搜尋暫時失敗，請檢查終點名稱或網絡後再試。</div>';}
 }
 
 /* ---------- view 2: search route number ---------- */
