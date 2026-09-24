@@ -3456,12 +3456,12 @@ function viewHome() {
 async function geocodeHK(q) {
   const aliases = {
     '大埔':[22.45,114.16],'沙田':[22.38,114.19],'旺角':[22.319,114.169],'尖沙咀':[22.296,114.172],
-    '荃灣':[22.371,114.113],'觀塘':[22.312,114.225],'屯門':[22.391,113.977],'元朗':[22.445,114.034],
+    '荃灣':[22.371,114.113],'大窩口':[22.370365,114.124962],'大窩口站':[22.370365,114.124962],'tai wo hau':[22.370365,114.124962],'觀塘':[22.312,114.225],'屯門':[22.391,113.977],'元朗':[22.445,114.034],
     '粉嶺':[22.492,114.139],'上水':[22.502,114.127],'馬鞍山':[22.425,114.23],'將軍澳':[22.307,114.258],
     '葵涌':[22.356,114.129],'青衣':[22.35,114.108],'九龍塘':[22.337,114.176],'中環':[22.281,114.158],
     '銅鑼灣':[22.28,114.185],'北角':[22.29,114.2],'香港仔':[22.248,114.155],
     'tai po':[22.45,114.16],'sha tin':[22.38,114.19],'mong kok':[22.319,114.169],'tsim sha tsui':[22.296,114.172],
-    'tsuen wan':[22.371,114.113],'kwun tong':[22.312,114.225]
+    'tsuen wan':[22.371,114.113],'tai wo hau':[22.370365,114.124962],'kwun tong':[22.312,114.225]
   };
   const key = q.trim().toLowerCase();
   const local = Object.keys(aliases).find(k => key === k || key.includes(k));
@@ -3484,7 +3484,7 @@ async function searchPlaceRoutes(fromQ, toQ) {
       if (!start || d1 < start.d) start={...st,d:d1};
       if (!end || d2 < end.d) end={...st,d:d2};
     }
-    if (!start || !end || start.d > 3.5 || end.d > 3.5) continue;
+    if (!start || !end || start.d > 5 || end.d > 5) continue;
     // Prefer routes whose nearest stops follow the actual direction.
     if (start.seq >= end.seq) continue;
     const score=start.d+end.d;
@@ -3501,7 +3501,7 @@ function viewPlaceSearch() {
   sTitle.textContent='由起點搵終點';
   sBody.innerHTML='<div class="lbl">起點地區／地標</div><input class="tin" id="fromPlace" placeholder="例如 大埔、沙田站、旺角" autocomplete="off">'+
     '<div class="lbl">終點地區／地標</div><input class="tin" id="toPlace" placeholder="例如 沙田、荃灣、觀塘" autocomplete="off">'+
-    '<div class="hint">程式會按官方站點座標，列出起點及終點附近約 3.5 公里內、而且方向順序正確嘅九巴／龍運路線。你可以逐條比較後自己取捨。</div>'+
+    '<div class="hint">程式會按官方站點座標，列出起點及終點附近約 5 公里內、而且方向順序正確嘅巴士路線。你可以逐條比較後自己取捨。</div>'+
     '<button class="wide p" id="placeGo">搜尋可能路線</button><div id="placeOut"></div><button class="wide" id="placeBack">← 返回</button>';
   sBody.scrollTop=0;
   $('#placeBack').addEventListener('click',viewSearch);
