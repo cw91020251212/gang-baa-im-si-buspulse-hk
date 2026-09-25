@@ -2722,9 +2722,12 @@ function imageStyleStopMarker(st, selected = false) {
     icon: L.divIcon({ className:'image-stop-marker-wrap', html:'<span class="image-stop-marker' + (selected ? ' selected' : '') + '"></span>', iconSize:[18,18], iconAnchor:[9,9], popupAnchor:[0,-9] })
   });
 }
-function addImageStyleRouteLine(map, road) {
-  L.polyline(road, { color:'#4b555d', weight:5, opacity:.96, lineCap:'round', lineJoin:'round' }).addTo(map);
-  L.polyline(road, { color:'#e52635', weight:3, opacity:.98, lineCap:'round', lineJoin:'round' }).addTo(map);
+function addImageStyleRouteLine(map, segments) {
+  const lines = Array.isArray(segments?.[0]?.[0]) ? segments : [segments];
+  lines.filter(line => line.length > 1).forEach(line => {
+    L.polyline(line, { color:'#4b555d', weight:5, opacity:.96, lineCap:'round', lineJoin:'round' }).addTo(map);
+    L.polyline(line, { color:'#e52635', weight:3, opacity:.98, lineCap:'round', lineJoin:'round' }).addTo(map);
+  });
 }
 let getoffMapInstance = null;
 async function showGetoffMap(it, stops, button) {
@@ -2910,12 +2913,11 @@ async function toggleNotificationSetting() {
 }
 async function roadSegmentPath(a, b) {
   const directKm = Math.hypot((b.lat - a.lat) * 111, (b.lng - a.lng) * 102);
-  const fallback = [[a.lat, a.lng], [b.lat, b.lng]];
   try {
     const q = await getJSON('https://router.project-osrm.org/route/v1/driving/' + a.lng + ',' + a.lat + ';' + b.lng + ',' + b.lat + '?overview=full&geometries=geojson&steps=false', 12000);
     const line = q.routes?.[0]?.geometry?.coordinates || [];
     const routeKm = Number(q.routes?.[0]?.distance || 0) / 1000;
-    if (line.length < 2 || !routeKm) return fallback;
+    if (line.length < 2 || !routeKm) return null;
     // The road router is not a bus operator. Keep its geometry only when it
     // stays near this adjacent-stop segment and is not an implausible detour.
     const padLat = Math.max(.015, Math.abs(b.lat - a.lat) * .75 + .005);
@@ -2923,9 +2925,9 @@ async function roadSegmentPath(a, b) {
     const minLat = Math.min(a.lat, b.lat) - padLat, maxLat = Math.max(a.lat, b.lat) + padLat;
     const minLng = Math.min(a.lng, b.lng) - padLng, maxLng = Math.max(a.lng, b.lng) + padLng;
     const outside = line.some(x => x[1] < minLat || x[1] > maxLat || x[0] < minLng || x[0] > maxLng);
-    if (outside || routeKm > Math.max(1.2, directKm * 3.2)) return fallback;
+    if (outside || routeKm > Math.max(1.2, directKm * 3.2)) return null;
     return line.map(x => [x[1], x[0]]);
-  } catch { return fallback; }
+  } catch { return null; }
 }
 async function roadPath(stops) {
   const valid = stops.filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
@@ -2933,12 +2935,14 @@ async function roadPath(stops) {
   // Route every adjacent pair separately. A single multi-waypoint OSRM call
   // can connect the whole line through an unrelated highway, ferry or border
   // crossing even when the final two official stops are next to each other.
-  const road = [];
+  const segments = [];
   for (let i = 1; i < valid.length; i++) {
     const segment = await roadSegmentPath(valid[i - 1], valid[i]);
-    road.push(...(i > 1 ? segment.slice(1) : segment));
+    // Keep gaps as gaps. Flattening this into one polyline would make
+    // Leaflet draw a straight line through buildings between valid segments.
+    if (segment) segments.push(segment);
   }
-  return road;
+  return segments;
 }
 
 async function toggleMap(it, button) {

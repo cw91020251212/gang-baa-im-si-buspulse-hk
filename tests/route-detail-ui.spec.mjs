@@ -153,7 +153,7 @@ test('map route rejects an implausible OSRM detour between adjacent stops', asyn
     { lat:22.3, lng:114.2 },
     { lat:22.301, lng:114.201 }
   ]));
-  expect(path).toEqual([[22.3,114.2],[22.301,114.201]]);
+  expect(path).toEqual([]);
 });
 
 test('open service information stays open during detail refreshes', async ({ page }) => {
