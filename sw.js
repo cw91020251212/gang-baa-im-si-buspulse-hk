@@ -1,6 +1,6 @@
 /* BusPulse HK service worker: app shell cache and authorized local notifications only. */
-const SHELL = 'buspulse-hk-shell-v91-tool-label-size';
-const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './gps_PNG32.png', './fare-index.json', './place-index.json'];
+const SHELL = 'buspulse-hk-shell-v86-summary-tools';
+const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './fare-index.json', './place-index.json'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(SHELL).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
 });
