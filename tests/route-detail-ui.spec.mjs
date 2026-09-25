@@ -62,6 +62,7 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('.detail-eta strong').first()).toContainText('3');
   await expect(page.locator('.detail-live-dock')).toBeVisible();
   await expect(page.locator('.detail-live-dock')).toHaveCSS('z-index', '3');
+  await expect(page.locator('#routeDetail')).toHaveCSS('overflow-anchor', 'none');
   await expect(page.locator('.detail-live-dock .detail-eta')).toHaveCount(3);
   await page.locator('#routeDetail').evaluate(el => { el.style.height = '200px'; el.style.overflow = 'auto'; el.scrollTop = 140; updateRouteDetailCompact(); });
   await expect(page.locator('.detail-live-dock')).toHaveClass(/compact/);
