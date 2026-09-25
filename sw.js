@@ -1,5 +1,5 @@
 /* BusPulse HK service worker: app shell cache and authorized local notifications only. */
-const SHELL = 'buspulse-hk-shell-v84-eta-only-sticky';
+const SHELL = 'buspulse-hk-shell-v85-eta-page-sticky';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './fare-index.json', './place-index.json'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(SHELL).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

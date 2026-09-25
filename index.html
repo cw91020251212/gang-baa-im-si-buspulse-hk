@@ -354,7 +354,7 @@ body.light .nearby-stop-picker{background:rgba(8,115,77,.06);border-color:rgba(8
 .detail-live-dock .detail-current{padding:9px 12px;margin:0 0 6px;border-radius:12px;background:var(--card);border-color:var(--line);}
 .detail-current-label{font-size:10px;}
 .detail-current-name{font-size:15px;margin-top:3px;}
-.detail-live-dock .detail-eta-panel{position:sticky;top:57px;z-index:3;gap:6px;margin:0;padding:5px 4px 8px;background:color-mix(in srgb,var(--bg-deep) 98%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 5px 14px rgba(0,0,0,.12);}
+.detail-eta-panel{position:sticky;top:57px;z-index:3;gap:6px;margin:0;padding:5px 4px 8px;background:color-mix(in srgb,var(--bg-deep) 98%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 5px 14px rgba(0,0,0,.12);}
 .detail-eta{min-height:78px;padding:8px 5px;border-radius:14px;background:var(--card);box-shadow:0 2px 8px rgba(0,0,0,.05);}
 .detail-eta strong{font-size:20px;}
 .detail-eta span{font-size:10px;margin-top:4px;}
@@ -2296,8 +2296,8 @@ function renderRouteDetail() {
     '<div class="detail-summary"><div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><div class="detail-meta-row"><span class="summary-count">共 ' + routeDetailState.stops.length + ' 個站</span><span class="summary-buses" title="按同一輪 ETA 逐段推算">ETA 推算行駛中：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 部' : '讀取中') + '</span></div><div class="detail-meta-row"><span class="summary-coverage">' + detailEtaCoverageText() + '</span></div><div class="detail-meta-row"><span class="summary-schedule">' + detailScheduleSummary() + '</span></div><div class="detail-meta-row"><span class="summary-fare">全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + customTripPanel(routeDetailState.stops) + '</div>' +
     '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
     detailGpsPanel(it, current) +
-    detailEtaPanel(current) +
     '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +
+    detailEtaPanel(current) +
     '<div class="detail-section-title"><span>沿途車站列表</span><small>共 ' + routeDetailState.stops.length + ' 個站</small></div>' +
     '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const isLive = routeDetailState.gpsSeq === st.seq;
     const isTarget = getoff[uid(it)]?.active && getoff[uid(it)].targetSeq === st.seq;
