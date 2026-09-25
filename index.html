@@ -338,7 +338,7 @@ body.light .nearby-stop-picker{background:rgba(8,115,77,.06);border-color:rgba(8
 .bus-saver-vehicle{width:190px;height:82px;filter:drop-shadow(0 5px 8px #0009)}.bus-saver-body{left:4px;right:0;bottom:13px;height:51px;border:2px solid #f7d58a;border-radius:10px 18px 7px 7px;background:linear-gradient(180deg,#f6b44b 0 12%,#d92d36 13% 68%,#92243d 69% 100%);box-shadow:inset 0 -7px 0 #243c67}.bus-saver-body:before{content:none}.bus-saver-body:after{content:none}.bus-saver-roof{position:absolute;left:16px;right:17px;top:-7px;height:8px;border-radius:10px 14px 0 0;background:#f5d28b;border:2px solid #f7d58a;border-bottom:0}.bus-saver-window{position:absolute;top:8px;height:19px;background:linear-gradient(145deg,#b9e6f0 0 22%,#315778 23% 72%,#8fd3df 73%);border:2px solid #f9d98f;border-radius:3px 5px 2px 2px;box-shadow:inset 0 0 0 1px #183452}.bus-saver-window.w1{left:14px;width:35px}.bus-saver-window.w2{left:54px;width:35px}.bus-saver-window.w3{left:94px;width:35px}.bus-saver-door{position:absolute;right:13px;top:8px;width:25px;height:35px;border:2px solid #f9d98f;border-radius:3px 3px 1px 1px;background:linear-gradient(90deg,#8fd3df 0 45%,#284967 46% 53%,#8fd3df 54%)}.bus-saver-destination{position:absolute;right:16px;top:-4px;padding:1px 5px;border-radius:2px;background:#202a42;color:#ffe8a6;font:bold 7px ui-monospace,monospace;letter-spacing:.05em;z-index:2}.bus-saver-lower-stripe{position:absolute;left:0;right:0;bottom:13px;height:5px;background:#54c6b2;box-shadow:0 5px 0 #e8c24b}.bus-saver-logo{position:absolute;left:12px;bottom:20px;color:#fff4bd;font:bold 10px ui-monospace,monospace;letter-spacing:.08em}.bus-saver-lamp{position:absolute;left:6px;top:31px;width:6px;height:7px;border-radius:50%;background:#fff0ad;box-shadow:0 0 7px #fff0ad}.bus-saver-wheel{bottom:-10px;width:19px;height:19px;border:3px solid #b8c3d2;background:#151a27;box-shadow:inset 0 0 0 4px #4f6076;z-index:3}.bus-saver-wheel.a{left:25px}.bus-saver-wheel.b{right:21px}.bus-saver-wheel:after{content:"";position:absolute;inset:5px;border-radius:50%;background:#e7b54d}.bus-saver-wheel:before{content:"";position:absolute;left:8px;top:2px;width:2px;height:14px;border-radius:2px;background:#fff0ad;transform-origin:50% 50%;animation:bus-wheel-spin 1.8s linear infinite}@keyframes bus-wheel-spin{to{transform:rotate(360deg)}}.bus-saver-vehicle.convoy-follow{position:absolute}.bus-saver-hint{font-size:11px}
 
 /* Moovey-first route detail reconstruction: compact summary + three-card live dock */
-.route-detail{background:var(--bg-deep);}
+.route-detail{background:var(--bg-deep);overflow-anchor:none;}
 .route-detail-head{background:var(--bg);border-bottom:1px solid var(--line);}
 .route-detail-inner{max-width:720px;padding:0 12px 32px;}
 .detail-summary{position:relative;padding:12px 14px 11px;border:0;border-radius:18px;background:var(--card);box-shadow:0 3px 16px rgba(0,0,0,.08);margin-bottom:8px;}
@@ -362,6 +362,8 @@ body.light .nearby-stop-picker{background:rgba(8,115,77,.06);border-color:rgba(8
 .detail-live-dock .detail-status{margin-top:6px;padding:7px 9px;font-size:10px;}
 .detail-live-dock.compact{top:57px;padding:5px 4px 7px;background:color-mix(in srgb,var(--bg-deep) 99%,transparent);box-shadow:0 5px 14px rgba(0,0,0,.12);}
 .detail-live-dock .detail-current,.detail-live-dock .detail-status,.detail-live-dock .detail-gps-panel{max-height:420px;overflow:hidden;opacity:1;visibility:visible;transform:translateY(0);transition:max-height .38s ease,opacity .3s ease,visibility 0s linear 0s,transform .38s ease,margin .38s ease,padding .38s ease;}
+.detail-live-dock .detail-current,.detail-live-dock .detail-status,.detail-live-dock .detail-gps-panel{transition:none!important;}
+.detail-live-dock.compact .detail-current,.detail-live-dock.compact .detail-status,.detail-live-dock.compact .detail-gps-panel{max-height:420px;margin-top:0;margin-bottom:6px;padding-top:9px;padding-bottom:9px;opacity:0;visibility:hidden;transform:translateY(-4px);pointer-events:none;}
 .detail-live-dock.compact .detail-current,.detail-live-dock.compact .detail-status{max-height:0;margin-top:0;margin-bottom:0;padding-top:0;padding-bottom:0;opacity:0;visibility:hidden;transform:translateY(-14px);pointer-events:none;transition-delay:0s,.08s,.38s,0s,0s,0s;}
 .detail-live-dock.compact .detail-gps-panel{max-height:0;margin-top:0;margin-bottom:0;padding-top:0;padding-bottom:0;opacity:0;visibility:hidden;transform:translateY(-14px);pointer-events:none;transition-delay:0s,.08s,.38s,0s,0s,0s;}
 .detail-live-dock.compact .detail-eta{min-height:62px;padding:7px 4px;}
@@ -837,6 +839,7 @@ body.light *,
 .detail-service summary:after{flex:0 0 auto;margin-left:auto}
 .custom-trip-control{position:absolute;right:52px;bottom:11px;display:inline-flex;margin:0}.custom-trip-open{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid rgba(255,211,90,.48);border-radius:999px;background:rgba(255,211,90,.09);color:#ffd35a;font:800 10px inherit;cursor:pointer}.custom-trip-open span{display:inline-flex;align-items:center;gap:5px;min-width:0}.custom-trip-open b{font-size:11px}.custom-trip-open small{display:none}.custom-trip-open strong{font-size:10px}.custom-trip-open:focus-visible{outline:3px solid #ffd35a;outline-offset:2px}
 .custom-picker-copy b{font-size:19px;line-height:1.3}.custom-picker-copy b small{margin-left:3px;color:#8b8b8b;font-size:12px;font-weight:600}@media(max-width:430px){.custom-picker-copy b{font-size:18px}}
+.detail-live-dock.compact .detail-current,.detail-live-dock.compact .detail-status,.detail-live-dock.compact .detail-gps-panel{max-height:420px!important;margin-top:0!important;margin-bottom:6px!important;padding-top:9px!important;padding-bottom:9px!important;opacity:0!important;visibility:hidden!important;transform:translateY(-4px)!important;pointer-events:none!important;transition:none!important}
 </style>
 <style id="final-route-control-fixes">
 .chead-actions .getoff-btn{font-size:15px!important;line-height:1!important}
@@ -2258,18 +2261,19 @@ function centerDetailStop(seq) {
   const delta = targetCenter - viewportCenter;
   if (Math.abs(delta) < 8) return;
   const maxTop = Math.max(0, routeDetail.scrollHeight - routeDetail.clientHeight);
-  routeDetail.scrollTo({ top: Math.max(0, Math.min(maxTop, routeDetail.scrollTop + delta)), behavior:'smooth' });
+  routeDetail.scrollTo({ top: Math.max(0, Math.min(maxTop, routeDetail.scrollTop + delta)), behavior:'auto' });
 }
 function scheduleCenterDetailStop(seq) {
-  [0, 80, 220, 500].forEach(delay => window.setTimeout(() => centerDetailStop(seq), delay));
+  window.setTimeout(() => centerDetailStop(seq), 0);
   window.setTimeout(() => {
     if (routeDetailState.pendingCenterStopSeq === seq) routeDetailState.pendingCenterStopSeq = null;
-  }, 700);
+  }, 80);
 }
 routeDetail.addEventListener('scroll', updateRouteDetailCompact, { passive:true });
 function renderRouteDetail() {
   const it = routeDetailState.item;
   if (!it || !routeDetailBody) return;
+  const preservedScrollTop = routeDetail.scrollTop;
   const currentService = routeDetailBody.querySelector('.detail-service');
   if (currentService) routeDetailState.serviceOpen = currentService.open;
   const selected = routeDetailState.gpsSeq || routeDetailState.selectedSeq;
@@ -2313,6 +2317,10 @@ function renderRouteDetail() {
     const isTarget = getoff[uid(it)]?.active && getoff[uid(it)].targetSeq === st.seq;
     const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected ' : '') + (isLive ? 'is-live ' : '') + (isTarget ? 'is-getoff-target' : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (isLive ? '，你而家接近呢度' : st.seq === selected ? '，已選' : '，按兩下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-content"><span class="stop-copy"><strong>' + esc(st.seq) + '　' + detailStopNameMarkup(st.name) + '</strong><small>' + esc(st.name_en || '') + '</small></span>' + '<span class="stop-state">' + (isLive ? '你而家喺呢度' : isTarget ? '落車站' : state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></span></button>'; const near = nearStation === st.seq ? '<div class="detail-between-bus" role="img" aria-label="巴士即將到站" title="巴士即將到站"><span class="bus-front-marker"></span><span class="bus-status-label">' + (nearStationEta?.sched ? '原定班次接近' : '巴士接近中') + '</span></div>' : ''; return row + near + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it, routeDetailState.serviceOpen);
   updateRouteDetailCompact();
+  routeDetail.scrollTo({ top: preservedScrollTop, behavior:'auto' });
+  requestAnimationFrame(() => {
+    if (routeDetailState.pendingCenterStopSeq == null) routeDetail.scrollTo({ top: preservedScrollTop, behavior:'auto' });
+  });
   routeDetailBody.querySelector('[data-detail-gps]')?.addEventListener('click', () => startRouteDetailGps(it));
   routeDetailBody.querySelector('[data-detail-gps-stop]')?.addEventListener('click', stopRouteDetailGps);
   routeDetailBody.querySelector('[data-custom-open]')?.addEventListener('click', () => { routeDetailState.customPickerOpen = true; routeDetailState.customPickerMode = 'from'; renderRouteDetail(); });

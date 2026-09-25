@@ -139,6 +139,21 @@ test('open service information stays open during detail refreshes', async ({ pag
   await expect(page.locator('.detail-service')).toHaveAttribute('open', '');
 });
 
+test('detail refresh preserves the reader scroll position', async ({ page }) => {
+  await prepare(page);
+  await page.locator('[data-detail-id]').click();
+  await expect(page.locator('[data-detail-stop="3"]')).toBeVisible();
+  const result = await page.evaluate(() => {
+    const detail = document.getElementById('routeDetail');
+    const target = Math.min(180, Math.max(0, detail.scrollHeight - detail.clientHeight));
+    routeDetailState.pendingCenterStopSeq = null;
+    detail.scrollTo({ top:target, behavior:'auto' });
+    renderRouteDetail();
+    return { before:target, after:detail.scrollTop };
+  });
+  expect(result.after).toBe(result.before);
+});
+
 test('finds the nearest route stop from the current location before adding a route', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('buspulse.first-use-tour.v1', '1');
