@@ -78,6 +78,10 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('[data-detail-refresh]')).toHaveAttribute('aria-label', '立即更新全部車站 ETA');
   await expect(page.locator('[data-detail-gps]')).toBeVisible();
   await expect(page.locator('[data-detail-gps]')).toHaveCSS('color', 'rgb(54, 224, 160)');
+  await expect(page.locator('[data-detail-gps]')).toHaveAttribute('aria-pressed', 'false');
+  const stateCss = (await page.locator('style').allTextContents()).join('\n');
+  expect(stateCss).toContain('.detail-summary-tool.gps.is-active');
+  expect(stateCss).toContain('filter:brightness(0) invert(1)');
   await expect(page.locator('[data-detail-refresh]')).toHaveCSS('color', 'rgb(255, 211, 78)');
   await expect(page.locator('[data-detail-refresh]')).toHaveCSS('font-size', '0px');
   const gpsCss = (await page.locator('style').allTextContents()).join('\n');
