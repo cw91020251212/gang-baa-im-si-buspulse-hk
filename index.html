@@ -3252,12 +3252,13 @@ document.addEventListener('visibilitychange', () => {
   // 不要因為切去音樂／聊天 App 就停止提醒；回到前景時立即補一次更新，
   // 並重排下一次輪詢，避免背景節流造成長時間漂移。
   if (!document.hidden) {
+    if (busSaverActive) closeBusSaver();
     wakeAlarmPlans();
     refresh();
     startLoop();
   }
 });
-window.addEventListener('pageshow', () => { wakeAlarmPlans(); refresh(); });
+window.addEventListener('pageshow', () => { if (busSaverActive) closeBusSaver(); wakeAlarmPlans(); refresh(); });
 window.addEventListener('online', () => { wakeAlarmPlans(); refresh(); });
 refreshBtn.addEventListener('click', () => { refresh({ manual:true }); });
 function bindInfoBar(bar) {

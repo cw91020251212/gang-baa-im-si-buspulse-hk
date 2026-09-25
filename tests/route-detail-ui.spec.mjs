@@ -336,3 +336,14 @@ test('arrow keys move between stops and keep the selected ETA panel in sync', as
   await expect(page.locator('.detail-current-name')).toContainText('第一站');
   await expect(first).toBeFocused();
 });
+
+test('returning to the app closes the screen saver before showing the main UI', async ({ page }) => {
+  await page.goto('./?smoke=route-detail-ui', { waitUntil: 'domcontentloaded' });
+  const state = await page.evaluate(() => {
+    openBusSaver();
+    const before = document.getElementById('busSaver').classList.contains('on');
+    window.dispatchEvent(new PageTransitionEvent('pageshow'));
+    return { before, after: busSaverActive, visible: document.getElementById('busSaver').classList.contains('on') };
+  });
+  expect(state).toEqual({ before:true, after:false, visible:false });
+});
