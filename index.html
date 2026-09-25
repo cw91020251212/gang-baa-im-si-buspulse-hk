@@ -2245,8 +2245,10 @@ async function refreshRouteDetailEtas() {
 
 function updateRouteDetailCompact(){
   if (!routeDetail) return;
-  const dock = routeDetail.querySelector('.detail-live-dock');
-  if (dock) dock.classList.toggle('compact', routeDetail.scrollTop > 52);
+  // Keep the live summary in normal document flow while scrolling.  The old
+  // compact toggle collapsed the current/status panels at 52px, which made
+  // two ETA cards appear to disappear abruptly before the dock scrolled away.
+  // The browser should naturally move the complete three-card panel offscreen.
 }
 function centerDetailStop(seq) {
   const button = routeDetailBody?.querySelector('[data-detail-stop="' + cssEscape(String(seq)) + '"]');
