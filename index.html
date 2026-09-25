@@ -2946,7 +2946,12 @@ async function roadSegmentPath(a, b, timing) {
       const routeMinutes = Number(route.duration || 0) / 60;
       const outside = line.some(x => x[1] < minLat || x[1] > maxLat || x[0] < minLng || x[0] > maxLng);
       const timeBad = etaGap != null && routeMinutes > 0 && (routeMinutes > Math.max(etaGap * 2.5, etaGap + 4) || routeMinutes < Math.max(.25, etaGap * .35));
-      if (line.length < 2 || !routeKm || outside || routeKm > Math.max(1.2, directKm * 3.2) || timeBad) return null;
+      const detourBad = routeKm > Math.max(1.2, directKm * 3.2);
+      // A close pair of stops can legitimately require a loop or a flyover.
+      // Do not drop that road merely because its ratio to the straight-line
+      // distance is high when the official stop-to-stop ETA supports it.
+      const unsupportedDetour = detourBad && (etaGap == null || timeBad);
+      if (line.length < 2 || !routeKm || outside || routeKm > 6 || unsupportedDetour || timeBad) return null;
       // OSRM's driving profile excludes footways and pedestrian paths; keep only
       // its road geometry, never connect endpoints with a straight fallback.
       const timeDelta = etaGap == null || routeMinutes <= 0 ? 0 : Math.abs(routeMinutes - etaGap);
