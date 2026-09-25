@@ -68,6 +68,7 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('.detail-live-dock')).not.toHaveClass(/compact/);
   await expect(page.locator('.detail-eta')).toHaveCount(3);
   await expect(page.locator('.detail-live-dock .detail-current')).toBeVisible();
+  await expect(page.locator('.detail-gps-panel:not(.is-live)')).toHaveCount(0);
   await expect(page.locator('.detail-eta-panel')).toHaveCSS('position', 'sticky');
   await expect(page.locator('.detail-status')).toHaveAttribute('aria-live', 'polite');
   await expect(page.locator('#routeDetailOperator')).toHaveText('KMB');
