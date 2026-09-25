@@ -1,6 +1,6 @@
 /* BusPulse HK service worker: app shell cache and authorized local notifications only. */
-const SHELL = 'buspulse-hk-shell-v87-summary-icons';
-const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './fare-index.json', './place-index.json'];
+const SHELL = 'buspulse-hk-shell-v88-gps-image';
+const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './gps_PNG32.png', './fare-index.json', './place-index.json'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(SHELL).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
 });
