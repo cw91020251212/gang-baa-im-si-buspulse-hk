@@ -2908,54 +2908,37 @@ async function toggleNotificationSetting() {
   prefs.notificationsEnabled = prefs.notificationsEnabled === false;
   savePrefs(); updateNotificationButton(); renderDiagnostics();
 }
+async function roadSegmentPath(a, b) {
+  const directKm = Math.hypot((b.lat - a.lat) * 111, (b.lng - a.lng) * 102);
+  const fallback = [[a.lat, a.lng], [b.lat, b.lng]];
+  try {
+    const q = await getJSON('https://router.project-osrm.org/route/v1/driving/' + a.lng + ',' + a.lat + ';' + b.lng + ',' + b.lat + '?overview=full&geometries=geojson&steps=false', 12000);
+    const line = q.routes?.[0]?.geometry?.coordinates || [];
+    const routeKm = Number(q.routes?.[0]?.distance || 0) / 1000;
+    if (line.length < 2 || !routeKm) return fallback;
+    // The road router is not a bus operator. Keep its geometry only when it
+    // stays near this adjacent-stop segment and is not an implausible detour.
+    const padLat = Math.max(.015, Math.abs(b.lat - a.lat) * .75 + .005);
+    const padLng = Math.max(.015, Math.abs(b.lng - a.lng) * .75 + .005);
+    const minLat = Math.min(a.lat, b.lat) - padLat, maxLat = Math.max(a.lat, b.lat) + padLat;
+    const minLng = Math.min(a.lng, b.lng) - padLng, maxLng = Math.max(a.lng, b.lng) + padLng;
+    const outside = line.some(x => x[1] < minLat || x[1] > maxLat || x[0] < minLng || x[0] > maxLng);
+    if (outside || routeKm > Math.max(1.2, directKm * 3.2)) return fallback;
+    return line.map(x => [x[1], x[0]]);
+  } catch { return fallback; }
+}
 async function roadPath(stops) {
   const valid = stops.filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
   if (valid.length < 2) return valid.map(x => [x.lat, x.lng]);
-  const gapKm = (a,b) => Math.hypot((b.lat-a.lat)*111, (b.lng-a.lng)*102);
-  // Long gaps often make a multi-waypoint router choose an unrelated road/ferry.
-  // Route these links separately so mountain roads, tunnels and bridges stay in order.
-  if (valid.some((x,i) => i && gapKm(valid[i-1],x) > 5)) {
-    const segmented = [];
-    for (let i=1; i<valid.length; i++) {
-      const a=valid[i-1], b=valid[i];
-      try {
-        const q=await getJSON('https://router.project-osrm.org/route/v1/driving/' + a.lng + ',' + a.lat + ';' + b.lng + ',' + b.lat + '?overview=full&geometries=geojson&steps=false', 12000);
-        const line=q.routes?.[0]?.geometry?.coordinates || [];
-        if (line.length > 1) {
-          const lats=line.map(x=>x[1]), lngs=line.map(x=>x[0]);
-          const outside=line.some(x => Math.abs(x[1]-((a.lat+b.lat)/2)) > .18 || Math.abs(x[0]-((a.lng+b.lng)/2)) > .25);
-          const directKm=gapKm(a,b), routeKm=Number(q.routes?.[0]?.distance || 0)/1000;
-          // OSRM may choose a ferry/跨境 detour between nearby airport stops.
-          // Reject implausible segments before drawing them.
-          if (!outside && routeKm > 0 && routeKm <= Math.max(25, directKm * 6)) {
-            if (i > 1) line.shift(); segmented.push(...line.map(x => [x[1],x[0]])); continue;
-          }
-        }
-      } catch {}
-      if (i > 1) segmented.pop();
-      segmented.push([a.lat,a.lng],[b.lat,b.lng]);
-    }
-    if (segmented.length > 1) return segmented;
+  // Route every adjacent pair separately. A single multi-waypoint OSRM call
+  // can connect the whole line through an unrelated highway, ferry or border
+  // crossing even when the final two official stops are next to each other.
+  const road = [];
+  for (let i = 1; i < valid.length; i++) {
+    const segment = await roadSegmentPath(valid[i - 1], valid[i]);
+    road.push(...(i > 1 ? segment.slice(1) : segment));
   }
-  try {
-    const coords = valid.map(x => x.lng + ',' + x.lat).join(';');
-    const d = await getJSON('https://router.project-osrm.org/route/v1/driving/' + coords + '?overview=full&geometries=geojson&steps=false', 15000);
-    const line = d.routes?.[0]?.geometry?.coordinates || [];
-    if (line.length > 1) {
-      const lats = valid.map(x => x.lat), lngs = valid.map(x => x.lng);
-      const minLat = Math.min(...lats) - .03, maxLat = Math.max(...lats) + .03;
-      const minLng = Math.min(...lngs) - .03, maxLng = Math.max(...lngs) + .03;
-      const outside = line.some(x => x[1] < minLat || x[1] > maxLat || x[0] < minLng || x[0] > maxLng);
-      const directKm = valid.slice(1).reduce((sum, x, i) => {
-        const a = valid[i], dy = (x.lat-a.lat)*111, dx = (x.lng-a.lng)*102;
-        return sum + Math.hypot(dx, dy);
-      }, 0);
-      const routeKm = Number(d.routes?.[0]?.distance || 0) / 1000;
-      // Reject implausible detours (e.g. E41 being routed towards Zhuhai/Macau).
-      if (!outside && (!routeKm || routeKm <= Math.max(80, directKm * 3.2))) return line.map(x => [x[1], x[0]]);
-    }
-  } catch {}
-  return valid.map(x => [x.lat, x.lng]);
+  return road;
 }
 
 async function toggleMap(it, button) {

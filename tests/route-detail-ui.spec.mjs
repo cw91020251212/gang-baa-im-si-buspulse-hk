@@ -143,6 +143,19 @@ test('service accordion keeps a clear, single-line mobile heading', async ({ pag
   expect(hierarchy.titleRight).toBeLessThan(hierarchy.summaryRight - 28);
 });
 
+test('map route rejects an implausible OSRM detour between adjacent stops', async ({ page }) => {
+  await page.route('https://router.project-osrm.org/**', route => route.fulfill({
+    status:200, contentType:'application/json',
+    body:JSON.stringify({ routes:[{ distance:12000, geometry:{ coordinates:[[114.2,22.3],[114.45,22.55],[114.201,22.301]] } }] })
+  }));
+  await page.goto('./?smoke=route-detail-ui', { waitUntil:'domcontentloaded' });
+  const path = await page.evaluate(() => roadPath([
+    { lat:22.3, lng:114.2 },
+    { lat:22.301, lng:114.201 }
+  ]));
+  expect(path).toEqual([[22.3,114.2],[22.301,114.201]]);
+});
+
 test('open service information stays open during detail refreshes', async ({ page }) => {
   await prepare(page);
   await page.locator('[data-detail-id]').click();

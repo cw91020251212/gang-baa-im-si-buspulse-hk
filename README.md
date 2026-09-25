@@ -44,7 +44,7 @@ The screensaver is a visual idle mode and does not stop ETA polling or local ala
 
 ## Map notes
 
-The map uses Leaflet with OpenStreetMap tiles. Stop coordinates come from the public transport APIs where available. The blue line follows a road-network driving route between official stops where routing is available; it is a visual approximation, not the operator's exact bus-only geometry or a live bus GPS trace. Location access is requested only when the user taps the location button and is handled by the browser.
+The map uses Leaflet with OpenStreetMap tiles. Stop coordinates come from the public transport APIs where available. The red/blue line is a visual road-network approximation between adjacent official stops. It uses OSRM one segment at a time and rejects implausibly long or geographically distant detours, falling back to a direct connection for that segment; it is not the operator's exact bus-only geometry or a live bus GPS trace. Location access is requested only when the user taps the location button and is handled by the browser.
 
 Fare labels use the Transport Department's biweekly public route-and-fare GeoJSON. A compact `fare-index.json` is committed for reliable browser loading because the original public file is large and does not provide browser CORS headers. The public dataset provides the route's `fullFare` value; it does not expose a complete stop-by-stop sectional fare table, so the label is the official full-route fare rather than an inferred segment fare.
 
