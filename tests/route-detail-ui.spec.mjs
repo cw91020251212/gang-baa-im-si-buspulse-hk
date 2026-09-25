@@ -80,7 +80,7 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('[data-detail-refresh]')).toHaveCSS('color', 'rgb(255, 211, 78)');
   await expect(page.locator('[data-detail-refresh]')).toHaveCSS('font-size', '29px');
   const gpsCss = (await page.locator('style').allTextContents()).join('\n');
-  expect(gpsCss).toContain("mask:url('./assets/gps-location.png')");
+  expect(gpsCss).toContain("background:url('./assets/gps-location.png')");
   await expect(page.locator('.detail-inference').first()).toContainText('估計位置');
   await expect(page.locator('.detail-eta.near-arrival .near-arrival-dot').first()).toBeVisible();
   const markerCss = (await page.locator('style').allTextContents()).join('\n');
