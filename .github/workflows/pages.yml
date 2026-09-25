@@ -59,7 +59,10 @@ jobs:
           rm -rf _site
           mkdir -p _site
           cp index.html manifest.json sw.js icon-192.png icon-512.png fare-index.json place-index.json _site/
+          mkdir -p _site/assets
+          cp assets/gps-location.png _site/assets/
           test -f _site/index.html
+          test -f _site/assets/gps-location.png
           test -f _site/sw.js
           test ! -e _site/tests
           test ! -e _site/node_modules
