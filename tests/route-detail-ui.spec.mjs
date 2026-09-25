@@ -82,7 +82,7 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('[data-detail-gps]')).toHaveAttribute('aria-pressed', 'false');
   const stateCss = (await page.locator('style').allTextContents()).join('\n');
   expect(stateCss).toContain('.detail-summary-tool.gps.is-active');
-  expect(stateCss).toContain('filter:grayscale(1) brightness(1.35)');
+  expect(stateCss).toContain('filter:grayscale(1) brightness(.72)');
   expect(stateCss).toContain('.detail-summary-tool.gps.is-active{background:transparent');
   expect(stateCss).toContain('.detail-summary-tool.gps.is-active::before{filter:none;}');
   await expect(page.locator('[data-detail-refresh]')).toHaveCSS('color', 'rgb(255, 211, 78)');
