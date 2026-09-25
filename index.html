@@ -2934,24 +2934,25 @@ async function mapEtaEvidence(it, stops) {
 async function roadSegmentPath(a, b, timing) {
   const directKm = Math.hypot((b.lat - a.lat) * 111, (b.lng - a.lng) * 102);
   try {
-    const q = await getJSON('https://router.project-osrm.org/route/v1/driving/' + a.lng + ',' + a.lat + ';' + b.lng + ',' + b.lat + '?overview=full&geometries=geojson&steps=false', 12000);
-    const line = q.routes?.[0]?.geometry?.coordinates || [];
-    const routeKm = Number(q.routes?.[0]?.distance || 0) / 1000;
-    if (line.length < 2 || !routeKm) return null;
-    // The road router is not a bus operator. Keep its geometry only when it
-    // stays near this adjacent-stop segment and is not an implausible detour.
+    const q = await getJSON('https://router.project-osrm.org/route/v1/driving/' + a.lng + ',' + a.lat + ';' + b.lng + ',' + b.lat + '?overview=full&geometries=geojson&steps=false&alternatives=true&continue_straight=true', 12000);
+    const etaGap = etaSegmentGapMinutes(a, b, timing);
     const padLat = Math.max(.015, Math.abs(b.lat - a.lat) * .75 + .005);
     const padLng = Math.max(.015, Math.abs(b.lng - a.lng) * .75 + .005);
     const minLat = Math.min(a.lat, b.lat) - padLat, maxLat = Math.max(a.lat, b.lat) + padLat;
     const minLng = Math.min(a.lng, b.lng) - padLng, maxLng = Math.max(a.lng, b.lng) + padLng;
-    const outside = line.some(x => x[1] < minLat || x[1] > maxLat || x[0] < minLng || x[0] > maxLng);
-    if (outside || routeKm > Math.max(1.2, directKm * 3.2)) return null;
-    const etaGap = etaSegmentGapMinutes(a, b, timing);
-    const routeMinutes = Number(q.routes?.[0]?.duration || 0) / 60;
-    // ETA is noisy, so use it as a cross-check rather than an exact speed
-    // limit. A large disagreement is evidence that this is the wrong road.
-    if (etaGap != null && routeMinutes > 0 && (routeMinutes > Math.max(etaGap * 2.5, etaGap + 4) || routeMinutes < Math.max(.25, etaGap * .35))) return null;
-    return line.map(x => [x[1], x[0]]);
+    const candidates = (q.routes || []).map(route => {
+      const line = route.geometry?.coordinates || [];
+      const routeKm = Number(route.distance || 0) / 1000;
+      const routeMinutes = Number(route.duration || 0) / 60;
+      const outside = line.some(x => x[1] < minLat || x[1] > maxLat || x[0] < minLng || x[0] > maxLng);
+      const timeBad = etaGap != null && routeMinutes > 0 && (routeMinutes > Math.max(etaGap * 2.5, etaGap + 4) || routeMinutes < Math.max(.25, etaGap * .35));
+      if (line.length < 2 || !routeKm || outside || routeKm > Math.max(1.2, directKm * 3.2) || timeBad) return null;
+      // OSRM's driving profile excludes footways and pedestrian paths; keep only
+      // its road geometry, never connect endpoints with a straight fallback.
+      const timeDelta = etaGap == null || routeMinutes <= 0 ? 0 : Math.abs(routeMinutes - etaGap);
+      return { line, score: routeKm + timeDelta * .08, routeKm };
+    }).filter(Boolean).sort((x, y) => x.score - y.score)[0];
+    return candidates ? candidates.line.map(x => [x[1], x[0]]) : null;
   } catch { return null; }
 }
 async function roadPath(stops, timing = null) {
