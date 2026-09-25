@@ -156,6 +156,21 @@ test('map route rejects an implausible OSRM detour between adjacent stops', asyn
   expect(path).toEqual([]);
 });
 
+test('map route rejects a road duration that contradicts the official ETA gap', async ({ page }) => {
+  await page.route('https://router.project-osrm.org/**', route => route.fulfill({
+    status:200, contentType:'application/json',
+    body:JSON.stringify({ routes:[{ distance:500, duration:900, geometry:{ coordinates:[[114.2,22.3],[114.205,22.305],[114.21,22.31]] } }] })
+  }));
+  await page.goto('./?smoke=route-detail-ui', { waitUntil:'domcontentloaded' });
+  const path = await page.evaluate(() => roadPath([
+    { id:'a', lat:22.3, lng:114.2 }, { id:'b', lat:22.31, lng:114.21 }
+  ], new Map([
+    ['a', { iso:new Date(Date.now() + 60000).toISOString(), etaSeq:1 }],
+    ['b', { iso:new Date(Date.now() + 180000).toISOString(), etaSeq:1 }]
+  ])));
+  expect(path).toEqual([]);
+});
+
 test('open service information stays open during detail refreshes', async ({ page }) => {
   await prepare(page);
   await page.locator('[data-detail-id]').click();

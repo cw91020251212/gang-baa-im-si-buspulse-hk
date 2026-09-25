@@ -2746,7 +2746,8 @@ async function showGetoffMap(it, stops, button) {
   getoffMapInstance = map;
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap contributors' }).addTo(map);
   const points = valid.map(x => [x.lat, x.lng]);
-  const road = await roadPath(valid);
+  const timing = await mapEtaEvidence(it, valid);
+  const road = await roadPath(valid, timing);
   addImageStyleRouteLine(map, road);
   valid.forEach(st => {
     const marker=imageStyleStopMarker(st, getoff[uid(it)]?.targetSeq === st.seq);
@@ -2911,7 +2912,26 @@ async function toggleNotificationSetting() {
   prefs.notificationsEnabled = prefs.notificationsEnabled === false;
   savePrefs(); updateNotificationButton(); renderDiagnostics();
 }
-async function roadSegmentPath(a, b) {
+function etaSegmentGapMinutes(a, b, timing) {
+  if (!timing) return null;
+  const first = timing.get(String(a.id)), second = timing.get(String(b.id));
+  if (!first?.iso || !second?.iso) return null;
+  if (first.etaSeq != null && second.etaSeq != null && Number(first.etaSeq) !== Number(second.etaSeq)) return null;
+  const gap = (Date.parse(second.iso) - Date.parse(first.iso)) / 60000;
+  return Number.isFinite(gap) && gap >= .5 && gap <= 30 ? gap : null;
+}
+async function mapEtaEvidence(it, stops) {
+  try {
+    if (it.co === 'KMB') {
+      const d = (await getJSON(KMB + '/route-eta/' + encodeURIComponent(it.route) + '/' + it.service_type)).data;
+      const grouped = parseKmbRouteEta(d, it);
+      return new Map(stops.map(stop => [String(stop.id), (grouped.get(Number(stop.seq)) || []).find(e => e.iso && !e.sched) || null]));
+    }
+    const rows = await Promise.all(stops.map(async stop => [String(stop.id), (await fetchETA(makeStopRequest(it, stop))).etas.find(e => e.iso && !e.sched) || null]));
+    return new Map(rows);
+  } catch { return null; }
+}
+async function roadSegmentPath(a, b, timing) {
   const directKm = Math.hypot((b.lat - a.lat) * 111, (b.lng - a.lng) * 102);
   try {
     const q = await getJSON('https://router.project-osrm.org/route/v1/driving/' + a.lng + ',' + a.lat + ';' + b.lng + ',' + b.lat + '?overview=full&geometries=geojson&steps=false', 12000);
@@ -2926,10 +2946,15 @@ async function roadSegmentPath(a, b) {
     const minLng = Math.min(a.lng, b.lng) - padLng, maxLng = Math.max(a.lng, b.lng) + padLng;
     const outside = line.some(x => x[1] < minLat || x[1] > maxLat || x[0] < minLng || x[0] > maxLng);
     if (outside || routeKm > Math.max(1.2, directKm * 3.2)) return null;
+    const etaGap = etaSegmentGapMinutes(a, b, timing);
+    const routeMinutes = Number(q.routes?.[0]?.duration || 0) / 60;
+    // ETA is noisy, so use it as a cross-check rather than an exact speed
+    // limit. A large disagreement is evidence that this is the wrong road.
+    if (etaGap != null && routeMinutes > 0 && (routeMinutes > Math.max(etaGap * 2.5, etaGap + 4) || routeMinutes < Math.max(.25, etaGap * .35))) return null;
     return line.map(x => [x[1], x[0]]);
   } catch { return null; }
 }
-async function roadPath(stops) {
+async function roadPath(stops, timing = null) {
   const valid = stops.filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
   if (valid.length < 2) return valid.map(x => [x.lat, x.lng]);
   // Route every adjacent pair separately. A single multi-waypoint OSRM call
@@ -2937,7 +2962,7 @@ async function roadPath(stops) {
   // crossing even when the final two official stops are next to each other.
   const segments = [];
   for (let i = 1; i < valid.length; i++) {
-    const segment = await roadSegmentPath(valid[i - 1], valid[i]);
+    const segment = await roadSegmentPath(valid[i - 1], valid[i], timing);
     // Keep gaps as gaps. Flattening this into one polyline would make
     // Leaflet draw a straight line through buildings between valid segments.
     if (segment) segments.push(segment);
@@ -2963,7 +2988,8 @@ async function toggleMap(it, button) {
     const map = L.map(mapEl, { zoomControl: true, attributionControl: true });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(map);
     const points = stops.map(x => [x.lat, x.lng]);
-    const road = await roadPath(stops);
+    const timing = await mapEtaEvidence(it, stops);
+  const road = await roadPath(stops, timing);
     addImageStyleRouteLine(map, road);
     stops.forEach((st, i) => {
       const here = st.id === it.stopId;
@@ -2994,7 +3020,8 @@ async function showSetupMap(v, stops, button) {
   setupMapInstance = map;
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(map);
   const points = valid.map(x => [x.lat, x.lng]);
-  const road = await roadPath(valid);
+  const timing = await mapEtaEvidence(it, valid);
+  const road = await roadPath(valid, timing);
   addImageStyleRouteLine(map, road);
   valid.forEach(st => {
     const marker = imageStyleStopMarker(st);
