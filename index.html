@@ -361,9 +361,8 @@ body.light .nearby-stop-picker{background:rgba(8,115,77,.06);border-color:rgba(8
 .detail-eta small{font-size:9px;margin-top:3px;}
 .detail-live-dock .detail-status{margin-top:6px;padding:7px 9px;font-size:10px;}
 .detail-live-dock.compact{top:57px;padding:5px 4px 7px;background:color-mix(in srgb,var(--bg-deep) 99%,transparent);box-shadow:0 5px 14px rgba(0,0,0,.12);}
-.detail-live-dock .detail-current,.detail-live-dock .detail-status,.detail-live-dock .detail-gps-panel{max-height:420px;overflow:hidden;opacity:1;visibility:visible;transform:translateY(0);transition:max-height .38s ease,opacity .3s ease,visibility 0s linear 0s,transform .38s ease,margin .38s ease,padding .38s ease;}
-.detail-live-dock.compact .detail-current,.detail-live-dock.compact .detail-status{max-height:0;margin-top:0;margin-bottom:0;padding-top:0;padding-bottom:0;opacity:0;visibility:hidden;transform:translateY(-14px);pointer-events:none;transition-delay:0s,.08s,.38s,0s,0s,0s;}
-.detail-live-dock.compact .detail-gps-panel{max-height:0;margin-top:0;margin-bottom:0;padding-top:0;padding-bottom:0;opacity:0;visibility:hidden;transform:translateY(-14px);pointer-events:none;transition-delay:0s,.08s,.38s,0s,0s,0s;}
+.detail-live-dock .detail-current,.detail-live-dock .detail-status,.detail-live-dock .detail-gps-panel{max-height:420px;overflow:hidden;opacity:1;visibility:visible;transform:translateY(0);transition:max-height .55s ease,opacity .42s ease,visibility 0s linear 0s,transform .55s ease,margin .55s ease,padding .55s ease;}
+.detail-live-dock.compact .detail-current,.detail-live-dock.compact .detail-status,.detail-live-dock.compact .detail-gps-panel{max-height:0;margin-top:0;margin-bottom:0;padding-top:0;padding-bottom:0;opacity:0;visibility:hidden;transform:translateY(-14px);pointer-events:none;transition-delay:0s,.12s,.55s,0s,0s,0s;}
 .detail-live-dock.compact .detail-eta{min-height:62px;padding:7px 4px;}
 .detail-live-dock.compact .detail-eta strong{font-size:18px;}
 .detail-live-dock.compact .detail-eta-panel{gap:5px;margin:0;}
@@ -2245,10 +2244,8 @@ async function refreshRouteDetailEtas() {
 
 function updateRouteDetailCompact(){
   if (!routeDetail) return;
-  // Keep the live summary in normal document flow while scrolling.  The old
-  // compact toggle collapsed the current/status panels at 52px, which made
-  // two ETA cards appear to disappear abruptly before the dock scrolled away.
-  // The browser should naturally move the complete three-card panel offscreen.
+  const dock = routeDetail.querySelector('.detail-live-dock');
+  if (dock) dock.classList.toggle('compact', routeDetail.scrollTop > 52);
 }
 function centerDetailStop(seq) {
   const button = routeDetailBody?.querySelector('[data-detail-stop="' + cssEscape(String(seq)) + '"]');
