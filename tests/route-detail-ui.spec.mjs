@@ -75,6 +75,12 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('#routeDetailOperator')).toHaveCSS('color', 'rgb(231, 25, 45)');
   await expect(page.locator('.detail-route-icon')).toHaveText('🚌');
   await expect(page.locator('[data-detail-refresh]')).toHaveAttribute('aria-label', '立即更新全部車站 ETA');
+  await expect(page.locator('[data-detail-gps]')).toBeVisible();
+  await expect(page.locator('[data-detail-gps]')).toHaveCSS('color', 'rgb(54, 224, 160)');
+  await expect(page.locator('[data-detail-refresh]')).toHaveCSS('color', 'rgb(255, 211, 78)');
+  await expect(page.locator('[data-detail-refresh]')).toHaveCSS('font-size', '29px');
+  const gpsCss = (await page.locator('style').allTextContents()).join('\n');
+  expect(gpsCss).toContain("mask:url('./assets/gps-location.png')");
   await expect(page.locator('.detail-inference').first()).toContainText('估計位置');
   await expect(page.locator('.detail-eta.near-arrival .near-arrival-dot').first()).toBeVisible();
   const markerCss = (await page.locator('style').allTextContents()).join('\n');
