@@ -301,6 +301,25 @@ test('ETA wave estimate places virtual buses between the correct stops', async (
   expect(result.map(x => x.fromSeq)).toEqual([1,2]);
 });
 
+test('custom trip uses the selected intermediate destination instead of the terminal stop', async ({ page }) => {
+  await page.goto('./?smoke=route-detail-custom-trip', { waitUntil: 'domcontentloaded' });
+  const result = await page.evaluate(() => {
+    const stops = [
+      { id:'a', seq:1, name:'起點', cumulativeDistanceMeters:0 },
+      { id:'b', seq:2, name:'中途上車站', cumulativeDistanceMeters:1200 },
+      { id:'c', seq:3, name:'中途落車站', cumulativeDistanceMeters:3600 },
+      { id:'d', seq:4, name:'尾站', cumulativeDistanceMeters:12000 }
+    ];
+    routeDetailState.customFromSeq = 2;
+    routeDetailState.customToSeq = 3;
+    const trip = customTripResult(stops, new Map(), 2, 3);
+    const html = customTripPanel(stops);
+    return { trip, hasSelectedDestination: html.includes('中途落車站') && !html.includes('尾站') };
+  });
+  expect(result.trip).toMatchObject({ status:'estimate', from:{ seq:2 }, to:{ seq:3 }, minutes:12 });
+  expect(result.hasSelectedDestination).toBe(true);
+});
+
 test('arrow keys move between stops and keep the selected ETA panel in sync', async ({ page }) => {
   await prepare(page);
   await page.locator('[data-detail-id]').click();
