@@ -2946,10 +2946,11 @@ async function roadSegmentPath(a, b, timing) {
       const routeMinutes = Number(route.duration || 0) / 60;
       const outside = line.some(x => x[1] < minLat || x[1] > maxLat || x[0] < minLng || x[0] > maxLng);
       const timeBad = etaGap != null && routeMinutes > 0 && (routeMinutes > Math.max(etaGap * 2.5, etaGap + 4) || routeMinutes < Math.max(.25, etaGap * .35));
-      // A close pair of stops can legitimately require a loop or a flyover.
-      // Do not drop a road merely because its ratio to straight-line distance
-      // is high; the hard checks are road-router geometry, bounds, and ETA.
-      if (line.length < 2 || !routeKm || outside || routeKm > 6 || timeBad) return null;
+      // Reject a route that leaves the adjacent-stop corridor and then comes
+      // back to it: that is the common OSRM failure here, not a bus shape.
+      const detourRatio = routeKm / Math.max(directKm, .05);
+      const backtrack = detourRatio > 3.2 && routeKm > 1.2;
+      if (line.length < 2 || !routeKm || outside || routeKm > 6 || timeBad || backtrack) return null;
       // OSRM's driving profile excludes footways and pedestrian paths; keep only
       // its road geometry, never connect endpoints with a straight fallback.
       const timeDelta = etaGap == null || routeMinutes <= 0 ? 0 : Math.abs(routeMinutes - etaGap);
