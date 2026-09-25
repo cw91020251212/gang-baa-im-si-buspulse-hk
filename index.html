@@ -347,7 +347,8 @@ body.light .nearby-stop-picker{background:rgba(8,115,77,.06);border-color:rgba(8
 .detail-summary-tool:hover{background:rgba(108,140,255,.2);border-color:#9eb2ff;}
 .detail-summary-tool:active{transform:scale(.94);}
 .detail-summary-tool.gps{color:#36e0a0;border-color:rgba(54,224,160,.7);}
-.detail-summary-tool.refresh{color:#b9c6ff;}
+.detail-summary-tool.gps{font-size:24px;}
+.detail-summary-tool.refresh{color:#b9c6ff;font-size:31px;line-height:.8;}
 .detail-summary-tool:disabled{opacity:.55;cursor:wait;}
 .detail-route-line{display:flex;align-items:center;gap:9px;min-width:0;font-size:18px;line-height:1.2;white-space:nowrap;}
 .detail-route-line > span:last-child{overflow:hidden;text-overflow:ellipsis;}
@@ -1778,7 +1779,7 @@ function detailGpsPanel(it, current) {
 function detailActionButtons(it) {
   const state = routeDetailState;
   const gps = state.gpsStatus === 'watching'
-    ? '<button class="detail-summary-tool gps" type="button" data-detail-gps-stop aria-label="停止 GPS 跟車" title="停止 GPS 跟車">⌾</button>'
+    ? '<button class="detail-summary-tool gps" type="button" data-detail-gps-stop aria-label="停止 GPS 跟車" title="停止 GPS 跟車">⌖</button>'
     : '<button class="detail-summary-tool gps" type="button" data-detail-gps aria-label="開啟 GPS 跟車" title="開啟 GPS 跟車">⌖</button>';
   return '<div class="detail-summary-tools" aria-label="路線功能">' + gps + '<button class="detail-summary-tool refresh" type="button" data-detail-refresh aria-label="立即更新全部車站 ETA" title="立即更新全部車站 ETA">↻</button></div>';
 }
