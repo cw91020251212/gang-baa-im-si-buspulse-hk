@@ -314,10 +314,14 @@ test('custom trip uses the selected intermediate destination instead of the term
     routeDetailState.customToSeq = 3;
     const trip = customTripResult(stops, new Map(), 2, 3);
     const html = customTripPanel(stops);
-    return { trip, hasSelectedDestination: html.includes('中途落車站') && !html.includes('尾站') };
+    routeDetailState.customFromSeq = null;
+    routeDetailState.customToSeq = null;
+    const defaultHtml = customTripPanel(stops);
+    return { trip, hasSelectedDestination: html.includes('中途落車站') && !html.includes('尾站'), defaultsToTerminal: defaultHtml.includes('尾站') };
   });
   expect(result.trip).toMatchObject({ status:'estimate', from:{ seq:2 }, to:{ seq:3 }, minutes:12 });
   expect(result.hasSelectedDestination).toBe(true);
+  expect(result.defaultsToTerminal).toBe(true);
 });
 
 test('arrow keys move between stops and keep the selected ETA panel in sync', async ({ page }) => {
