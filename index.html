@@ -836,6 +836,7 @@ body.light *,
 .detail-service summary small{display:block;font-size:12px !important;line-height:1.35;color:var(--faint);font-weight:650}
 .detail-service summary:after{flex:0 0 auto;margin-left:auto}
 .custom-trip-control{position:absolute;right:52px;bottom:11px;display:inline-flex;margin:0}.custom-trip-open{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid rgba(255,211,90,.48);border-radius:999px;background:rgba(255,211,90,.09);color:#ffd35a;font:800 10px inherit;cursor:pointer}.custom-trip-open span{display:inline-flex;align-items:center;gap:5px;min-width:0}.custom-trip-open b{font-size:11px}.custom-trip-open small{display:none}.custom-trip-open strong{font-size:10px}.custom-trip-open:focus-visible{outline:3px solid #ffd35a;outline-offset:2px}
+.custom-picker-copy b{font-size:19px;line-height:1.3}.custom-picker-copy b small{margin-left:3px;color:#8b8b8b;font-size:12px;font-weight:600}@media(max-width:430px){.custom-picker-copy b{font-size:18px}}
 </style>
 <style id="final-route-control-fixes">
 .chead-actions .getoff-btn{font-size:15px!important;line-height:1!important}
@@ -1899,7 +1900,12 @@ function customTripPickerDrawer(stops, fromSeq, toSeq) {
     const durationText = segment?.status === 'live' ? segment.minutes + ' 分鐘' : segment?.status === 'estimate' ? '約 ' + segment.minutes + ' 分鐘' : null;
     const etaText = durationText || (eta ? detailEtaLabel(eta) : state.status === 'loading' ? '讀取中' : '未有班次');
     const displayText = role === '終點' && durationText ? '終點 · ' + durationText : role || etaText;
-    return '<button type="button" class="custom-picker-stop ' + (selected ? 'selected ' : '') + (durationText ? 'has-duration ' : '') + (seq === Number(fromSeq) ? 'origin ' : '') + (seq === Number(toSeq) ? 'destination' : '') + '" data-custom-pick-seq="' + esc(seq) + '" aria-label="第 ' + esc(seq) + ' 站 ' + esc(stop.name) + (role ? '，' + role + (durationText ? '，由起點' + durationText : '') : durationText ? '，由起點約 ' + durationText : '') + '"><span class="custom-picker-dot" aria-hidden="true"></span><span class="custom-picker-copy"><b>' + esc(stop.name) + ' <small>(' + esc(stop.id) + ')</small></b><em>' + displayText + '</em></span></button>';
+    const rawName = String(stop.name || '').trim();
+    const nameMatch = rawName.match(/^(.*?)(?:\s+\(([^()]*)\))?$/);
+    const stopName = nameMatch?.[1] || rawName;
+    const stopCode = nameMatch?.[2] || '';
+    const codeMarkup = stopCode ? ' <small>(' + esc(stopCode) + ')</small>' : '';
+    return '<button type="button" class="custom-picker-stop ' + (selected ? 'selected ' : '') + (durationText ? 'has-duration ' : '') + (seq === Number(fromSeq) ? 'origin ' : '') + (seq === Number(toSeq) ? 'destination' : '') + '" data-custom-pick-seq="' + esc(seq) + '" aria-label="第 ' + esc(seq) + ' 站 ' + esc(rawName) + (role ? '，' + role + (durationText ? '，由起點' + durationText : '') : durationText ? '，由起點約 ' + durationText : '') + '"><span class="custom-picker-dot" aria-hidden="true"></span><span class="custom-picker-copy"><b>' + esc(stopName) + codeMarkup + '</b><em>' + displayText + '</em></span></button>';
   };
   return '<div class="custom-picker-backdrop"></div><aside class="custom-picker-drawer" role="dialog" aria-modal="true" aria-labelledby="customPickerTitle"><header><div><b id="customPickerTitle">車程</b><small>點選站點設定起點及終點</small></div><button type="button" class="custom-picker-close" data-custom-close aria-label="關閉選擇視窗">×</button></header><div class="custom-picker-tabs"><button type="button" class="' + (mode === 'from' ? 'active' : '') + '" data-custom-mode="from">起點</button><button type="button" class="' + (mode === 'to' ? 'active' : '') + '" data-custom-mode="to">終點</button></div><p class="custom-picker-hint">' + (mode === 'from' ? '請點選上車起點' : '請點選落車終點') + '</p><div class="custom-picker-timeline" role="list">' + stops.map(row).join('') + '</div></aside>';
 }
