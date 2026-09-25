@@ -74,7 +74,7 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('#routeDetailOperator')).toHaveClass(/KMB/);
   await expect(page.locator('#routeDetailOperator')).toHaveCSS('color', 'rgb(231, 25, 45)');
   await expect(page.locator('.detail-route-icon')).toHaveText('🚌');
-  await expect(page.locator('[data-detail-refresh]')).toHaveText('立即更新全部車站 ETA');
+  await expect(page.locator('[data-detail-refresh]')).toHaveAttribute('aria-label', '立即更新全部車站 ETA');
   await expect(page.locator('.detail-inference').first()).toContainText('估計位置');
   await expect(page.locator('.detail-eta.near-arrival .near-arrival-dot').first()).toBeVisible();
   const markerCss = (await page.locator('style').allTextContents()).join('\n');
