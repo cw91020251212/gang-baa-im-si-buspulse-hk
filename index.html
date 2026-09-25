@@ -346,10 +346,10 @@ body.light .nearby-stop-picker{background:rgba(8,115,77,.06);border-color:rgba(8
 .detail-summary-tool{display:grid;place-items:center;width:36px;height:36px;padding:0;border:1px solid rgba(108,140,255,.6);border-radius:50%;background:rgba(10,20,35,.3);color:#cbd7ff;font:800 21px/1 inherit;cursor:pointer;transition:background .18s ease,transform .18s ease,border-color .18s ease;}
 .detail-summary-tool:hover{background:rgba(108,140,255,.2);border-color:#9eb2ff;}
 .detail-summary-tool:active{transform:scale(.94);}
-.detail-summary-tool.gps{color:#d6dbe2;border:1px solid #aeb8c4;background:rgba(214,219,226,.16);font-size:0;}
+.detail-summary-tool.gps{color:#d6dbe2;border:1px solid #aeb8c4;background:transparent;font-size:0;}
 .detail-summary-tool.gps::before{content:'';display:block;width:25px;height:25px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 800'%3E%3Cellipse cx='400' cy='650' rx='300' ry='92' fill='none' stroke='%2336e0a0' stroke-width='52'/%3E%3Cpath fill='%2336e0a0' fill-rule='evenodd' d='M400 58c-116 0-210 94-210 210 0 158 210 440 210 440s210-282 210-440C610 152 516 58 400 58zm0 118a93 93 0 1 1 0 186 93 93 0 0 1 0-186z'/%3E%3C/svg%3E") center/contain no-repeat;filter:grayscale(1) brightness(1.35);}
-.detail-summary-tool.gps.is-active{background:#36e0a0;border-color:#72f0bc;color:#071c19;box-shadow:0 0 0 3px rgba(54,224,160,.18),0 0 14px rgba(54,224,160,.28);}
-.detail-summary-tool.gps.is-active::before{filter:brightness(0) invert(1);}
+.detail-summary-tool.gps.is-active{background:transparent;border-color:#36e0a0;color:#36e0a0;box-shadow:none;}
+.detail-summary-tool.gps.is-active::before{filter:none;}
 .detail-summary-tool.refresh{color:#ffd34e;border-color:rgba(255,211,78,.78);font-size:0;}
 .detail-summary-tool.refresh::before{content:'↻';display:grid;place-items:center;width:100%;height:100%;font:800 29px/1 Arial,sans-serif;transform:translateY(-1px);}
 .detail-summary-tool.refresh:hover{background:rgba(255,211,78,.16);border-color:#ffe48a;}
