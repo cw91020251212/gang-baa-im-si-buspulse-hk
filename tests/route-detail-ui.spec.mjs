@@ -115,6 +115,31 @@ test('opens full-screen timeline and changes selected stop without side effects'
   await expect(page.locator('.detail-meta')).toContainText('尾班車：24:20');
 });
 
+test('summary GPS and refresh controls reserve space instead of floating over text on mobile', async ({ page }) => {
+  await page.setViewportSize({ width:402, height:874 });
+  await prepare(page);
+  await page.locator('[data-detail-id]').click();
+  const layout = await page.evaluate(() => {
+    const box = selector => {
+      const r = document.querySelector(selector).getBoundingClientRect();
+      return { left:r.left, right:r.right, top:r.top, bottom:r.bottom };
+    };
+    const tools = box('.detail-summary-tools');
+    const title = box('.detail-route-line');
+    const meta = box('.detail-meta');
+    return {
+      toolsPosition:getComputedStyle(document.querySelector('.detail-summary-tools')).position,
+      summaryDisplay:getComputedStyle(document.querySelector('.detail-summary')).display,
+      titleClear:tools.left >= title.right,
+      metaClear:tools.left >= meta.right,
+      toolsInsideCard:tools.right <= box('.detail-summary').right
+    };
+  });
+  expect(layout).toEqual({
+    toolsPosition:'static', summaryDisplay:'grid', titleClear:true, metaClear:true, toolsInsideCard:true
+  });
+});
+
 test('service accordion keeps a clear, single-line mobile heading', async ({ page }) => {
   await page.setViewportSize({ width:375, height:812 });
   await prepare(page);
