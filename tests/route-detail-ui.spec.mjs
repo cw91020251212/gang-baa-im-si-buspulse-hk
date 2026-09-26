@@ -119,6 +119,7 @@ test('summary GPS and refresh controls reserve space instead of floating over te
   await page.setViewportSize({ width:402, height:874 });
   await prepare(page);
   await page.locator('[data-detail-id]').click();
+  await expect(page.locator('.detail-route-line')).toBeVisible();
   const layout = await page.evaluate(() => {
     const box = selector => {
       const r = document.querySelector(selector).getBoundingClientRect();
@@ -179,6 +180,64 @@ test('map route rejects an implausible OSRM detour between adjacent stops', asyn
     { lat:22.301, lng:114.201 }
   ]));
   expect(path).toEqual([]);
+});
+
+test('map uses the complete HKBUS CSDI route shape matched by the official E41 stop sequence', async ({ page }) => {
+  const stopIds = [
+    '9DD63D93684C27D6','638851B5496C1765','9394A27497B9958D','89240EC55B8818BC','B83F3546C41A5114',
+    '13E458C819D90940','87F2B57F6457C6CA','EE212E6FD5124813','8394FFF35F9D2EFB','AC0BDA78C106FF7A',
+    '277DD90A63454F48','40AC79F25124280A','86F4FDCF2F5D13ED','52C7FFE6629F5972','7211E63DE150A10E',
+    'AAC64BCDD5B55A86','A99B6BB7F1628A08','CB1F6E0BE13D469D','08E7E3FD65881EE2','9DCBD34740D95B23',
+    'F32C8A98A5D64A72'
+  ];
+  let osrmCalls = 0;
+  await page.route('https://data.hkbus.app/routeFareList.json', route => route.fulfill({
+    status:200, contentType:'application/json', headers:{'Access-Control-Allow-Origin':'*'},
+    body:JSON.stringify({ routeList:{ 'E41+TAI PO TAU+SKYCITY':{
+      route:'E41', gtfsId:'1462', co:['kmb'], bound:{kmb:'O'}, serviceType:'1', stops:{kmb:stopIds}
+    } } })
+  }));
+  await page.route('https://hkbus.github.io/route-waypoints/1462-O.json', route => route.fulfill({
+    status:200, contentType:'application/json', headers:{'Access-Control-Allow-Origin':'*'},
+    body:JSON.stringify({type:'FeatureCollection',features:[{
+      type:'Feature', properties:{ROUTE_ID:'1462',ROUTE_SEQ:1,COMPANY_CODE:'LWB',ROUTE_NAMEE:'E41'},
+      geometry:{type:'MultiLineString',coordinates:[[[114.20,22.30],[114.21,22.34]],[[114.22,22.32],[114.23,22.33]]]}
+    }]})
+  }));
+  await page.route('https://router.project-osrm.org/**', route => {
+    osrmCalls++;
+    return route.fulfill({status:200, contentType:'application/json',body:JSON.stringify({routes:[]})});
+  });
+  await page.goto('./?smoke=route-detail-ui', { waitUntil:'domcontentloaded' });
+  const path = await page.evaluate(async stopIds => mapRoutePath(
+    {co:'KMB',route:'E41',dir:'O',bound:'outbound',service_type:'1'},
+    stopIds.map((id, index) => ({id,seq:index+1}))
+  ), stopIds);
+  expect(path).toEqual([
+    [[22.30,114.20],[22.34,114.21]],
+    [[22.32,114.22],[22.33,114.23]]
+  ]);
+  const bounds = await page.evaluate(path => routeMapBoundsPoints([
+    {lat:22.30,lng:114.20}, {lat:22.33,lng:114.23}
+  ], path), path);
+  expect(bounds).toContainEqual([22.34,114.21]);
+  expect(osrmCalls).toBe(0);
+});
+
+test('map keeps the OSRM fallback when no matching official route shape exists', async ({ page }) => {
+  await page.route('https://data.hkbus.app/routeFareList.json', route => route.fulfill({
+    status:200, contentType:'application/json', headers:{'Access-Control-Allow-Origin':'*'},
+    body:JSON.stringify({routeList:{}})
+  }));
+  await page.route('https://router.project-osrm.org/**', route => route.fulfill({
+    status:200, contentType:'application/json',
+    body:JSON.stringify({routes:[{distance:500,duration:120,geometry:{coordinates:[[114.2,22.3],[114.205,22.305],[114.21,22.31]]}}]})
+  }));
+  await page.goto('./?smoke=route-detail-ui', { waitUntil:'domcontentloaded' });
+  const path = await page.evaluate(() => mapRoutePath({co:'KMB',route:'74X',dir:'O',service_type:'1'}, [
+    {id:'a',lat:22.3,lng:114.2}, {id:'b',lat:22.31,lng:114.21}
+  ]));
+  expect(path).toEqual([[[22.3,114.2],[22.305,114.205],[22.31,114.21]]]);
 });
 
 test('map route rejects a road duration that contradicts the official ETA gap', async ({ page }) => {

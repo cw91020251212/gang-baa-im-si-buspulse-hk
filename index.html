@@ -2744,10 +2744,10 @@ async function showGetoffMap(it, stops, button) {
   mapEl.innerHTML = '';
   const map = L.map(mapEl, { zoomControl:true, attributionControl:true });
   getoffMapInstance = map;
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap contributors' }).addTo(map);
-  const points = valid.map(x => [x.lat, x.lng]);
+  addRouteMapTiles(map);
   const timing = await mapEtaEvidence(it, valid);
-  const road = await roadPath(valid, timing);
+  const road = await mapRoutePath(it, valid, timing);
+  const points = routeMapBoundsPoints(valid, road);
   addImageStyleRouteLine(map, road);
   valid.forEach(st => {
     const marker=imageStyleStopMarker(st, getoff[uid(it)]?.targetSeq === st.seq);
@@ -2931,6 +2931,125 @@ async function mapEtaEvidence(it, stops) {
     return new Map(rows);
   } catch { return null; }
 }
+const ROUTE_WAYPOINT_INDEX_KEY = 'buspulse.route-waypoint-index.v1';
+const ROUTE_WAYPOINT_INDEX_MAX_AGE = 12 * 60 * 60 * 1000;
+const ROUTE_FARE_LIST_URL = 'https://data.hkbus.app/routeFareList.json';
+const ROUTE_WAYPOINTS_URL = 'https://hkbus.github.io/route-waypoints/';
+let routeWaypointIndexPromise = null;
+const routeWaypointGeometryCache = new Map();
+function compactRouteWaypointIndex(routeList) {
+  const rows = [];
+  Object.values(routeList || {}).forEach(route => {
+    if (!route?.gtfsId || !route.route) return;
+    (Array.isArray(route.co) ? route.co : []).forEach(co => {
+      const ids = route.stops?.[co];
+      const bound = route.bound?.[co];
+      if (!Array.isArray(ids) || !ids.length || !['O','I'].includes(String(bound))) return;
+      rows.push([
+        String(route.route).trim().toUpperCase(), String(co).toLowerCase(), String(bound),
+        String(route.gtfsId), String(route.serviceType ?? '1'), ids.map(String)
+      ]);
+    });
+  });
+  return rows;
+}
+function getRouteWaypointIndex() {
+  if (routeWaypointIndexPromise) return routeWaypointIndexPromise;
+  routeWaypointIndexPromise = (async () => {
+    let staleRows = null;
+    try {
+      const cached = JSON.parse(localStorage.getItem(ROUTE_WAYPOINT_INDEX_KEY) || 'null');
+      if (Array.isArray(cached?.rows) && cached.rows.length) {
+        staleRows = cached.rows;
+        if (Date.now() - Number(cached.savedAt) < ROUTE_WAYPOINT_INDEX_MAX_AGE) return cached.rows;
+      }
+    } catch {}
+    try {
+      const data = await getJSON(ROUTE_FARE_LIST_URL, 18000);
+      const rows = compactRouteWaypointIndex(data.routeList);
+      if (!rows.length) throw new Error('empty waypoint route index');
+      try { localStorage.setItem(ROUTE_WAYPOINT_INDEX_KEY, JSON.stringify({ savedAt:Date.now(), rows })); } catch {}
+      return rows;
+    } catch (error) {
+      if (staleRows?.length) return staleRows;
+      throw error;
+    }
+  })().catch(error => {
+    routeWaypointIndexPromise = null;
+    throw error;
+  });
+  return routeWaypointIndexPromise;
+}
+async function findRouteWaypointRow(it, stops) {
+  const provider = ({ KMB:'kmb', CTB:'ctb', GMB:'gmb' })[it?.co];
+  if (!provider || !Array.isArray(stops) || !stops.length) return null;
+  const route = String(it.route || '').trim().toUpperCase();
+  const ids = stops.map(stop => String(stop.id));
+  const serviceType = String(it.service_type || '1');
+  const rows = await getRouteWaypointIndex();
+  const matches = rows.filter(row => row[0] === route && row[1] === provider
+    && (provider !== 'kmb' || row[4] === serviceType)
+    && row[5].length === ids.length && row[5].every((id, index) => id === ids[index]));
+  const directions = new Set(matches.map(row => row[3] + '|' + row[2]));
+  return directions.size === 1 ? matches[0] : null;
+}
+async function fetchRouteWaypointJSON(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(url, { signal:controller.signal, cache:'default' });
+    if (!response.ok) throw new Error('waypoint HTTP ' + response.status);
+    return await response.json();
+  } finally { clearTimeout(timeout); }
+}
+function geoJSONRouteLines(geometry) {
+  if (!geometry || !['LineString','MultiLineString'].includes(geometry.type)) return null;
+  const parts = geometry.type === 'LineString' ? [geometry.coordinates] : geometry.coordinates;
+  if (!Array.isArray(parts) || !parts.length || parts.some(part => !Array.isArray(part) || part.length < 2)) return null;
+  const lines = parts.map(part => part.map(point => {
+    const lng = Number(point?.[0]), lat = Number(point?.[1]);
+    return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
+      ? [lat, lng] : null;
+  }));
+  return lines.some(line => line.some(point => !point)) ? null : lines;
+}
+async function officialRoutePath(it, stops) {
+  try {
+    const row = await findRouteWaypointRow(it, stops);
+    if (!row) return null;
+    const id = row[3], bound = row[2], key = id + '-' + bound;
+    let pending = routeWaypointGeometryCache.get(key);
+    if (!pending) {
+      pending = fetchRouteWaypointJSON(ROUTE_WAYPOINTS_URL + encodeURIComponent(key) + '.json')
+        .then(data => {
+          const feature = (data.features || []).find(item => String(item?.properties?.ROUTE_ID) === id);
+          if (!feature) throw new Error('route ID missing from waypoint geometry');
+          const lines = geoJSONRouteLines(feature.geometry);
+          if (!lines) throw new Error('invalid waypoint geometry');
+          return lines;
+        }).catch(error => { routeWaypointGeometryCache.delete(key); throw error; });
+      routeWaypointGeometryCache.set(key, pending);
+    }
+    return await pending;
+  } catch { return null; }
+}
+async function mapRoutePath(it, stops, timing = null) {
+  const official = await officialRoutePath(it, stops);
+  return official?.length ? official : roadPath(stops, timing);
+}
+function routeMapBoundsPoints(stops, path) {
+  const lines = Array.isArray(path?.[0]?.[0]) ? path : (path?.length ? [path] : []);
+  return [
+    ...(stops || []).filter(stop => Number.isFinite(stop?.lat) && Number.isFinite(stop?.lng)).map(stop => [stop.lat, stop.lng]),
+    ...lines.flat().filter(point => Array.isArray(point) && Number.isFinite(point[0]) && Number.isFinite(point[1]))
+  ];
+}
+function addRouteMapTiles(map) {
+  return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom:19,
+    attribution:'© OpenStreetMap contributors · Route data: <a href="https://github.com/hkbus/route-waypoints" target="_blank" rel="noopener">HK Bus Crawling@2021</a>'
+  }).addTo(map);
+}
 async function roadSegmentPath(a, b, timing) {
   const directKm = Math.hypot((b.lat - a.lat) * 111, (b.lng - a.lng) * 102);
   try {
@@ -2991,10 +3110,10 @@ async function toggleMap(it, button) {
     if (!stops.length) throw new Error('no-coordinates');
     mapEl.innerHTML = '';
     const map = L.map(mapEl, { zoomControl: true, attributionControl: true });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(map);
-    const points = stops.map(x => [x.lat, x.lng]);
+    addRouteMapTiles(map);
     const timing = await mapEtaEvidence(it, stops);
-  const road = await roadPath(stops, timing);
+    const road = await mapRoutePath(it, stops, timing);
+    const points = routeMapBoundsPoints(stops, road);
     addImageStyleRouteLine(map, road);
     stops.forEach((st, i) => {
       const here = st.id === it.stopId;
@@ -3023,10 +3142,10 @@ async function showSetupMap(v, stops, button) {
   mapEl.innerHTML = '';
   const map = L.map(mapEl, { zoomControl: true, attributionControl: true });
   setupMapInstance = map;
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(map);
-  const points = valid.map(x => [x.lat, x.lng]);
+  addRouteMapTiles(map);
   const timing = await mapEtaEvidence(it, valid);
-  const road = await roadPath(valid, timing);
+  const road = await mapRoutePath(it, valid, timing);
+  const points = routeMapBoundsPoints(valid, road);
   addImageStyleRouteLine(map, road);
   valid.forEach(st => {
     const marker = imageStyleStopMarker(st);
