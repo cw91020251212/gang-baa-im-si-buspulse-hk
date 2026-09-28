@@ -2415,7 +2415,7 @@ function shell() {
         '<span class="co ' + it.co + '">' + CO_NAME[it.co] + '</span>' +
         '<span class="dest">往 ' + esc(it.dest || '') + '</span>' +
       '<span class="chead-actions">' +
-      '<button class="getoff-btn ' + (getoff[uid(it)]?.active ? 'on' : '') + '" data-getoff-id="' + id + '" type="button" title="' + (getoff[uid(it)]?.active ? '停止落車提醒' : '設定落車提醒') + '" aria-label="' + (getoff[uid(it)]?.active ? '停止落車提醒' : '設定落車提醒') + '">' + (getoff[uid(it)]?.active ? '落車中' : '落車') + '</button>' +
+      '<button class="getoff-btn ' + (getoff[uid(it)]?.active ? 'on' : '') + '" data-getoff-id="' + id + '" title="設定落車提醒">' + (getoff[uid(it)]?.active ? '落車中' : '落車') + '</button>' +
       '<button class="alarm-btn ' + (alarms[uid(it)] ? 'on' : '') + '" data-alarm-id="' + id + '" title="' + (alarms[uid(it)] === true ? '關閉到站提醒' : '開啟到站提醒') + '" aria-label="' + (alarms[uid(it)] === true ? '關閉到站提醒' : '開啟到站提醒') + '" aria-pressed="' + String(alarms[uid(it)] === true) + '">🔔</button>' +
       '<button class="map-head-btn" data-map-id="' + id + '" title="查看路線地圖" aria-label="查看路線地圖" style="background:transparent!important;color:#ff7182!important;border-color:#ff7182!important"><svg class="map-pin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z"/></svg></button>' +
       '</span>' +
@@ -2430,10 +2430,7 @@ function shell() {
   board.querySelectorAll('[data-getoff-id]').forEach(button => {
     const id = button.dataset.getoffId;
     const item = items.find(x => uid(x) === id);
-    if (item) button.addEventListener('click', () => {
-      if (getoff[id]?.active) stopGetoff(item);
-      else openGetoffSetup(item);
-    });
+    if (item) button.addEventListener('click', () => openGetoffSetup(item));
   });
   board.querySelectorAll('[data-edit-stop]').forEach(button => {
     const item = items.find(x => uid(x) === button.dataset.editStop);
