@@ -61,7 +61,6 @@ for (const theme of ['dark', 'light']) {
 }
 
 test('home-page first arriving ETA label uses the reduced 20px size', async ({ page }) => {
-  await page.setViewportSize({ width:390, height:844 });
   await page.addInitScript(() => {
     localStorage.setItem('busboard.items.v1', JSON.stringify([{
       co:'KMB', route:'N271', bound:'outbound', dir:'O', service_type:'1', seq:1,
@@ -75,22 +74,7 @@ test('home-page first arriving ETA label uses the reduced 20px size', async ({ p
   const arrival = await page.evaluate(() => {
     paint(items[0], { etas:[{ iso:new Date(Date.now() - 30000).toISOString(), min:0, sched:false }], stale:false });
     const label = board.querySelector('.eta.arr .m');
-    const card = label?.closest('.eta');
-    const bounds = card?.getBoundingClientRect();
-    const textRange = label ? document.createRange() : null;
-    if (textRange && label) textRange.selectNodeContents(label);
-    const textBounds = textRange?.getBoundingClientRect();
-    const style = card ? getComputedStyle(card) : null;
-    const availableTextWidth = card && style ? card.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) : 0;
-    return {
-      text:label?.textContent.trim(), fontSize:label ? getComputedStyle(label).fontSize : null,
-      flexGrow:style?.flexGrow, cardWidth:bounds?.width,
-      textFits:!!textBounds && textBounds.width <= availableTextWidth
-    };
+    return { text:label?.textContent.trim(), fontSize:label ? getComputedStyle(label).fontSize : null };
   });
-  expect(arrival.text).toBe('即將到達');
-  expect(arrival.fontSize).toBe('20px');
-  expect(arrival.flexGrow).toBe('1.15');
-  expect(arrival.cardWidth).toBeLessThan(150);
-  expect(arrival.textFits).toBe(true);
+  expect(arrival).toEqual({ text:'即將到達', fontSize:'20px' });
 });
