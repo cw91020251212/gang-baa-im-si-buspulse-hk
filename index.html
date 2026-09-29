@@ -1275,7 +1275,7 @@ function forgetAlarmPlan(id, key) {
   if (!alarmPlans[id].length) delete alarmPlans[id];
   saveAlarmPlans();
 }
-function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:45000 }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:45000 }; } }
+function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:120000 }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:120000 }; } }
 function normalizeAlarms(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
   return Object.fromEntries(Object.entries(raw).map(([id, enabled]) => [id, enabled === true]));

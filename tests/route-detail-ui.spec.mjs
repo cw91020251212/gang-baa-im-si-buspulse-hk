@@ -476,3 +476,23 @@ test('returning to the app closes the screen saver before showing the main UI', 
   });
   expect(state).toEqual({ before:true, after:false, visible:false });
 });
+
+test('screen saver defaults to two minutes without overriding saved preferences', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('screensaver-default-test-cleaned')) return;
+    localStorage.removeItem('busboard.preferences.v1');
+    sessionStorage.setItem('screensaver-default-test-cleaned', 'true');
+  });
+  await page.goto('./?smoke=route-detail-ui', { waitUntil:'domcontentloaded' });
+  await page.locator('#prefsBtn').click();
+  const saverSettings = page.locator('details.settings-group').filter({ hasText:'螢幕保護' });
+  await saverSettings.locator('summary').click();
+  await expect(page.locator('#busSaverDelay')).toHaveValue('120000');
+
+  await page.evaluate(() => localStorage.setItem('busboard.preferences.v1', JSON.stringify({ screenSaverIdle:45000 })));
+  await page.reload({ waitUntil:'domcontentloaded' });
+  await page.locator('#prefsBtn').click();
+  const reloadedSaverSettings = page.locator('details.settings-group').filter({ hasText:'螢幕保護' });
+  await reloadedSaverSettings.locator('summary').click();
+  await expect(page.locator('#busSaverDelay')).toHaveValue('45000');
+});
