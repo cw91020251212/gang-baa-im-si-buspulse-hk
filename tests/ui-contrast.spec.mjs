@@ -16,7 +16,7 @@ async function expectCleanDarkText(page) {
 
 for (const theme of ['dark', 'light']) {
   for (const width of [320, 390]) {
-    test(`large add-route label stays crisp and usable in ${theme} mode at ${width}px`, async ({ page }, testInfo) => {
+    test(`compact add-route button stays crisp and usable in ${theme} mode at ${width}px`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 844 });
       await page.addInitScript(() => {
         localStorage.setItem('busboard.items.v1', JSON.stringify([{
@@ -31,7 +31,7 @@ for (const theme of ['dark', 'light']) {
       const fab = page.getByRole('button', { name: '加入巴士路線', exact: true });
       await expect(fab).toBeVisible();
       await expect(fab).toHaveText('＋ 路線');
-      await expect(fab).toHaveCSS('font-size', '22px');
+      await expect(fab).toHaveCSS('font-size', '18px');
       await expect(fab).toHaveCSS('text-shadow', 'none');
       await expect(fab).not.toHaveCSS('box-shadow', 'none');
       const bounds = await fab.boundingBox();
@@ -59,3 +59,22 @@ for (const theme of ['dark', 'light']) {
     });
   }
 }
+
+test('home-page first arriving ETA label uses the reduced 20px size', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('busboard.items.v1', JSON.stringify([{
+      co:'KMB', route:'N271', bound:'outbound', dir:'O', service_type:'1', seq:1,
+      stopId:'test-stop', stopName:'大埔中心總站', origin:'大埔中心', dest:'紅磡'
+    }]));
+    localStorage.setItem('busboard.user-defaults.v1', '[]');
+  });
+  await page.route(/https:\/\/[^/]*(?:gov\.hk|kmb\.hk)\//, route => route.abort());
+  await page.goto('./?smoke=large-add-route', { waitUntil:'domcontentloaded' });
+  await expect(page.getByRole('button', { name:'加入巴士路線', exact:true })).toBeVisible();
+  const arrival = await page.evaluate(() => {
+    paint(items[0], { etas:[{ iso:new Date(Date.now() - 30000).toISOString(), min:0, sched:false }], stale:false });
+    const label = board.querySelector('.eta.arr .m');
+    return { text:label?.textContent.trim(), fontSize:label ? getComputedStyle(label).fontSize : null };
+  });
+  expect(arrival).toEqual({ text:'即將到達', fontSize:'20px' });
+});
