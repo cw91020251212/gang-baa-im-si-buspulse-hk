@@ -55,3 +55,8 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 ## 8. 本次追加修改：定位圖片改用淺灰色背景
 - `route-location-icon.png`：圖片底色改為淺灰色 `#d7dce0`，改善紅色定位點在深色路線卡上的可見度。
 - `sw.js`：快取版本更新至 `buspulse-hk-shell-v91-route-location-light-gray`，確保裝置取得新圖片。
+
+## 9. 本次追加修改：繞過舊快取及黑色 CSS 規則
+- `index.html`：將地圖按鈕背景以 `#d7dce0!important` 固定為淺灰色，覆蓋舊有黑色規則。圖片網址改為 `route-location-icon-v2.png`。
+- `sw.js`：precache 改用新圖片檔名，令手機／PWA 不會繼續命中舊圖片快取。
+

@@ -1,4 +1,7 @@
 # BusPulse HK 修改紀錄
+## 2026-10-06 — 強制地圖按鈕使用淺灰底及新圖片檔名
+修正舊版 `.map-head-btn` 黑色強制背景規則，現在地圖按鈕會固定使用淺灰色 `#d7dce0`；同時改用 `route-location-icon-v2.png`，避開手機／PWA 對舊圖片網址的快取。
+
 ## 2026-10-06 — 路線定位圖片改用淺灰色背景
 將路線卡右上角定位圖片的透明／深色顯示改為淺灰色背景（`#d7dce0`），令紅色定位點及黑色虛線路線更清楚；Service Worker 更新至 `buspulse-hk-shell-v91-route-location-light-gray`。
 
