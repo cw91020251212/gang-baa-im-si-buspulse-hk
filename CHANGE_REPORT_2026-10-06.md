@@ -45,3 +45,9 @@
 ## 6. 部署提示
 
 GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後如手機仍見舊圖標，請完全關閉舊分頁或已安裝 PWA 後重新開啟，讓新的 Service Worker 完成更新。
+
+## 7. 本次追加修改：使用者提供的路線定位圖片
+- `route-location-icon.png`：由使用者提供的圖片移除白色背景後產生，保留兩個紅色定位點及黑色虛線路線。
+- `index.html`：路線卡右上角的地圖按鈕改用上述圖片，兩張／多張路線卡會共用同一資產；按鈕仍保留原本的 `查看路線地圖` 操作及無障礙名稱。
+- `sw.js`：更新 shell 版本至 `buspulse-hk-shell-v90-route-location-image`，並加入圖片 precache。
+- `.github/workflows/pages.yml`：部署時將圖片複製到 Pages 輸出目錄。
