@@ -55,4 +55,3 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 ## 8. 本次追加修改：定位圖片改用淺灰色背景
 - `route-location-icon.png`：圖片底色改為淺灰色 `#d7dce0`，改善紅色定位點在深色路線卡上的可見度。
 - `sw.js`：快取版本更新至 `buspulse-hk-shell-v91-route-location-light-gray`，確保裝置取得新圖片。
-
