@@ -884,6 +884,55 @@ body.light *,
 .detail-summary .custom-trip-control .custom-trip-open{color:#36e0a0!important;border-color:#36e0a0!important;background:rgba(54,224,160,.1)!important}
 </style>
 
+
+<style id="detail-map-control-redesign">
+/* Compact, unified map toolbar: clear labels, soft surfaces, no nested circles. */
+.detail-map-panel.open .detail-map-canvas .map-tools {
+  gap:5px!important; padding:5px!important; border:1px solid rgba(255,255,255,.16)!important;
+  border-radius:16px!important; background:rgba(15,25,39,.9)!important;
+  box-shadow:0 6px 20px rgba(0,0,0,.28)!important;
+  -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+}
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn,
+.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close {
+  display:inline-flex!important; align-items:center!important; justify-content:center!important;
+  gap:7px!important; width:auto!important; min-width:76px!important; height:40px!important;
+  min-height:40px!important; margin:0!important; padding:0 11px!important;
+  border:1px solid rgba(255,255,255,.13)!important; border-radius:11px!important;
+  background:rgba(255,255,255,.08)!important; color:#edf3fa!important;
+  box-shadow:none!important; font-family:inherit!important; font-size:12px!important; font-weight:700!important; line-height:1!important; letter-spacing:.01em;
+  cursor:pointer; transition:background .16s ease,border-color .16s ease,transform .16s ease;
+}
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn .gps-crosshair,
+.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close .map-close-icon {
+  display:block!important; flex:none!important; width:18px!important; height:18px!important;
+}
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn::after {content:"定位";font-size:12px;line-height:1;white-space:nowrap}
+.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close::after {content:"關閉";font-size:12px;line-height:1;white-space:nowrap}
+.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close .map-close-icon circle {display:none}
+.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close .map-close-icon path {stroke-width:2.4}
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn:not(.is-active) {border-color:rgba(255,255,255,.16)!important;color:#d5deea!important}
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active {background:rgba(22,132,96,.94)!important;border-color:#55e3ad!important;color:#fff!important}
+.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close {color:#e3eaf2!important}
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn:active,
+.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close:active {transform:scale(.96)}
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn:focus-visible,
+.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close:focus-visible {outline:2px solid #8ab4ff;outline-offset:2px}
+
+/* Final specificity guard against legacy full-screen circle overrides. */
+body:not(.light) .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn:not(.is-active),
+body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn:not(.is-active),
+body:not(.light) .detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close,
+body.light .detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close {
+  background:rgba(255,255,255,.08)!important; color:#edf3fa!important;
+  border:1px solid rgba(255,255,255,.16)!important; box-shadow:none!important;
+  border-radius:11px!important;
+}
+body:not(.light) .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active,
+body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active {
+  background:rgba(22,132,96,.94)!important; color:#fff!important; border-color:#55e3ad!important;
+}
+</style>
 </head>
 <body>
 <div class="top">
