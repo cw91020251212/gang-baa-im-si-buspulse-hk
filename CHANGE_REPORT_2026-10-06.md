@@ -100,3 +100,8 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 - `routeDetailState.detailMapOpen`：保存地圖開啟狀態，避免 ETA／GPS 重新渲染時消失。
 - 詳細地圖改成全屏 modal layer，阻擋底層操作；只可用右上角 `×` 關閉。
 - 每次重新渲染前清理舊 Leaflet instance，重新渲染後保留地圖模式並重新初始化。
+
+## 20. 本次追加修改：地圖頂部保留三格 ETA
+- 全屏詳細地圖內加入現有 `detailEtaPanel(current)`，保留第一至第三架車資訊。
+- 地圖模式下縮窄三格卡片高度、間距及字體，讓地圖仍然盡量放大。
+- 獨立 `×` 關閉掣維持於地圖頂部右側。
