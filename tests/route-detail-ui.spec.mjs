@@ -514,7 +514,10 @@ test('floating map GPS and close controls respond to real clicks', async ({ page
   await expect(page.locator('[data-detail-map-wrap]')).toHaveClass(/open/);
   await expect(page.locator('[data-detail-map-locate]')).toBeVisible();
   await expect(page.locator('[data-detail-map-close]')).toBeVisible();
-  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('border-top-color', 'rgba(255, 255, 255, 0.16)');
+  await expect(page.locator('[data-detail-map-close]')).toHaveAttribute('aria-label', '返回路線');
+  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('position', 'absolute');
+  await expect(page.locator('[data-detail-map-close]')).toHaveCSS('position', 'absolute');
+  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('border-top-color', 'rgb(199, 247, 229)');
   await expect.poll(() => page.evaluate(() => Boolean(routeDetailBody.querySelector('[data-detail-map-wrap]')?._map)), { timeout:10000 }).toBe(true);
   await page.evaluate(() => { window.__mapRef = routeDetailBody.querySelector('[data-detail-map-wrap]')._map; renderRouteDetail(); });
   await expect.poll(() => page.evaluate(() => routeDetailBody.querySelector('[data-detail-map-wrap]')._map === window.__mapRef)).toBe(true);

@@ -886,51 +886,77 @@ body.light *,
 
 
 <style id="detail-map-control-redesign">
-/* Compact, unified map toolbar: clear labels, soft surfaces, no nested circles. */
+/* Two independent map actions with clear hierarchy and distinct locations. */
+.detail-map-panel.open .route-map .leaflet-top.leaflet-left {left:auto;right:0}
+.detail-map-panel.open .route-map .leaflet-control-zoom {margin:10px 10px 0 0}
 .detail-map-panel.open .detail-map-canvas .map-tools {
-  gap:5px!important; padding:5px!important; border:1px solid rgba(255,255,255,.16)!important;
-  border-radius:16px!important; background:rgba(15,25,39,.9)!important;
-  box-shadow:0 6px 20px rgba(0,0,0,.28)!important;
-  -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+  position:absolute!important; inset:0!important; z-index:1000!important;
+  display:block!important; padding:0!important; margin:0!important;
+  border:0!important; border-radius:0!important; background:transparent!important;
+  box-shadow:none!important; pointer-events:none!important;
 }
-.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn,
+.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close,
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn {
+  position:absolute!important; display:inline-flex!important; align-items:center!important;
+  justify-content:center!important; gap:9px!important; min-height:46px!important;
+  margin:0!important; cursor:pointer; pointer-events:auto!important;
+  font-family:inherit!important; font-weight:800!important; line-height:1!important;
+  text-shadow:none!important; transition:transform .16s ease,background .16s ease,box-shadow .16s ease;
+}
+/* Secondary navigation action: a left-arrow tab, separate from the GPS action. */
 .detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close {
-  display:inline-flex!important; align-items:center!important; justify-content:center!important;
-  gap:7px!important; width:auto!important; min-width:76px!important; height:40px!important;
-  min-height:40px!important; margin:0!important; padding:0 11px!important;
-  border:1px solid rgba(255,255,255,.13)!important; border-radius:11px!important;
-  background:rgba(255,255,255,.08)!important; color:#edf3fa!important;
-  box-shadow:none!important; font-family:inherit!important; font-size:12px!important; font-weight:700!important; line-height:1!important; letter-spacing:.01em;
-  cursor:pointer; transition:background .16s ease,border-color .16s ease,transform .16s ease;
+  top:14px!important; left:14px!important; right:auto!important; bottom:auto!important;
+  width:auto!important; min-width:112px!important; height:44px!important; padding:0 14px!important;
+  border:1px solid rgba(255,255,255,.22)!important; border-radius:12px!important;
+  background:rgba(12,23,37,.9)!important; color:#f2f6fb!important;
+  box-shadow:0 5px 16px rgba(0,0,0,.22)!important; font-size:13px!important;
 }
-.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn .gps-crosshair,
 .detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close .map-close-icon {
   display:block!important; flex:none!important; width:18px!important; height:18px!important;
 }
-.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn::after {content:"定位";font-size:12px;line-height:1;white-space:nowrap}
-.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close::after {content:"關閉";font-size:12px;line-height:1;white-space:nowrap}
-.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close .map-close-icon circle {display:none}
-.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close .map-close-icon path {stroke-width:2.4}
-.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn:not(.is-active) {border-color:rgba(255,255,255,.16)!important;color:#d5deea!important}
-.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active {background:rgba(22,132,96,.94)!important;border-color:#55e3ad!important;color:#fff!important}
-.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close {color:#e3eaf2!important}
+.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close::after {
+  content:"返回路線"; white-space:nowrap; font-size:13px; letter-spacing:.02em;
+}
+/* Primary location action: a substantial, readable control at lower-right. */
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn {
+  top:auto!important; left:auto!important; right:14px!important;
+  bottom:calc(16px + env(safe-area-inset-bottom))!important;
+  width:auto!important; min-width:148px!important; height:50px!important; padding:0 17px!important;
+  border:1px solid #c7f7e5!important; border-radius:15px!important;
+  background:linear-gradient(135deg,#82f0c1,#43d6a0)!important; color:#063b2a!important;
+  box-shadow:0 8px 22px rgba(0,32,23,.32)!important; font-size:14px!important;
+}
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn .gps-crosshair {
+  display:block!important; flex:none!important; width:21px!important; height:21px!important;
+}
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn::after {
+  content:"我的位置"; white-space:nowrap; font-size:14px; letter-spacing:.02em;
+}
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active {
+  background:linear-gradient(135deg,#117655,#0a5b43)!important;
+  color:#fff!important; border-color:#55e3ad!important;
+  box-shadow:0 7px 20px rgba(0,54,37,.4)!important;
+}
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active::after {content:"停止定位"}
 .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn:active,
-.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close:active {transform:scale(.96)}
+.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close:active {transform:translateY(1px) scale(.97)}
 .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn:focus-visible,
-.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close:focus-visible {outline:2px solid #8ab4ff;outline-offset:2px}
-
-/* Final specificity guard against legacy full-screen circle overrides. */
+.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close:focus-visible {outline:3px solid #fff;outline-offset:3px}
+@media(max-width:360px){
+  .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn {min-width:132px!important;height:46px!important;right:10px!important;bottom:calc(12px + env(safe-area-inset-bottom))!important}
+  .detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close {top:10px!important;left:10px!important}
+}
 body:not(.light) .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn:not(.is-active),
-body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn:not(.is-active),
-body:not(.light) .detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close,
-body.light .detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close {
-  background:rgba(255,255,255,.08)!important; color:#edf3fa!important;
-  border:1px solid rgba(255,255,255,.16)!important; box-shadow:none!important;
-  border-radius:11px!important;
+body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn:not(.is-active) {
+  width:auto!important; height:50px!important; padding:0 17px!important; border:1px solid #c7f7e5!important;
+  border-radius:15px!important; background:linear-gradient(135deg,#82f0c1,#43d6a0)!important;
+  color:#063b2a!important; box-shadow:0 8px 22px rgba(0,32,23,.32)!important;
 }
 body:not(.light) .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active,
 body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active {
-  background:rgba(22,132,96,.94)!important; color:#fff!important; border-color:#55e3ad!important;
+  border:1px solid #55e3ad!important; border-radius:15px!important;
+  background:linear-gradient(135deg,#117655,#0a5b43)!important; color:#fff!important;
+  box-shadow:0 7px 20px rgba(0,54,37,.4)!important;
 }
 </style>
 </head>
@@ -2431,7 +2457,7 @@ function renderRouteDetail() {
   routeDetailBody.classList.remove('detail-loading');
   routeDetailBody.innerHTML =
     '<div class="detail-summary">' + detailActionButtons(it) + '<div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><div class="detail-meta-row"><span class="summary-count">共 ' + routeDetailState.stops.length + ' 個站</span><span class="summary-buses" title="按同一輪 ETA 逐段推算">ETA 推算行駛中：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 部' : '讀取中') + '</span></div><div class="detail-meta-row"><span class="summary-coverage">' + detailEtaCoverageText() + '</span></div><div class="detail-meta-row"><span class="summary-schedule">' + detailScheduleSummary() + '</span></div><div class="detail-meta-row"><span class="summary-fare">全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + customTripPanel(routeDetailState.stops) + '</div>' +
-    '<div class="detail-map-panel' + (routeDetailState.detailMapOpen ? ' open' : '') + '" data-detail-map-wrap><div class="detail-map-head"><span>路線地圖</span></div>' + (routeDetailState.detailMapOpen ? detailEtaPanel(current) : '') + '<div class="detail-map-canvas"><div class="route-map"></div><div class="map-tools"><button class="locate-btn' + (routeDetailState.gpsStatus === 'watching' ? ' is-active' : '') + '" data-detail-map-locate type="button" aria-pressed="' + String(routeDetailState.gpsStatus === 'watching') + '" aria-label="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '" title="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '">' + '<svg class="gps-crosshair" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1.5v5.5M12 17v5.5M1.5 12h5.5M17 12h5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>' + '</button><button class="detail-map-close" type="button" data-detail-map-close aria-label="關閉路線地圖" title="關閉路線地圖"><svg class="map-close-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button></div></div></div>' +
+    '<div class="detail-map-panel' + (routeDetailState.detailMapOpen ? ' open' : '') + '" data-detail-map-wrap><div class="detail-map-head"><span>路線地圖</span></div>' + (routeDetailState.detailMapOpen ? detailEtaPanel(current) : '') + '<div class="detail-map-canvas"><div class="route-map"></div><div class="map-tools"><button class="locate-btn' + (routeDetailState.gpsStatus === 'watching' ? ' is-active' : '') + '" data-detail-map-locate type="button" aria-pressed="' + String(routeDetailState.gpsStatus === 'watching') + '" aria-label="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '" title="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '">' + '<svg class="gps-crosshair" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1.5v5.5M12 17v5.5M1.5 12h5.5M17 12h5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>' + '</button><button class="detail-map-close" type="button" data-detail-map-close aria-label="返回路線" title="返回路線"><svg class="map-close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m7 7-7-7 7-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div></div>' +
     '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
     detailGpsPanel(it, current) +
     '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +
