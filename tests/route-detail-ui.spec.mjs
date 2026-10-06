@@ -500,6 +500,13 @@ test('screen saver defaults to two minutes without overriding saved preferences'
 test('floating map GPS and close controls respond to real clicks', async ({ page }) => {
   await page.context().grantPermissions(['geolocation']);
   await page.context().setGeolocation({ latitude: 22.30, longitude: 114.20 });
+  await page.addInitScript(() => {
+    window.__gps = { callbacks: [], next: 1 };
+    Object.defineProperty(navigator, 'geolocation', { configurable:true, value: {
+      watchPosition(success) { const id = window.__gps.next++; window.__gps.callbacks.push({ id, success }); return id; },
+      clearWatch() {}
+    }});
+  });
   await prepare(page);
   await page.locator('[data-detail-id]').click();
   await expect(page.locator('.detail-route-line')).toBeVisible();
@@ -509,6 +516,18 @@ test('floating map GPS and close controls respond to real clicks', async ({ page
   await expect(page.locator('[data-detail-map-close]')).toBeVisible();
   await page.locator('[data-detail-map-locate]').click();
   await expect.poll(() => page.evaluate(() => routeDetailState.gpsStatus)).toBe('watching');
+  await expect(page.locator('[data-detail-map-locate]')).toHaveClass(/is-active/);
+  await expect.poll(() => page.evaluate(() => Boolean(routeDetailBody.querySelector('[data-detail-map-wrap]')?._map)), { timeout:10000 }).toBe(true);
+  await page.evaluate(() => { window.__mapRef = routeDetailBody.querySelector('[data-detail-map-wrap]')._map; });
+  await page.evaluate(() => window.__gps.callbacks[0].success({ coords:{ latitude:22.40, longitude:114.30, accuracy:12 }, timestamp:Date.now() }));
+  await expect.poll(() => page.evaluate(() => {
+    const wrap=routeDetailBody.querySelector('[data-detail-map-wrap]'), map=wrap?._map;
+    if (!map?._loaded) return {loaded:false, marker:Boolean(routeDetailState.mapLocationMarker)};
+    const c=map.getCenter();
+    return {loaded:true, lat:c.lat, lng:c.lng, zoom:map.getZoom(), marker:Boolean(routeDetailState.mapLocationMarker)};
+  }), { timeout:10000 }).toMatchObject({ loaded:true, lat:22.40, lng:114.30, marker:true });
+  await expect.poll(() => page.evaluate(() => routeDetailBody.querySelector('[data-detail-map-wrap]')._map === window.__mapRef)).toBe(true);
+  await expect.poll(() => page.locator('[data-detail-map-wrap]').evaluate(el => el._map.getZoom())).toBeGreaterThanOrEqual(13);
   await page.locator('[data-detail-map-close]').click();
   await expect(page.locator('[data-detail-map-wrap]')).not.toHaveClass(/open/);
   await expect(page.locator('.detail-map-panel.open')).toHaveCount(0);

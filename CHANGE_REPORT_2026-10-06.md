@@ -123,3 +123,9 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 - 透過真實 Playwright click 重現：ETA 卡片覆蓋咗原本放喺面板頂部嘅 GPS／× 控制掣，攔截 pointer events。
 - 將兩個控制掣移入 `.detail-map-canvas`，定位喺地圖畫布右上角，並提高浮層層級；避免再同 ETA 卡片重疊。
 - 新增真實 click 回歸測試，驗證 GPS 狀態會變成 watching，× 會關閉地圖。
+
+## 25. 修正 GPS 顯示及地圖閃爍
+- GPS 未啟用時改為灰色，成功啟用後先變綠並顯示 pressed 狀態。
+- 定位 callback 會在地圖上顯示綠色定位點，將地圖移到目前位置並放大至至少 13 級。
+- GPS 跟蹤期間不再重建 Leaflet 地圖，避免放大／縮細閃爍；再次撳掣可停止 GPS 並移除定位點。
+- 放大 × 符號，保留圓形按鈕外框。

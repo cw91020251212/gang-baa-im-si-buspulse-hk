@@ -356,7 +356,7 @@ body.light .nearby-stop-picker{background:rgba(8,115,77,.06);border-color:rgba(8
 .detail-map-panel{display:none;margin:0 0 10px;border:1px solid var(--line);border-radius:14px;background:var(--card);overflow:hidden;}
 .detail-map-panel.open{display:flex;flex-direction:column;position:fixed;inset:0;z-index:240;margin:0;border:0;border-radius:0;background:var(--bg);padding:calc(6px + var(--safe-t)) 10px calc(6px + var(--safe-b));overflow:hidden;}
 .detail-map-head{display:none;}
-.detail-map-close{display:grid;place-items:center;width:38px;height:38px;border:1px solid var(--line);border-radius:50%;background:rgba(12,25,42,.88);color:var(--tx);font:800 22px/1 inherit;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);}
+.detail-map-close{display:grid;place-items:center;width:38px;height:38px;border:1px solid var(--line);border-radius:50%;background:rgba(12,25,42,.88);color:var(--tx);font:800 30px/1 inherit;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);}
 .detail-map-close:active{transform:scale(.94);}
 .detail-map-panel .map-tools{position:relative;z-index:2;min-height:0;padding:8px;background:rgba(10,20,35,.08);flex:0 0 auto;}
 .detail-map-panel .detail-map-canvas{position:relative;min-height:0;flex:1 1 auto;}
@@ -749,6 +749,8 @@ body.light .map-tools .locate-btn {
   border:2px solid #36e0a0!important;
   box-shadow:0 2px 8px rgba(30,45,58,.3)!important;
 }
+.detail-map-canvas .map-tools .locate-btn{background:rgba(24,37,54,.86)!important;color:#cbd3dc!important;border:2px solid rgba(160,174,190,.82)!important;box-shadow:0 2px 9px rgba(0,0,0,.5)!important;}
+.detail-map-canvas .map-tools .locate-btn.is-active{background:rgba(8,91,63,.92)!important;color:#7df0b4!important;border-color:#36e0a0!important;}
 body:not(.light) .wide.danger,
 body:not(.light) .notification-toggle.notification-off,
 body:not(.light) .notification-toggle.notification-warn,
@@ -1826,6 +1828,11 @@ function acceptDetailLocation(it, pos, source) {
   state.gpsSeq = nearest?.stop?.seq || state.gpsSeq;
   if (nearest?.stop) { state.selectedSeq = nearest.stop.seq; state.selectedStopId = nearest.stop.id; }
   if (getoff[uid(it)]?.active) updateGetoff(it, pos.coords);
+  if (routeDetailState.detailMapOpen) {
+    focusDetailMapOnPosition(pos.coords);
+    updateDetailMapGpsControl();
+    return;
+  }
   renderRouteDetail();
 }
 function detailLocationError() {
@@ -1833,21 +1840,44 @@ function detailLocationError() {
   // watchers alive and let a later GPS/network fix update the timeline.
   routeDetailState.gpsErrorCount = Math.min(9, routeDetailState.gpsErrorCount + 1);
   routeDetailState.gpsStatus = 'watching'; routeDetailState.gpsError = '定位訊號未能取得';
+  if (routeDetailState.detailMapOpen) { updateDetailMapGpsControl(); return; }
   renderRouteDetail();
 }
-function startRouteDetailGps(it) {
+function updateDetailMapGpsControl(){
+  const button = routeDetailBody?.querySelector('[data-detail-map-locate]');
+  if (!button) return;
+  const active = routeDetailState.gpsStatus === 'watching';
+  button.classList.toggle('is-active', active);
+  button.setAttribute('aria-pressed', String(active));
+  button.setAttribute('aria-label', active ? '停止 GPS 定位' : '開啟 GPS 定位');
+  button.title = active ? '停止 GPS 定位' : '開啟 GPS 定位';
+}
+function focusDetailMapOnPosition(coords){
+  const wrap = routeDetailBody?.querySelector('[data-detail-map-wrap]'), map = wrap?._map;
+  const lat = Number(coords?.latitude), lng = Number(coords?.longitude);
+  if (!map || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
+  if (!map._loaded) { map.once('load', () => focusDetailMapOnPosition(coords)); return; }
+  if (!routeDetailState.mapLocationMarker || routeDetailState.mapLocationMarker._map !== map) {
+    routeDetailState.mapLocationMarker?.remove?.();
+    routeDetailState.mapLocationMarker = L.circleMarker([lat,lng], {radius:9,color:'#36e0a0',weight:4,fillColor:'#0a8f63',fillOpacity:.9}).addTo(map);
+  } else routeDetailState.mapLocationMarker.setLatLng([lat,lng]);
+  map.setView([lat,lng], Math.max(map.getZoom(), 13), {animate:false});
+}
+function startRouteDetailGps(it, options = {}) {
   if (routeDetailState.gpsWatch != null || routeDetailState.gpsNetworkWatch != null) return;
-  if (!navigator.geolocation) { routeDetailState.gpsStatus = 'error'; routeDetailState.gpsError = 'unsupported'; renderRouteDetail(); return; }
-  routeDetailState.gpsStatus = 'watching'; routeDetailState.gpsError = null; routeDetailState.gpsErrorCount = 0; renderRouteDetail();
+  if (!navigator.geolocation) { routeDetailState.gpsStatus = 'error'; routeDetailState.gpsError = 'unsupported'; if (options.render !== false) renderRouteDetail(); else updateDetailMapGpsControl(); return; }
+  routeDetailState.gpsStatus = 'watching'; routeDetailState.gpsError = null; routeDetailState.gpsErrorCount = 0;
+  if (options.render !== false) renderRouteDetail(); else updateDetailMapGpsControl();
   routeDetailState.gpsWatch = navigator.geolocation.watchPosition(pos => acceptDetailLocation(it, pos, 'gps'), detailLocationError, { enableHighAccuracy:true, maximumAge:10000, timeout:20000 });
   // Low-accuracy mode lets the browser use Wi‑Fi/cell-tower positioning when
   // satellite GPS is blocked by the bus roof or tunnel.
   routeDetailState.gpsNetworkWatch = navigator.geolocation.watchPosition(pos => acceptDetailLocation(it, pos, 'network'), detailLocationError, { enableHighAccuracy:false, maximumAge:15000, timeout:30000 });
 }
-function stopRouteDetailGps() {
+function stopRouteDetailGps(options = {}) {
   if (routeDetailState.gpsWatch != null && navigator.geolocation) navigator.geolocation.clearWatch(routeDetailState.gpsWatch);
   if (routeDetailState.gpsNetworkWatch != null && navigator.geolocation) navigator.geolocation.clearWatch(routeDetailState.gpsNetworkWatch);
-  routeDetailState.gpsWatch = null; routeDetailState.gpsNetworkWatch = null; routeDetailState.gpsStatus = 'idle'; routeDetailState.gpsSeq = null; routeDetailState.gpsPosition = null; routeDetailState.gpsPositionAccuracy = null; routeDetailState.gpsSource = null; routeDetailState.gpsPositionTime = 0; routeDetailState.gpsErrorCount = 0; renderRouteDetail();
+  routeDetailState.gpsWatch = null; routeDetailState.gpsNetworkWatch = null; routeDetailState.gpsStatus = 'idle'; routeDetailState.gpsSeq = null; routeDetailState.gpsPosition = null; routeDetailState.gpsPositionAccuracy = null; routeDetailState.gpsSource = null; routeDetailState.gpsPositionTime = 0; routeDetailState.gpsErrorCount = 0;
+  if (options.render !== false) renderRouteDetail(); else { routeDetailState.mapLocationMarker?.remove?.(); routeDetailState.mapLocationMarker = null; updateDetailMapGpsControl(); }
 }
 function detailVehicleStatus(stop) {
   const eta = detailEtaStateFor(stop).etas?.[0];
@@ -2344,7 +2374,7 @@ function renderRouteDetail() {
   routeDetailBody.classList.remove('detail-loading');
   routeDetailBody.innerHTML =
     '<div class="detail-summary">' + detailActionButtons(it) + '<div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><div class="detail-meta-row"><span class="summary-count">共 ' + routeDetailState.stops.length + ' 個站</span><span class="summary-buses" title="按同一輪 ETA 逐段推算">ETA 推算行駛中：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 部' : '讀取中') + '</span></div><div class="detail-meta-row"><span class="summary-coverage">' + detailEtaCoverageText() + '</span></div><div class="detail-meta-row"><span class="summary-schedule">' + detailScheduleSummary() + '</span></div><div class="detail-meta-row"><span class="summary-fare">全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + customTripPanel(routeDetailState.stops) + '</div>' +
-    '<div class="detail-map-panel' + (routeDetailState.detailMapOpen ? ' open' : '') + '" data-detail-map-wrap><div class="detail-map-head"><span>路線地圖</span></div>' + (routeDetailState.detailMapOpen ? detailEtaPanel(current) : '') + '<div class="detail-map-canvas"><div class="route-map"></div><div class="map-tools"><button class="locate-btn" data-detail-map-locate type="button" aria-label="開啟 GPS" title="開啟 GPS">⌖ 開啟 GPS</button><button class="detail-map-close" type="button" data-detail-map-close aria-label="關閉路線地圖" title="關閉路線地圖">×</button></div></div></div>' +
+    '<div class="detail-map-panel' + (routeDetailState.detailMapOpen ? ' open' : '') + '" data-detail-map-wrap><div class="detail-map-head"><span>路線地圖</span></div>' + (routeDetailState.detailMapOpen ? detailEtaPanel(current) : '') + '<div class="detail-map-canvas"><div class="route-map"></div><div class="map-tools"><button class="locate-btn' + (routeDetailState.gpsStatus === 'watching' ? ' is-active' : '') + '" data-detail-map-locate type="button" aria-pressed="' + String(routeDetailState.gpsStatus === 'watching') + '" aria-label="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '" title="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '">⌖ 開啟 GPS</button><button class="detail-map-close" type="button" data-detail-map-close aria-label="關閉路線地圖" title="關閉路線地圖">×</button></div></div></div>' +
     '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
     detailGpsPanel(it, current) +
     '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +
@@ -2360,7 +2390,7 @@ function renderRouteDetail() {
   routeDetailBody.querySelector('[data-detail-gps]')?.addEventListener('click', () => startRouteDetailGps(it));
   routeDetailBody.querySelector('[data-detail-gps-stop]')?.addEventListener('click', stopRouteDetailGps);
   routeDetailBody.querySelector('[data-detail-map]')?.addEventListener('click', event => toggleDetailRouteMap(it, event.currentTarget));
-  routeDetailBody.querySelector('[data-detail-map-locate]')?.addEventListener('click', () => startRouteDetailGps(it));
+  routeDetailBody.querySelector('[data-detail-map-locate]')?.addEventListener('click', () => routeDetailState.gpsStatus === 'watching' ? stopRouteDetailGps({render:false}) : startRouteDetailGps(it, {render:false}));
   routeDetailBody.querySelector('[data-detail-map-close]')?.addEventListener('click', () => { routeDetailState.detailMapOpen = false; renderRouteDetail(); });
   if (routeDetailState.detailMapOpen) initDetailRouteMap(it);
   routeDetailBody.querySelector('[data-custom-open]')?.addEventListener('click', () => { routeDetailState.customPickerOpen = true; routeDetailState.customPickerMode = 'from'; renderRouteDetail(); });
@@ -3154,6 +3184,9 @@ async function initDetailRouteMap(it) {
     mapEl.innerHTML = '';
     const map = L.map(mapEl, { zoomControl:true, attributionControl:true });
     wrap._map = map; addRouteMapTiles(map);
+    const initial = routeDetailState.gpsPosition;
+    if (initial) map.setView([Number(initial.latitude), Number(initial.longitude)], 13, {animate:false});
+    else map.setView([stops[0].lat, stops[0].lng], 10, {animate:false});
     const timing = await mapEtaEvidence(it, stops);
     const road = await mapRoutePath(it, stops, timing);
     const points = routeMapBoundsPoints(stops, road);
@@ -3162,7 +3195,8 @@ async function initDetailRouteMap(it) {
       const marker = imageStyleStopMarker(st, st.seq === routeDetailState.selectedSeq);
       marker.bindPopup('<b>第 ' + st.seq + ' 站</b><br>' + esc(st.name)); marker.addTo(map);
     });
-    if (points.length) map.fitBounds(L.latLngBounds(points), { padding:[18,18], maxZoom:15 });
+    if (routeDetailState.gpsPosition) focusDetailMapOnPosition(routeDetailState.gpsPosition);
+    else if (points.length) map.fitBounds(L.latLngBounds(points), { padding:[18,18], maxZoom:15 });
     setTimeout(() => map.invalidateSize(), 80);
   } catch { mapEl.innerHTML = '<div class="map-loading">暫時未有站頭座標資料</div>'; }
 }
