@@ -518,9 +518,8 @@ test('screen saver defaults to two minutes without overriding saved preferences'
 });
 
 test('main-board map buttons open a selectable shared map with estimated buses', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('buspulse.first-use-tour.v1','1'));
   await prepare(page);
-  const skipTour=page.getByRole('button',{name:'略過教學'});
-  if (await skipTour.isVisible().catch(() => false)) await skipTour.click();
   await page.evaluate(() => {
     mapEtaEvidence = async () => null;
     mapRoutePath = async (_it, stops) => stops.slice(0,-1).map((stop,i) => [[stop.lat,stop.lng],[stops[i+1].lat,stops[i+1].lng]]);
