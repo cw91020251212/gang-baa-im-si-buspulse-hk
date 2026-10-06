@@ -89,4 +89,3 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 - `.map-pin-icon`：由 18px 放大至 24px，縮窄圖案與 28px 外框之間嘅留白。
 - `detailActionButtons()`：加入圓形 36×36px 地圖掣，順序為 GPS｜地圖｜更新。
 - 詳細版本加入隱藏路線地圖面板；撳中間地圖掣後載入站點、路線及地圖。
-
