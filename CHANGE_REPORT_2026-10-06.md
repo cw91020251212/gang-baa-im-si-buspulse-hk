@@ -84,4 +84,3 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 
 ## 15. 本次追加修改：對齊兩個按鈕外框
 - `index.html`：`.chead-actions .map-head-btn` 改為 `28px × 28px`、`padding:0`、1px 邊框及 8px 圓角，與 `.detail-entry` 四箭嘴按鈕相同；地圖圖片維持 `18px × 18px`。
-
