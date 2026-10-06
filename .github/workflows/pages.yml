@@ -58,7 +58,7 @@ jobs:
         run: |
           rm -rf _site
           mkdir -p _site
-          cp index.html manifest.json sw.js icon-192.png icon-512.png route-location-icon-v2.png fare-index.json place-index.json _site/
+          cp index.html manifest.json sw.js icon-192.png icon-512.png route-location-icon-v3.png fare-index.json place-index.json _site/
           test -f _site/index.html
           test -f _site/sw.js
           test ! -e _site/tests

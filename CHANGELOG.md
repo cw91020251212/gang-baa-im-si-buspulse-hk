@@ -1,4 +1,7 @@
 # BusPulse HK 修改紀錄
+## 2026-10-06 — 裁走定位圖片留白並放大圖示
+重新以原始圖片的實際內容邊界裁切，移除四周大幅留白；路線卡地圖按鈕放大至 34px，內部圖片放大至 32px，令兩個紅色定位點填滿圖示區域。圖片改用 `route-location-icon-v3.png`，Service Worker 更新至 `buspulse-hk-shell-v92-route-location-cropped`。
+
 ## 2026-10-06 — 強制地圖按鈕使用淺灰底及新圖片檔名
 修正舊版 `.map-head-btn` 黑色強制背景規則，現在地圖按鈕會固定使用淺灰色 `#d7dce0`；同時改用 `route-location-icon-v2.png`，避開手機／PWA 對舊圖片網址的快取。
 
