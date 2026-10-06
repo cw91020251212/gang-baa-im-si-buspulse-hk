@@ -497,6 +497,22 @@ test('screen saver defaults to two minutes without overriding saved preferences'
   await expect(page.locator('#busSaverDelay')).toHaveValue('45000');
 });
 
+test('main-board map buttons open the shared full-screen map and return to the board', async ({ page }) => {
+  await prepare(page);
+  const trigger = page.locator('[data-map-id]').first();
+  await expect(trigger).toHaveAttribute('aria-label', '在全屏地圖查看路線');
+  await trigger.click();
+  await expect(page.locator('[data-detail-map-wrap]')).toHaveClass(/open/);
+  await expect(page.locator('[data-detail-map-locate]')).toBeVisible();
+  await expect(page.locator('.detail-map-panel.open .detail-eta')).toHaveCount(3);
+  await expect.poll(() => page.locator('.detail-map-panel.open .detail-eta strong').first().textContent(), { timeout:10000 }).not.toContain('—');
+  await expect.poll(() => page.evaluate(() => routeDetailState.mapReturnToBoard)).toBe(true);
+  await expect(page.locator('.card [data-map-wrap]')).toHaveCount(0);
+  await page.locator('[data-detail-map-close]').click();
+  await expect(page.locator('#routeDetail')).not.toHaveClass(/on/);
+  await expect(page.locator('[data-map-id]').first()).toBeFocused();
+});
+
 test('floating map GPS and close controls respond to real clicks', async ({ page }) => {
   await page.context().grantPermissions(['geolocation']);
   await page.context().setGeolocation({ latitude: 22.30, longitude: 114.20 });
