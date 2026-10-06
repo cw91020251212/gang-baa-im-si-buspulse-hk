@@ -363,7 +363,7 @@ body.light .nearby-stop-picker{background:rgba(8,115,77,.06);border-color:rgba(8
 .detail-map-panel .detail-map-canvas{position:relative;min-height:0;flex:1 1 auto;}
 .detail-map-panel.open .detail-map-canvas .map-tools{position:absolute;top:12px;right:12px;display:flex;align-items:center;gap:7px;padding:0;background:transparent;z-index:1000;pointer-events:auto;}
 .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn{width:38px;height:38px;min-height:38px;margin:0;padding:0;border-radius:50%;font-size:0;display:grid;place-items:center;}
-.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn::before{content:'⌖';display:grid;place-items:center;width:100%;height:100%;font:400 24px/1 Arial,sans-serif;transform:translateY(-1px);}
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn::before{content:'';display:block;width:22px;height:22px;background:radial-gradient(circle,transparent 0 4px,currentColor 4px 5px,transparent 5px),linear-gradient(currentColor,currentColor) center/2px 100% no-repeat,linear-gradient(currentColor,currentColor) center/100% 2px no-repeat;}
 .detail-map-panel .route-map{width:100%;height:min(680px,calc((100vw - 24px) * 1.55));min-height:460px;aspect-ratio:auto;}
 .detail-map-panel.open .route-map{height:100%;min-height:0;}
 .detail-map-panel.open .detail-eta-panel{position:relative;top:auto;flex:0 0 auto;gap:5px;margin:0;padding:0 4px 6px;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;}
@@ -1709,7 +1709,7 @@ const routeDetailState = {
   vehicleInference:{ status:'hidden', fromStopId:null, toStopId:null, reason:null, observedAt:null },
   generation:0, abortController:null, etaRequest:null, fareLabel:null, scheduleLabel:null, serviceOpen:false, detailTicker:null, detailLastOK:null, sweepStatus:'idle',
   gpsWatch:null, gpsNetworkWatch:null, gpsSeq:null, gpsPosition:null, gpsPositionAccuracy:null, gpsSource:null, gpsPositionTime:0, gpsStatus:'idle', gpsError:null, gpsErrorCount:0,
-  customFromSeq:null, customToSeq:null, customPickerOpen:false, customPickerMode:'from'
+  customFromSeq:null, customToSeq:null, customPickerOpen:false, customPickerMode:'from', mapViewLocked:false
 };
 function beginRouteDetailGeneration() {
   routeDetailState.generation += 1;
@@ -1732,7 +1732,7 @@ function closeRouteDetailState() {
     if (routeDetailState.gpsWatch != null) navigator.geolocation.clearWatch(routeDetailState.gpsWatch);
     if (routeDetailState.gpsNetworkWatch != null) navigator.geolocation.clearWatch(routeDetailState.gpsNetworkWatch);
   }
-  routeDetailState.gpsWatch = null; routeDetailState.gpsNetworkWatch = null; routeDetailState.gpsSeq = null; routeDetailState.gpsPosition = null; routeDetailState.gpsPositionAccuracy = null; routeDetailState.gpsSource = null; routeDetailState.gpsPositionTime = 0; routeDetailState.gpsStatus = 'idle'; routeDetailState.gpsError = null; routeDetailState.gpsErrorCount = 0;
+  routeDetailState.gpsWatch = null; routeDetailState.gpsNetworkWatch = null; routeDetailState.gpsSeq = null; routeDetailState.gpsPosition = null; routeDetailState.gpsPositionAccuracy = null; routeDetailState.gpsSource = null; routeDetailState.gpsPositionTime = 0; routeDetailState.gpsStatus = 'idle'; routeDetailState.gpsError = null; routeDetailState.gpsErrorCount = 0; routeDetailState.mapViewLocked = false;
 }
 function startRouteDetailTicker() {
   clearInterval(routeDetailState.detailTicker);
@@ -2339,6 +2339,7 @@ routeDetail.addEventListener('scroll', updateRouteDetailCompact, { passive:true 
 function renderRouteDetail() {
   const it = routeDetailState.item;
   if (!it || !routeDetailBody) return;
+  if (routeDetailState.detailMapOpen && routeDetailState.mapViewLocked) return;
   const savedDetailScrollTop = routeDetail.scrollTop;
   const oldDetailMap = routeDetailBody.querySelector('[data-detail-map-wrap]')?._map;
   if (oldDetailMap) { try { oldDetailMap.remove(); } catch {} }
@@ -2394,7 +2395,7 @@ function renderRouteDetail() {
   routeDetailBody.querySelector('[data-detail-gps-stop]')?.addEventListener('click', stopRouteDetailGps);
   routeDetailBody.querySelector('[data-detail-map]')?.addEventListener('click', event => toggleDetailRouteMap(it, event.currentTarget));
   routeDetailBody.querySelector('[data-detail-map-locate]')?.addEventListener('click', () => routeDetailState.gpsStatus === 'watching' ? stopRouteDetailGps({render:false}) : startRouteDetailGps(it, {render:false}));
-  routeDetailBody.querySelector('[data-detail-map-close]')?.addEventListener('click', () => { routeDetailState.detailMapOpen = false; renderRouteDetail(); });
+  routeDetailBody.querySelector('[data-detail-map-close]')?.addEventListener('click', () => { routeDetailState.detailMapOpen = false; routeDetailState.mapViewLocked = false; renderRouteDetail(); });
   if (routeDetailState.detailMapOpen) initDetailRouteMap(it);
   routeDetailBody.querySelector('[data-custom-open]')?.addEventListener('click', () => { routeDetailState.customPickerOpen = true; routeDetailState.customPickerMode = 'from'; renderRouteDetail(); });
   routeDetailBody.querySelectorAll('[data-custom-close]').forEach(button => button.addEventListener('click', () => { routeDetailState.customPickerOpen = false; renderRouteDetail(); }));
@@ -3173,7 +3174,9 @@ async function roadPath(stops, timing = null) {
 function toggleDetailRouteMap(it, button) {
   if (routeDetailState.detailMapOpen) return;
   routeDetailState.detailMapOpen = true;
+  routeDetailState.mapViewLocked = false;
   renderRouteDetail();
+  routeDetailState.mapViewLocked = true;
 }
 async function initDetailRouteMap(it) {
   const wrap = routeDetailBody?.querySelector('[data-detail-map-wrap]');

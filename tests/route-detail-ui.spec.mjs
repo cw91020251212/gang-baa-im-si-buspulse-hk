@@ -515,6 +515,9 @@ test('floating map GPS and close controls respond to real clicks', async ({ page
   await expect(page.locator('[data-detail-map-locate]')).toBeVisible();
   await expect(page.locator('[data-detail-map-close]')).toBeVisible();
   await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('border-top-color', 'rgb(174, 184, 196)');
+  await expect.poll(() => page.evaluate(() => Boolean(routeDetailBody.querySelector('[data-detail-map-wrap]')?._map)), { timeout:10000 }).toBe(true);
+  await page.evaluate(() => { window.__mapRef = routeDetailBody.querySelector('[data-detail-map-wrap]')._map; renderRouteDetail(); });
+  await expect.poll(() => page.evaluate(() => routeDetailBody.querySelector('[data-detail-map-wrap]')._map === window.__mapRef)).toBe(true);
   await page.locator('[data-detail-map-locate]').click();
   await expect.poll(() => page.evaluate(() => routeDetailState.gpsStatus)).toBe('watching');
   await expect(page.locator('[data-detail-map-locate]')).toHaveClass(/is-active/);

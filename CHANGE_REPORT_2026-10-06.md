@@ -135,3 +135,8 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 - GPS 圖案改用 grid pseudo-element 置中，避免文字 baseline 偏移。
 - × 改用獨立 pseudo-element，字體加大至 34px 並精準置中。
 - 已加入手機 viewport 視覺核對要求，部署前先截圖檢查。
+
+## 27. 修正地圖眨動及 GPS 十字置中
+- 找出真正原因：詳細地圖開啟期間，15 秒 ticker、ETA、schedule 及 fare 更新會呼叫 `renderRouteDetail()`，拆除舊 Leaflet 地圖後重新 fit route，導致眨動及跳回原位。
+- 加入 `mapViewLocked`：地圖全屏開啟後，背景資料更新不再重建 DOM／Leaflet 地圖；關閉地圖後才恢復一般重繪。
+- GPS 控制掣圖案由字體符號改為 CSS 圓環十字，固定幾何置中，避免不同手機字體造成偏移。
