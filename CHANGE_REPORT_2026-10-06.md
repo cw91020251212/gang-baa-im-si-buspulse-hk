@@ -114,3 +114,7 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 ## 22. 視覺驗收修正：清除全屏地圖上方空位
 - 發現 `.detail-eta-panel` 繼承普通詳細頁 `position:sticky; top:57px`，令全屏地圖三格 ETA 上方出現無謂空白。
 - 只在 `.detail-map-panel.open` 覆蓋為普通流式定位，直接置頂，並移除不必要背景及陰影。
+
+## 23. 取消按鈕旁提示
+- 移除自訂 `.button-hint` 提示框樣式及 hover／focus／手機長按顯示程式。
+- 移除只為提示功能而設的回歸測試；按鈕恢復乾淨外觀，不再額外出現文字框。
