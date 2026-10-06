@@ -77,4 +77,3 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 ## 13. 本次追加修改：重做底色及圓角
 - `route-location-icon-v6.png`：確認已移除原圖白底，改用真正淺灰底；黑色路徑加粗，圖片四角使用圓角透明遮罩。
 - `index.html`／`sw.js`／`.github/workflows/pages.yml`：改用 v6 資產並更新快取／部署清單。
-
