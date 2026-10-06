@@ -790,64 +790,7 @@ body.light .stop-row.is-live.is-selected .stop-dot:after{background:#08734d!impo
 .custom-trip-fields{display:flex;align-items:end;gap:8px}.custom-trip-fields label{display:flex;flex:1;flex-direction:column;gap:5px;color:var(--faint);font-size:12px;font-weight:800}.custom-trip-fields select{width:100%;min-width:0;padding:10px 8px;border:1px solid rgba(145,170,205,.45);border-radius:10px;background:var(--bg-deep);color:var(--text);font:inherit}.custom-trip-arrow{padding:0 0 10px;color:var(--accent);font-size:20px;font-weight:900}.custom-trip-result{display:flex;flex-direction:column;gap:3px;margin-top:12px;padding:10px 11px;border-radius:10px;background:rgba(10,20,35,.48);color:var(--text)}.custom-trip-result strong{font-size:14px}.custom-trip-result small{color:var(--faint);line-height:1.45}.custom-trip-result.live strong{color:#ffd35a}.custom-trip-result.estimate strong{color:#9fc2ff}.custom-trip-result.unavailable strong,.custom-trip-result.invalid strong{color:#ffb4a8}@media(max-width:430px){.custom-trip-fields{gap:5px}.custom-trip-fields select{font-size:12px;padding-left:5px;padding-right:2px}}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="">
-/* Universal button hints: hover/focus on desktop, long-press on touch devices. */
-(function installButtonHints(){
-  const hint = document.createElement('div');
-  hint.className = 'button-hint'; hint.setAttribute('role','tooltip'); hint.hidden = true;
-  document.body.appendChild(hint);
-  let active = null, timer = null, hideTimer = null;
-  const targetOf = node => node?.closest?.('button,[role="button"],a');
-  const textOf = el => {
-    if (!el) return '';
-    const title = el.getAttribute('title') || el.getAttribute('aria-label') || '';
-    return title.trim();
-  };
-  function position(el){
-    if (!el || hint.hidden) return;
-    const r = el.getBoundingClientRect(), gap = 8;
-    const width = Math.min(260, window.innerWidth - 24);
-    hint.style.maxWidth = width + 'px';
-    const h = hint.getBoundingClientRect().height || 32;
-    let top = r.top - h - gap;
-    if (top < 8) top = r.bottom + gap;
-    let left = r.left + (r.width / 2) - (hint.getBoundingClientRect().width / 2);
-    left = Math.max(12, Math.min(left, window.innerWidth - hint.getBoundingClientRect().width - 12));
-    hint.style.left = Math.round(left) + 'px'; hint.style.top = Math.round(top) + 'px';
-  }
-  function show(el, duration=0){
-    const text = textOf(el); if (!text) return;
-    clearTimeout(hideTimer); active = el; hint.textContent = text; hint.hidden = false;
-    hint.classList.add('is-visible'); hint.setAttribute('aria-hidden','false');
-    requestAnimationFrame(() => position(el));
-    if (duration) hideTimer = setTimeout(() => hide(el), duration);
-  }
-  function hide(el){
-    if (el && active !== el) return;
-    clearTimeout(hideTimer); active = null; hint.classList.remove('is-visible'); hint.setAttribute('aria-hidden','true');
-    setTimeout(() => { if (!active) hint.hidden = true; }, 140);
-  }
-  document.addEventListener('pointerover', event => {
-    if (event.pointerType !== 'mouse') return;
-    const el = targetOf(event.target); if (el) show(el);
-  });
-  document.addEventListener('pointerout', event => {
-    if (event.pointerType !== 'mouse') return;
-    const el = targetOf(event.target), next = targetOf(event.relatedTarget);
-    if (el && el !== next) hide(el);
-  });
-  document.addEventListener('focusin', event => { const el = targetOf(event.target); if (el) show(el); });
-  document.addEventListener('focusout', event => { const el = targetOf(event.target); if (el) hide(el); });
-  document.addEventListener('pointerdown', event => {
-    if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
-    const el = targetOf(event.target); if (!el || !textOf(el)) return;
-    clearTimeout(timer); timer = setTimeout(() => show(el, 2200), 520);
-  }, { passive:true });
-  ['pointerup','pointercancel','pointerleave'].forEach(type => document.addEventListener(type, event => {
-    if (event.pointerType === 'touch' || event.pointerType === 'pen') { clearTimeout(timer); timer = null; }
-  }, { passive:true }));
-  window.addEventListener('scroll', () => { if (active) position(active); }, { passive:true });
-  window.addEventListener('resize', () => { if (active) position(active); });
-})();
+
 </script>
 <style>
 /* Final light-theme switch treatment: no pink/green fills; preserve + 路線. */
@@ -4042,6 +3985,66 @@ shell();
 startLoop();
 scheduleBusSaver();
 window.setTimeout(openTour, 450);
+</script>
+<script>
+/* Universal button hints: hover/focus on desktop, long-press on touch devices. */
+(function installButtonHints(){
+  const hint = document.createElement('div');
+  hint.className = 'button-hint'; hint.setAttribute('role','tooltip'); hint.hidden = true;
+  document.body.appendChild(hint);
+  let active = null, timer = null, hideTimer = null;
+  const targetOf = node => node?.closest?.('button,[role="button"],a');
+  const textOf = el => {
+    if (!el) return '';
+    const title = el.getAttribute('title') || el.getAttribute('aria-label') || '';
+    return title.trim();
+  };
+  function position(el){
+    if (!el || hint.hidden) return;
+    const r = el.getBoundingClientRect(), gap = 8;
+    const width = Math.min(260, window.innerWidth - 24);
+    hint.style.maxWidth = width + 'px';
+    const h = hint.getBoundingClientRect().height || 32;
+    let top = r.top - h - gap;
+    if (top < 8) top = r.bottom + gap;
+    let left = r.left + (r.width / 2) - (hint.getBoundingClientRect().width / 2);
+    left = Math.max(12, Math.min(left, window.innerWidth - hint.getBoundingClientRect().width - 12));
+    hint.style.left = Math.round(left) + 'px'; hint.style.top = Math.round(top) + 'px';
+  }
+  function show(el, duration=0){
+    const text = textOf(el); if (!text) return;
+    clearTimeout(hideTimer); active = el; hint.textContent = text; hint.hidden = false;
+    hint.classList.add('is-visible'); hint.setAttribute('aria-hidden','false');
+    requestAnimationFrame(() => position(el));
+    if (duration) hideTimer = setTimeout(() => hide(el), duration);
+  }
+  function hide(el){
+    if (el && active !== el) return;
+    clearTimeout(hideTimer); active = null; hint.classList.remove('is-visible'); hint.setAttribute('aria-hidden','true');
+    setTimeout(() => { if (!active) hint.hidden = true; }, 140);
+  }
+  document.addEventListener('pointerover', event => {
+    if (event.pointerType !== 'mouse') return;
+    const el = targetOf(event.target); if (el) show(el);
+  });
+  document.addEventListener('pointerout', event => {
+    if (event.pointerType !== 'mouse') return;
+    const el = targetOf(event.target), next = targetOf(event.relatedTarget);
+    if (el && el !== next) hide(el);
+  });
+  document.addEventListener('focusin', event => { const el = targetOf(event.target); if (el) show(el); });
+  document.addEventListener('focusout', event => { const el = targetOf(event.target); if (el) hide(el); });
+  document.addEventListener('pointerdown', event => {
+    if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
+    const el = targetOf(event.target); if (!el || !textOf(el)) return;
+    clearTimeout(timer); timer = setTimeout(() => show(el, 2200), 520);
+  }, { passive:true });
+  ['pointerup','pointercancel','pointerleave'].forEach(type => document.addEventListener(type, event => {
+    if (event.pointerType === 'touch' || event.pointerType === 'pen') { clearTimeout(timer); timer = null; }
+  }, { passive:true }));
+  window.addEventListener('scroll', () => { if (active) position(active); }, { passive:true });
+  window.addEventListener('resize', () => { if (active) position(active); });
+})();
 </script>
 </body>
 </html>
