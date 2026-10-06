@@ -59,4 +59,3 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 ## 9. 本次追加修改：繞過舊快取及黑色 CSS 規則
 - `index.html`：將地圖按鈕背景以 `#d7dce0!important` 固定為淺灰色，覆蓋舊有黑色規則。圖片網址改為 `route-location-icon-v2.png`。
 - `sw.js`：precache 改用新圖片檔名，令手機／PWA 不會繼續命中舊圖片快取。
-
