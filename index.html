@@ -926,6 +926,35 @@ body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-a
 .detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close:active {transform:translateY(1px)}
 .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn:focus-visible,
 .detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close:focus-visible {outline:2px solid #386fa8;outline-offset:2px}
+
+/* Beat legacy theme-specific active colors while keeping the same control bounds. */
+body:not(.light) .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active,
+body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active {
+  background:#007f5b!important; color:#fff!important; border:1px solid #006a4b!important;
+}
+/* Make the active GPS state unmistakable without adding an outer outline. */
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active {
+  display:flex!important; align-items:center!important; justify-content:center!important; gap:6px!important;
+  width:auto!important; min-width:94px!important; height:42px!important; padding:0 11px!important;
+  border-radius:999px!important; background:#007f5b!important; color:#fff!important;
+  border:1px solid #006a4b!important; box-shadow:inset 0 0 0 1px rgba(255,255,255,.45)!important;
+}
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active::after {
+  content:'GPS 已開'; display:block!important; color:#fff!important;
+  font:700 12px/1.1 system-ui,sans-serif!important; white-space:nowrap!important;
+}
+.detail-map-context {
+  flex:0 0 auto; display:grid; gap:4px; margin:0 8px 6px; padding:6px 10px;
+  border:1px solid color-mix(in srgb,#00865f 26%,var(--line)); border-radius:10px;
+  background:color-mix(in srgb,var(--card) 94%,#d9efe7); color:var(--text);
+}
+.detail-map-context-route,.detail-map-context-stop {display:flex; align-items:center; min-width:0; gap:7px; line-height:1.2;}
+.detail-map-context-company {font-size:10px; font-weight:700; color:var(--muted); white-space:nowrap;}
+.detail-map-route-number {font-size:15px; font-weight:850; letter-spacing:.02em; white-space:nowrap;}
+.detail-map-destination {margin-left:auto; overflow:hidden; color:var(--muted); font-size:11px; font-weight:600; text-overflow:ellipsis; white-space:nowrap;}
+.detail-map-context-label {flex:none; color:var(--muted); font-size:10px; font-weight:600; white-space:nowrap;}
+.detail-map-context-stop-name {min-width:0; overflow:hidden; font-size:12px; font-weight:750; text-overflow:ellipsis; white-space:nowrap;}
+.detail-map-context[data-gps-active="true"] .detail-map-context-label {color:#007f5b;}
 </style>
 </head>
 <body>
@@ -1902,6 +1931,7 @@ function updateDetailMapGpsControl(){
   button.setAttribute('aria-pressed', String(active));
   button.setAttribute('aria-label', active ? '停止 GPS 定位' : '開啟 GPS 定位');
   button.title = active ? '停止 GPS 定位' : '開啟 GPS 定位';
+  updateDetailMapContext();
 }
 function focusDetailMapOnPosition(coords){
   const wrap = routeDetailBody?.querySelector('[data-detail-map-wrap]'), map = wrap?._map;
@@ -2332,6 +2362,27 @@ function applyEtaPositionFallback(segments) {
     state.gpsSource = 'eta';
   }
 }
+function detailMapContextMarkup(it, current) {
+  const state = routeDetailState;
+  const gpsWatching = state.gpsStatus === 'watching';
+  const gpsStop = gpsWatching ? state.stops.find(stop => Number(stop.seq) === Number(state.gpsSeq)) : null;
+  const stop = gpsStop || current;
+  const stopLabel = gpsWatching ? (gpsStop ? 'GPS 最近車站' : 'GPS 定位中') : '目前查看車站';
+  const stopName = gpsWatching && !gpsStop ? '等待定位…' : stop ? '第 ' + stop.seq + ' 站 · ' + stop.name : '未選擇車站';
+  const company = CO_NAME[it.co] || it.co;
+  const direction = it.dest ? '往 ' + it.dest : (it.dirLabel || '');
+  return '<div class="detail-map-context" data-detail-map-context data-gps-active="' + String(Boolean(gpsStop)) + '" aria-label="目前路線與車站">' +
+    '<div class="detail-map-context-route"><span class="detail-map-context-company">' + esc(company) + '</span><strong class="detail-map-route-number">' + esc(it.route) + '</strong><span class="detail-map-destination">' + esc(direction) + '</span></div>' +
+    '<div class="detail-map-context-stop"><span class="detail-map-context-label">' + esc(stopLabel) + '</span><strong class="detail-map-context-stop-name">' + esc(stopName) + '</strong></div></div>';
+}
+function updateDetailMapContext() {
+  const state = routeDetailState;
+  const context = routeDetailBody?.querySelector('[data-detail-map-context]');
+  if (!state.detailMapOpen || !context || !state.item) return;
+  const selected = state.gpsSeq || state.selectedSeq;
+  const stop = state.stops.find(item => Number(item.seq) === Number(selected)) || state.stops[0];
+  context.outerHTML = detailMapContextMarkup(state.item, stop);
+}
 function updateDetailMapEtaPanel() {
   const state = routeDetailState;
   if (!state.detailMapOpen || !state.stops?.length) return;
@@ -2394,7 +2445,7 @@ routeDetail.addEventListener('scroll', updateRouteDetailCompact, { passive:true 
 function renderRouteDetail() {
   const it = routeDetailState.item;
   if (!it || !routeDetailBody) return;
-  if (routeDetailState.detailMapOpen && routeDetailState.mapViewLocked) return;
+  if (routeDetailState.detailMapOpen && routeDetailState.mapViewLocked) { updateDetailMapContext(); return; }
   const savedDetailScrollTop = routeDetail.scrollTop;
   const oldDetailMap = routeDetailBody.querySelector('[data-detail-map-wrap]')?._map;
   if (oldDetailMap) { try { oldDetailMap.remove(); } catch {} }
@@ -2433,7 +2484,7 @@ function renderRouteDetail() {
   routeDetailBody.classList.remove('detail-loading');
   routeDetailBody.innerHTML =
     '<div class="detail-summary">' + detailActionButtons(it) + '<div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><div class="detail-meta-row"><span class="summary-count">共 ' + routeDetailState.stops.length + ' 個站</span><span class="summary-buses" title="按同一輪 ETA 逐段推算">ETA 推算行駛中：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 部' : '讀取中') + '</span></div><div class="detail-meta-row"><span class="summary-coverage">' + detailEtaCoverageText() + '</span></div><div class="detail-meta-row"><span class="summary-schedule">' + detailScheduleSummary() + '</span></div><div class="detail-meta-row"><span class="summary-fare">全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + customTripPanel(routeDetailState.stops) + '</div>' +
-    '<div class="detail-map-panel' + (routeDetailState.detailMapOpen ? ' open' : '') + '" data-detail-map-wrap><div class="detail-map-head"><span>路線地圖</span></div>' + (routeDetailState.detailMapOpen ? detailEtaPanel(current) : '') + '<div class="detail-map-canvas"><div class="route-map"></div><div class="map-tools"><button class="locate-btn' + (routeDetailState.gpsStatus === 'watching' ? ' is-active' : '') + '" data-detail-map-locate type="button" aria-pressed="' + String(routeDetailState.gpsStatus === 'watching') + '" aria-label="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '" title="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '">' + '<svg class="gps-crosshair" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1.5v5.5M12 17v5.5M1.5 12h5.5M17 12h5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>' + '</button><button class="detail-map-close" type="button" data-detail-map-close aria-label="關閉路線地圖" title="關閉路線地圖"><svg class="map-close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></div></div></div>' +
+    '<div class="detail-map-panel' + (routeDetailState.detailMapOpen ? ' open' : '') + '" data-detail-map-wrap><div class="detail-map-head"><span>路線地圖</span></div>' + (routeDetailState.detailMapOpen ? detailEtaPanel(current) + detailMapContextMarkup(it, current) : '') + '<div class="detail-map-canvas"><div class="route-map"></div><div class="map-tools"><button class="locate-btn' + (routeDetailState.gpsStatus === 'watching' ? ' is-active' : '') + '" data-detail-map-locate type="button" aria-pressed="' + String(routeDetailState.gpsStatus === 'watching') + '" aria-label="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '" title="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '">' + '<svg class="gps-crosshair" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1.5v5.5M12 17v5.5M1.5 12h5.5M17 12h5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>' + '</button><button class="detail-map-close" type="button" data-detail-map-close aria-label="關閉路線地圖" title="關閉路線地圖"><svg class="map-close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></div></div></div>' +
     '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
     detailGpsPanel(it, current) +
     '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +

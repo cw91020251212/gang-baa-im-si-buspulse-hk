@@ -504,6 +504,8 @@ test('main-board map buttons open the shared full-screen map and return to the b
   await trigger.click();
   await expect(page.locator('[data-detail-map-wrap]')).toHaveClass(/open/);
   await expect(page.locator('[data-detail-map-locate]')).toBeVisible();
+  await expect(page.locator('[data-detail-map-context] .detail-map-route-number')).toHaveText('74X');
+  await expect(page.locator('[data-detail-map-context] .detail-map-context-stop-name')).toContainText('第一站');
   await expect(page.locator('.detail-map-panel.open .detail-eta')).toHaveCount(3);
   await expect.poll(() => page.locator('.detail-map-panel.open .detail-eta strong').first().textContent(), { timeout:10000 }).not.toContain('—');
   await expect.poll(() => page.evaluate(() => routeDetailState.mapReturnToBoard)).toBe(true);
@@ -548,10 +550,15 @@ test('floating map GPS and close controls respond to real clicks', async ({ page
   await page.locator('[data-detail-map-locate]').click();
   await expect.poll(() => page.evaluate(() => routeDetailState.gpsStatus)).toBe('watching');
   await expect(page.locator('[data-detail-map-locate]')).toHaveClass(/is-active/);
-  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('border-top-color', 'rgb(168, 203, 181)');
+  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('border-top-color', 'rgb(0, 106, 75)');
+  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('background-color', 'rgb(0, 127, 91)');
+  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await expect.poll(() => page.locator('[data-detail-map-locate]').evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThan(80);
+  await expect.poll(() => page.locator('[data-detail-map-locate]').evaluate(el => getComputedStyle(el, '::after').content)).toContain('GPS 已開');
   await expect.poll(() => page.evaluate(() => Boolean(routeDetailBody.querySelector('[data-detail-map-wrap]')?._map)), { timeout:10000 }).toBe(true);
   await page.evaluate(() => { window.__mapRef = routeDetailBody.querySelector('[data-detail-map-wrap]')._map; });
   await page.evaluate(() => window.__gps.callbacks[0].success({ coords:{ latitude:22.40, longitude:114.30, accuracy:12 }, timestamp:Date.now() }));
+  await expect(page.locator('[data-detail-map-context] .detail-map-context-label')).toContainText('GPS 最近車站');
   await expect.poll(() => page.evaluate(() => {
     const wrap=routeDetailBody.querySelector('[data-detail-map-wrap]'), map=wrap?._map;
     if (!map?._loaded) return {loaded:false, marker:Boolean(routeDetailState.mapLocationMarker)};
