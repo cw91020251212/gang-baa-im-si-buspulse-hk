@@ -430,6 +430,26 @@ test('ETA wave estimate places virtual buses between the correct stops', async (
   expect(result.map(x => x.fromSeq)).toEqual([1,2]);
 });
 
+test('estimated map bus advances along its route as ETA time passes', async ({ page }) => {
+  await page.goto('./?smoke=route-detail-map-bus-motion', { waitUntil: 'domcontentloaded' });
+  const result = await page.evaluate(() => {
+    const now=Date.now(), stops=[{id:'a',seq:1,lat:22.30,lng:114.20},{id:'b',seq:2,lat:22.31,lng:114.21}];
+    const etaByStop=new Map([
+      ['a',{etas:[{etaSeq:1,iso:new Date(now-60000).toISOString()}]}],
+      ['b',{etas:[{etaSeq:1,iso:new Date(now+180000).toISOString()}]}]
+    ]);
+    const segment={fromSeq:1,toSeq:2,etaSeq:1};
+    const before=detailMapEstimatedBusProgress(segment,stops,etaByStop,now);
+    const after=detailMapEstimatedBusProgress(segment,stops,etaByStop,now+60000);
+    const line=detailMapPathForBusSegment([[[22.30,114.20],[22.305,114.205],[22.31,114.21]]],stops,0,1);
+    const a=detailMapPointAlongPath(line,before), b=detailMapPointAlongPath(line,after);
+    return {before,after,a,b,lineLength:line.length};
+  });
+  expect(result.after).toBeGreaterThan(result.before);
+  expect(result.b[0]).toBeGreaterThan(result.a[0]);
+  expect(result.lineLength).toBeGreaterThanOrEqual(3);
+});
+
 test('custom trip uses the selected intermediate destination instead of the terminal stop', async ({ page }) => {
   await page.goto('./?smoke=route-detail-custom-trip', { waitUntil: 'domcontentloaded' });
   const result = await page.evaluate(() => {
@@ -497,8 +517,14 @@ test('screen saver defaults to two minutes without overriding saved preferences'
   await expect(page.locator('#busSaverDelay')).toHaveValue('45000');
 });
 
-test('main-board map buttons open the shared full-screen map and return to the board', async ({ page }) => {
+test('main-board map buttons open a selectable shared map with estimated buses', async ({ page }) => {
   await prepare(page);
+  const skipTour=page.getByRole('button',{name:'略過教學'});
+  if (await skipTour.isVisible().catch(() => false)) await skipTour.click();
+  await page.evaluate(() => {
+    mapEtaEvidence = async () => null;
+    mapRoutePath = async (_it, stops) => stops.slice(0,-1).map((stop,i) => [[stop.lat,stop.lng],[stops[i+1].lat,stops[i+1].lng]]);
+  });
   const trigger = page.locator('[data-map-id]').first();
   await expect(trigger).toHaveAttribute('aria-label', '在全屏地圖查看路線');
   await trigger.click();
@@ -508,6 +534,13 @@ test('main-board map buttons open the shared full-screen map and return to the b
   await expect(page.locator('[data-detail-map-context] .detail-map-context-stop-name')).toContainText('第一站');
   await expect(page.locator('.detail-map-panel.open .detail-eta')).toHaveCount(3);
   await expect.poll(() => page.locator('.detail-map-panel.open .detail-eta strong').first().textContent(), { timeout:10000 }).not.toContain('—');
+  await expect(page.locator('.detail-map-panel.open .image-stop-marker-wrap')).toHaveCount(3);
+  await expect.poll(() => page.locator('.detail-map-panel.open .detail-estimated-bus').count(), { timeout:10000 }).toBeGreaterThan(0);
+  await page.locator('.detail-map-panel.open .image-stop-marker-wrap').nth(1).click();
+  await expect(page.locator('[data-detail-map-context] .detail-map-context-stop-name')).toContainText('第二站');
+  await expect(page.locator('.detail-map-panel.open .detail-eta strong').first()).toContainText('3');
+  await expect(page.locator('.detail-map-panel.open .image-stop-marker.selected')).toHaveCount(1);
+  await expect(page.locator('.detail-map-panel.open .image-stop-marker.selected')).toHaveCSS('background-color','rgb(25, 168, 103)');
   await expect.poll(() => page.evaluate(() => routeDetailState.mapReturnToBoard)).toBe(true);
   await expect(page.locator('.card [data-map-wrap]')).toHaveCount(0);
   await page.locator('[data-detail-map-close]').click();
@@ -550,11 +583,11 @@ test('floating map GPS and close controls respond to real clicks', async ({ page
   await page.locator('[data-detail-map-locate]').click();
   await expect.poll(() => page.evaluate(() => routeDetailState.gpsStatus)).toBe('watching');
   await expect(page.locator('[data-detail-map-locate]')).toHaveClass(/is-active/);
-  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('border-top-color', 'rgb(0, 106, 75)');
-  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('background-color', 'rgb(0, 127, 91)');
-  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('color', 'rgb(255, 255, 255)');
-  await expect.poll(() => page.locator('[data-detail-map-locate]').evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThan(80);
-  await expect.poll(() => page.locator('[data-detail-map-locate]').evaluate(el => getComputedStyle(el, '::after').content)).toContain('GPS 已開');
+  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('border-top-color', 'rgb(161, 176, 188)');
+  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('background-color', 'rgb(247, 249, 252)');
+  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('color', 'rgb(0, 168, 154)');
+  await expect.poll(() => page.locator('[data-detail-map-locate]').evaluate(el => el.getBoundingClientRect().width)).toBe(34);
+  await expect.poll(() => page.locator('[data-detail-map-locate]').evaluate(el => getComputedStyle(el, '::after').content)).toBe('none');
   await expect.poll(() => page.evaluate(() => Boolean(routeDetailBody.querySelector('[data-detail-map-wrap]')?._map)), { timeout:10000 }).toBe(true);
   await page.evaluate(() => { window.__mapRef = routeDetailBody.querySelector('[data-detail-map-wrap]')._map; });
   await page.evaluate(() => window.__gps.callbacks[0].success({ coords:{ latitude:22.40, longitude:114.30, accuracy:12 }, timestamp:Date.now() }));

@@ -927,22 +927,15 @@ body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-a
 .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn:focus-visible,
 .detail-map-panel.open .detail-map-canvas .map-tools .detail-map-close:focus-visible {outline:2px solid #386fa8;outline-offset:2px}
 
-/* Beat legacy theme-specific active colors while keeping the same control bounds. */
+/* GPS-on state changes only the icon to teal; keep the existing 34px control. */
 body:not(.light) .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active,
 body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active {
-  background:#007f5b!important; color:#fff!important; border:1px solid #006a4b!important;
+  width:34px!important; min-width:34px!important; height:34px!important; min-height:34px!important; padding:0!important;
+  background:#f7f9fc!important; color:#00a89a!important; border:1px solid #a1b0bc!important; box-shadow:none!important;
 }
-/* Make the active GPS state unmistakable without adding an outer outline. */
-.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active {
-  display:flex!important; align-items:center!important; justify-content:center!important; gap:6px!important;
-  width:auto!important; min-width:94px!important; height:42px!important; padding:0 11px!important;
-  border-radius:999px!important; background:#007f5b!important; color:#fff!important;
-  border:1px solid #006a4b!important; box-shadow:inset 0 0 0 1px rgba(255,255,255,.45)!important;
-}
-.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active::after {
-  content:'GPS 已開'; display:block!important; color:#fff!important;
-  font:700 12px/1.1 system-ui,sans-serif!important; white-space:nowrap!important;
-}
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active::after {content:none!important; display:none!important;}
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active .gps-crosshair > circle:first-of-type,
+.detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-active .gps-crosshair > path {stroke-width:3px!important;}
 .detail-map-context {
   flex:0 0 auto; display:grid; gap:4px; margin:0 8px 6px; padding:6px 10px;
   border:1px solid color-mix(in srgb,#00865f 26%,var(--line)); border-radius:10px;
@@ -955,6 +948,18 @@ body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-a
 .detail-map-context-label {flex:none; color:var(--muted); font-size:10px; font-weight:600; white-space:nowrap;}
 .detail-map-context-stop-name {min-width:0; overflow:hidden; font-size:12px; font-weight:750; text-overflow:ellipsis; white-space:nowrap;}
 .detail-map-context[data-gps-active="true"] .detail-map-context-label {color:#007f5b;}
+
+.detail-map-panel.open .route-map .image-stop-marker.selected {background:#19a867!important;border-color:#08784c!important;box-shadow:inset 0 0 0 2px rgba(255,255,255,.78)!important;}
+.detail-map-panel.open .route-map .image-stop-marker.selected:before {background:#fff!important;}
+.detail-map-panel.open .route-map .image-stop-marker-wrap {cursor:pointer;}
+.detail-map-panel.open .route-map .detail-estimated-bus-wrap {background:transparent;border:0;}
+.detail-map-panel.open .route-map .detail-estimated-bus {position:relative;display:flex;align-items:center;justify-content:center;width:38px;height:38px;box-sizing:border-box;border:2px solid #167b9a;border-radius:50%;background:#f8ffff;color:#0c536d;box-shadow:0 2px 7px rgba(4,44,61,.32);font:850 10px/1 system-ui,sans-serif;animation:detailEstimatedBusPulse 2.2s ease-in-out infinite;}
+.detail-map-panel.open .route-map .detail-estimated-bus strong {max-width:31px;overflow:hidden;text-overflow:clip;white-space:nowrap;}
+.detail-map-panel.open .route-map .detail-estimated-bus small {position:absolute;right:-5px;top:-5px;display:grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid #fff;background:#167b9a;color:#fff;font:800 8px/1 system-ui,sans-serif;}
+@keyframes detailEstimatedBusPulse {0%,100%{box-shadow:0 2px 7px rgba(4,44,61,.32),0 0 0 0 rgba(22,123,154,.23)}50%{box-shadow:0 2px 7px rgba(4,44,61,.32),0 0 0 5px rgba(22,123,154,0)}}
+.detail-map-bus-legend {position:absolute;left:58px;top:12px;z-index:700;display:flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid rgba(40,75,91,.25);border-radius:999px;background:rgba(248,253,255,.94);color:#345462;font-size:10px;font-weight:700;line-height:1.1;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.12);}
+.detail-map-bus-legend[hidden] {display:none!important;}
+.detail-map-bus-legend-tag {display:grid;place-items:center;width:15px;height:15px;border-radius:50%;background:#167b9a;color:#fff;font-size:8px;}
 </style>
 </head>
 <body>
@@ -1786,7 +1791,7 @@ const routeDetailState = {
   vehicleInference:{ status:'hidden', fromStopId:null, toStopId:null, reason:null, observedAt:null },
   generation:0, abortController:null, etaRequest:null, fareLabel:null, scheduleLabel:null, serviceOpen:false, detailTicker:null, detailLastOK:null, sweepStatus:'idle',
   gpsWatch:null, gpsNetworkWatch:null, gpsSeq:null, gpsPosition:null, gpsPositionAccuracy:null, gpsSource:null, gpsPositionTime:0, gpsStatus:'idle', gpsError:null, gpsErrorCount:0,
-  customFromSeq:null, customToSeq:null, customPickerOpen:false, customPickerMode:'from', mapViewLocked:false, detailMapOpen:false, mapReturnToBoard:false
+  customFromSeq:null, customToSeq:null, customPickerOpen:false, customPickerMode:'from', mapViewLocked:false, detailMapOpen:false, mapReturnToBoard:false, mapManualSelectedSeq:null
 };
 function beginRouteDetailGeneration() {
   routeDetailState.generation += 1;
@@ -1798,6 +1803,7 @@ function isCurrentRouteDetailGeneration(generation) {
   return routeDetailState.open && routeDetailState.generation === generation;
 }
 function closeRouteDetailState() {
+  disposeDetailRouteMap(routeDetailBody?.querySelector('[data-detail-map-wrap]'));
   routeDetailState.open = false;
   routeDetailState.generation += 1;
   routeDetailState.abortController?.abort();
@@ -1809,7 +1815,7 @@ function closeRouteDetailState() {
     if (routeDetailState.gpsWatch != null) navigator.geolocation.clearWatch(routeDetailState.gpsWatch);
     if (routeDetailState.gpsNetworkWatch != null) navigator.geolocation.clearWatch(routeDetailState.gpsNetworkWatch);
   }
-  routeDetailState.gpsWatch = null; routeDetailState.gpsNetworkWatch = null; routeDetailState.gpsSeq = null; routeDetailState.gpsPosition = null; routeDetailState.gpsPositionAccuracy = null; routeDetailState.gpsSource = null; routeDetailState.gpsPositionTime = 0; routeDetailState.gpsStatus = 'idle'; routeDetailState.gpsError = null; routeDetailState.gpsErrorCount = 0; routeDetailState.mapViewLocked = false; routeDetailState.detailMapOpen = false; routeDetailState.mapReturnToBoard = false;
+  routeDetailState.gpsWatch = null; routeDetailState.gpsNetworkWatch = null; routeDetailState.gpsSeq = null; routeDetailState.gpsPosition = null; routeDetailState.gpsPositionAccuracy = null; routeDetailState.gpsSource = null; routeDetailState.gpsPositionTime = 0; routeDetailState.gpsStatus = 'idle'; routeDetailState.gpsError = null; routeDetailState.gpsErrorCount = 0; routeDetailState.mapViewLocked = false; routeDetailState.detailMapOpen = false; routeDetailState.mapReturnToBoard = false; routeDetailState.mapManualSelectedSeq = null;
 }
 function startRouteDetailTicker() {
   clearInterval(routeDetailState.detailTicker);
@@ -1909,8 +1915,9 @@ function acceptDetailLocation(it, pos, source) {
   if (nearest?.stop) { state.selectedSeq = nearest.stop.seq; state.selectedStopId = nearest.stop.id; }
   if (getoff[uid(it)]?.active) updateGetoff(it, pos.coords);
   if (routeDetailState.detailMapOpen) {
-    focusDetailMapOnPosition(pos.coords);
+    focusDetailMapOnPosition(pos.coords, { pan:state.mapManualSelectedSeq == null });
     updateDetailMapGpsControl();
+    if (state.mapManualSelectedSeq == null) updateDetailMapSelection(); else updateDetailMapContext();
     return;
   }
   renderRouteDetail();
@@ -1933,21 +1940,21 @@ function updateDetailMapGpsControl(){
   button.title = active ? '停止 GPS 定位' : '開啟 GPS 定位';
   updateDetailMapContext();
 }
-function focusDetailMapOnPosition(coords){
+function focusDetailMapOnPosition(coords, options = {}){
   const wrap = routeDetailBody?.querySelector('[data-detail-map-wrap]'), map = wrap?._map;
   const lat = Number(coords?.latitude), lng = Number(coords?.longitude);
   if (!map || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
-  if (!map._loaded) { map.once('load', () => focusDetailMapOnPosition(coords)); return; }
+  if (!map._loaded) { map.once('load', () => focusDetailMapOnPosition(coords, options)); return; }
   if (!routeDetailState.mapLocationMarker || routeDetailState.mapLocationMarker._map !== map) {
     routeDetailState.mapLocationMarker?.remove?.();
     routeDetailState.mapLocationMarker = L.circleMarker([lat,lng], {radius:9,color:'#36e0a0',weight:4,fillColor:'#0a8f63',fillOpacity:.9}).addTo(map);
   } else routeDetailState.mapLocationMarker.setLatLng([lat,lng]);
-  map.setView([lat,lng], Math.max(map.getZoom(), 13), {animate:false});
+  if (options.pan !== false) map.setView([lat,lng], Math.max(map.getZoom(), 13), {animate:false});
 }
 function startRouteDetailGps(it, options = {}) {
   if (routeDetailState.gpsWatch != null || routeDetailState.gpsNetworkWatch != null) return;
   if (!navigator.geolocation) { routeDetailState.gpsStatus = 'error'; routeDetailState.gpsError = 'unsupported'; if (options.render !== false) renderRouteDetail(); else updateDetailMapGpsControl(); return; }
-  routeDetailState.gpsStatus = 'watching'; routeDetailState.gpsError = null; routeDetailState.gpsErrorCount = 0;
+  routeDetailState.gpsStatus = 'watching'; routeDetailState.gpsError = null; routeDetailState.gpsErrorCount = 0; routeDetailState.mapManualSelectedSeq = null;
   if (options.render !== false) renderRouteDetail(); else updateDetailMapGpsControl();
   routeDetailState.gpsWatch = navigator.geolocation.watchPosition(pos => acceptDetailLocation(it, pos, 'gps'), detailLocationError, { enableHighAccuracy:true, maximumAge:10000, timeout:20000 });
   // Low-accuracy mode lets the browser use Wi‑Fi/cell-tower positioning when
@@ -2365,10 +2372,11 @@ function applyEtaPositionFallback(segments) {
 function detailMapContextMarkup(it, current) {
   const state = routeDetailState;
   const gpsWatching = state.gpsStatus === 'watching';
-  const gpsStop = gpsWatching ? state.stops.find(stop => Number(stop.seq) === Number(state.gpsSeq)) : null;
-  const stop = gpsStop || current;
-  const stopLabel = gpsWatching ? (gpsStop ? 'GPS 最近車站' : 'GPS 定位中') : '目前查看車站';
-  const stopName = gpsWatching && !gpsStop ? '等待定位…' : stop ? '第 ' + stop.seq + ' 站 · ' + stop.name : '未選擇車站';
+  const manual = state.mapManualSelectedSeq != null;
+  const gpsStop = gpsWatching && !manual ? state.stops.find(stop => Number(stop.seq) === Number(state.gpsSeq)) : null;
+  const stop = manual ? current : (gpsStop || current);
+  const stopLabel = manual ? '已選車站' : gpsWatching ? (gpsStop ? 'GPS 最近車站' : 'GPS 定位中') : '目前查看車站';
+  const stopName = gpsWatching && !manual && !gpsStop ? '等待定位…' : stop ? '第 ' + stop.seq + ' 站 · ' + stop.name : '未選擇車站';
   const company = CO_NAME[it.co] || it.co;
   const direction = it.dest ? '往 ' + it.dest : (it.dirLabel || '');
   return '<div class="detail-map-context" data-detail-map-context data-gps-active="' + String(Boolean(gpsStop)) + '" aria-label="目前路線與車站">' +
@@ -2379,16 +2387,41 @@ function updateDetailMapContext() {
   const state = routeDetailState;
   const context = routeDetailBody?.querySelector('[data-detail-map-context]');
   if (!state.detailMapOpen || !context || !state.item) return;
-  const selected = state.gpsSeq || state.selectedSeq;
+  const selected = state.mapManualSelectedSeq || state.gpsSeq || state.selectedSeq;
   const stop = state.stops.find(item => Number(item.seq) === Number(selected)) || state.stops[0];
   context.outerHTML = detailMapContextMarkup(state.item, stop);
 }
-function updateDetailMapEtaPanel() {
+function updateDetailMapEtaPanel(stopOverride = null) {
   const state = routeDetailState;
   if (!state.detailMapOpen || !state.stops?.length) return;
-  const stop = state.stops.find(x => String(x.id) === String(state.selectedStopId)) || state.stops[0];
+  const selected = state.mapManualSelectedSeq || state.gpsSeq || state.selectedSeq;
+  const stop = stopOverride || state.stops.find(x => Number(x.seq) === Number(selected)) || state.stops[0];
   const panel = routeDetailBody?.querySelector('.detail-map-panel.open .detail-eta-panel');
   if (stop && panel) panel.outerHTML = detailEtaPanel(stop);
+}
+function selectDetailMapStop(stop) {
+  const state = routeDetailState;
+  if (!stop || !state.detailMapOpen) return;
+  state.mapManualSelectedSeq = Number(stop.seq);
+  state.selectedSeq = Number(stop.seq);
+  state.selectedStopId = stop.id;
+  updateDetailMapSelection();
+  const etaState = state.etaByStop.get(String(stop.id));
+  if ((!etaState || etaState.status === 'idle' || etaState.status === 'error') && state.etaRequest) {
+    setDetailEtaState(stop.id, { status:'loading', etas:[] });
+    updateDetailMapEtaPanel(stop);
+    loadRouteDetailEtas(state.item, state.etaRequest, stop.id, stop.id).catch(() => {});
+  }
+}
+function updateDetailMapSelection() {
+  const state = routeDetailState;
+  const wrap = routeDetailBody?.querySelector('[data-detail-map-wrap]');
+  const selected = state.mapManualSelectedSeq || state.gpsSeq || state.selectedSeq;
+  const stop = state.stops.find(item => Number(item.seq) === Number(selected)) || state.stops[0];
+  if (!wrap || !stop) return;
+  wrap._detailStopMarkers?.forEach((marker, seq) => marker.setIcon(imageStyleStopIcon(Number(seq) === Number(stop.seq))));
+  updateDetailMapEtaPanel(stop);
+  updateDetailMapContext();
 }
 async function loadRouteDetailEtas(it, request, priorityStopId = routeDetailState.selectedStopId, onlyStopId = null) {
   routeDetailState.detailLastFetchAt = Date.now();
@@ -2447,12 +2480,12 @@ function renderRouteDetail() {
   if (!it || !routeDetailBody) return;
   if (routeDetailState.detailMapOpen && routeDetailState.mapViewLocked) { updateDetailMapContext(); return; }
   const savedDetailScrollTop = routeDetail.scrollTop;
-  const oldDetailMap = routeDetailBody.querySelector('[data-detail-map-wrap]')?._map;
-  if (oldDetailMap) { try { oldDetailMap.remove(); } catch {} }
+  const oldDetailMapWrap = routeDetailBody.querySelector('[data-detail-map-wrap]');
+  if (oldDetailMapWrap?._map) disposeDetailRouteMap(oldDetailMapWrap);
   const savedPickerScrollTop = routeDetailBody.querySelector('.custom-picker-drawer')?.scrollTop;
   const currentService = routeDetailBody.querySelector('.detail-service');
   if (currentService) routeDetailState.serviceOpen = currentService.open;
-  const selected = routeDetailState.gpsSeq || routeDetailState.selectedSeq;
+  const selected = routeDetailState.mapManualSelectedSeq || routeDetailState.gpsSeq || routeDetailState.selectedSeq;
   const selectedStop = routeDetailState.stops.find(s => s.seq === selected) || routeDetailState.stops[0];
   if (selectedStop) { routeDetailState.selectedSeq = selectedStop.seq; routeDetailState.selectedStopId = selectedStop.id; }
   routeDetailOperator.textContent = it.co;
@@ -2484,7 +2517,7 @@ function renderRouteDetail() {
   routeDetailBody.classList.remove('detail-loading');
   routeDetailBody.innerHTML =
     '<div class="detail-summary">' + detailActionButtons(it) + '<div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><div class="detail-meta-row"><span class="summary-count">共 ' + routeDetailState.stops.length + ' 個站</span><span class="summary-buses" title="按同一輪 ETA 逐段推算">ETA 推算行駛中：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 部' : '讀取中') + '</span></div><div class="detail-meta-row"><span class="summary-coverage">' + detailEtaCoverageText() + '</span></div><div class="detail-meta-row"><span class="summary-schedule">' + detailScheduleSummary() + '</span></div><div class="detail-meta-row"><span class="summary-fare">全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + customTripPanel(routeDetailState.stops) + '</div>' +
-    '<div class="detail-map-panel' + (routeDetailState.detailMapOpen ? ' open' : '') + '" data-detail-map-wrap><div class="detail-map-head"><span>路線地圖</span></div>' + (routeDetailState.detailMapOpen ? detailEtaPanel(current) + detailMapContextMarkup(it, current) : '') + '<div class="detail-map-canvas"><div class="route-map"></div><div class="map-tools"><button class="locate-btn' + (routeDetailState.gpsStatus === 'watching' ? ' is-active' : '') + '" data-detail-map-locate type="button" aria-pressed="' + String(routeDetailState.gpsStatus === 'watching') + '" aria-label="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '" title="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '">' + '<svg class="gps-crosshair" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1.5v5.5M12 17v5.5M1.5 12h5.5M17 12h5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>' + '</button><button class="detail-map-close" type="button" data-detail-map-close aria-label="關閉路線地圖" title="關閉路線地圖"><svg class="map-close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></div></div></div>' +
+    '<div class="detail-map-panel' + (routeDetailState.detailMapOpen ? ' open' : '') + '" data-detail-map-wrap><div class="detail-map-head"><span>路線地圖</span></div>' + (routeDetailState.detailMapOpen ? detailEtaPanel(current) + detailMapContextMarkup(it, current) : '') + '<div class="detail-map-canvas"><div class="route-map"></div><div class="detail-map-bus-legend" data-detail-map-bus-legend hidden></div><div class="map-tools"><button class="locate-btn' + (routeDetailState.gpsStatus === 'watching' ? ' is-active' : '') + '" data-detail-map-locate type="button" aria-pressed="' + String(routeDetailState.gpsStatus === 'watching') + '" aria-label="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '" title="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '">' + '<svg class="gps-crosshair" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1.5v5.5M12 17v5.5M1.5 12h5.5M17 12h5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>' + '</button><button class="detail-map-close" type="button" data-detail-map-close aria-label="關閉路線地圖" title="關閉路線地圖"><svg class="map-close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></div></div></div>' +
     '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
     detailGpsPanel(it, current) +
     '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +
@@ -2553,7 +2586,7 @@ function renderRouteDetail() {
 async function openRouteDetail(it, trigger, options = {}) {
   routeDetailReturnFocus = trigger || document.activeElement;
   routeDetailReturnFocusId = routeDetailReturnFocus?.getAttribute?.('data-detail-id') || routeDetailReturnFocus?.getAttribute?.('data-map-id') || uid(it); routeDetailReturnFocusAttr = routeDetailReturnFocus?.hasAttribute?.('data-map-id') ? 'data-map-id' : 'data-detail-id';
-  routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.etaHistory.clear(); routeDetailState.detailEtaLoading = false; routeDetailState.detailLastFetchAt = 0; routeDetailState.fareLabel = null; routeDetailState.scheduleLabel = null; routeDetailState.serviceOpen = false; routeDetailState.customPickerOpen = false; routeDetailState.customPickerMode = 'from'; routeDetailState.sweepStatus = 'loading'; routeDetailState.detailMapOpen = options.openMap === true; routeDetailState.mapReturnToBoard = options.openMap === true; routeDetailState.mapViewLocked = false;
+  routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.etaHistory.clear(); routeDetailState.detailEtaLoading = false; routeDetailState.detailLastFetchAt = 0; routeDetailState.fareLabel = null; routeDetailState.scheduleLabel = null; routeDetailState.serviceOpen = false; routeDetailState.customPickerOpen = false; routeDetailState.customPickerMode = 'from'; routeDetailState.sweepStatus = 'loading'; routeDetailState.detailMapOpen = options.openMap === true; routeDetailState.mapReturnToBoard = options.openMap === true; routeDetailState.mapViewLocked = false; routeDetailState.mapManualSelectedSeq = null;
   const request = beginRouteDetailGeneration();
   routeDetail.classList.add('on'); routeDetail.setAttribute('aria-hidden', 'false'); document.body.classList.add('detail-open'); startRouteDetailTicker();
   routeDetailBody.innerHTML = '<div class="detail-loading">' + (options.openMap ? '載入路線地圖…' : '載入路線站點…') + '</div>';
@@ -2898,11 +2931,11 @@ async function openGetoffSetup(it) {
     $('#cancelGetoff').addEventListener('click', viewHome);
   } catch { sBody.innerHTML = '<div class="msg">讀取站頭失敗，請檢查網絡</div><button class="wide" id="cancelGetoff">← 返回</button>'; $('#cancelGetoff').addEventListener('click', viewHome); }
 }
+function imageStyleStopIcon(selected = false) {
+  return L.divIcon({ className:'image-stop-marker-wrap', html:'<span class="image-stop-marker' + (selected ? ' selected' : '') + '"></span>', iconSize:[18,18], iconAnchor:[9,9], popupAnchor:[0,-9] });
+}
 function imageStyleStopMarker(st, selected = false) {
-  return L.marker([st.lat, st.lng], {
-    title: st.name,
-    icon: L.divIcon({ className:'image-stop-marker-wrap', html:'<span class="image-stop-marker' + (selected ? ' selected' : '') + '"></span>', iconSize:[18,18], iconAnchor:[9,9], popupAnchor:[0,-9] })
-  });
+  return L.marker([st.lat, st.lng], { title:st.name, icon:imageStyleStopIcon(selected) });
 }
 function addImageStyleRouteLine(map, segments) {
   const lines = Array.isArray(segments?.[0]?.[0]) ? segments : [segments];
@@ -3283,6 +3316,131 @@ function toggleDetailRouteMap(it, button) {
   renderRouteDetail();
   routeDetailState.mapViewLocked = true;
 }
+function detailMapPolylineParts(road) {
+  if (!Array.isArray(road) || !road.length) return [];
+  return Array.isArray(road[0]?.[0]) ? road : [road];
+}
+function detailMapDistanceMeters(a, b) {
+  if (!a || !b) return Infinity;
+  const meanLat = ((Number(a[0]) + Number(b[0])) * Math.PI) / 360;
+  const dx = (Number(b[1]) - Number(a[1])) * Math.cos(meanLat), dy = Number(b[0]) - Number(a[0]);
+  return Math.hypot(dx, dy) * 111320;
+}
+function nearestDetailMapPointIndex(point, line) {
+  let index = 0, distance = Infinity;
+  line.forEach((candidate, i) => { const d = detailMapDistanceMeters(point, candidate); if (d < distance) { distance = d; index = i; } });
+  return { index, distance };
+}
+function detailMapAdjacentRoutePath(road, from, to) {
+  const start = [Number(from.lat), Number(from.lng)], end = [Number(to.lat), Number(to.lng)];
+  const lines = detailMapPolylineParts(road);
+  let best = null;
+  lines.forEach(line => {
+    if (!Array.isArray(line) || line.length < 2) return;
+    const a = nearestDetailMapPointIndex(start, line), b = nearestDetailMapPointIndex(end, line);
+    const score = a.distance + b.distance;
+    if (score >= (best?.score ?? Infinity)) return;
+    const slice = a.index <= b.index ? line.slice(a.index, b.index + 1) : line.slice(b.index, a.index + 1).reverse();
+    if (slice.length >= 2) best = { score, slice };
+  });
+  if (best && best.score <= 3000) return [start, ...best.slice, end];
+  return [start, end];
+}
+function detailMapPathForBusSegment(road, stops, fromIndex, toIndex) {
+  const points = [];
+  const direction = fromIndex <= toIndex ? 1 : -1;
+  for (let i = fromIndex; i !== toIndex; i += direction) {
+    const a = stops[i], b = stops[i + direction];
+    if (!a || !b) continue;
+    const segment = detailMapAdjacentRoutePath(road, a, b);
+    segment.forEach(point => {
+      const last = points[points.length - 1];
+      if (!last || detailMapDistanceMeters(last, point) > .5) points.push(point);
+    });
+  }
+  return points;
+}
+function detailMapPointAlongPath(path, progress) {
+  if (!Array.isArray(path) || !path.length) return null;
+  if (path.length === 1) return path[0];
+  const lengths = []; let total = 0;
+  for (let i=0;i<path.length-1;i++) { const length = detailMapDistanceMeters(path[i], path[i+1]); lengths.push(length); total += length; }
+  if (!(total > 0)) return path[0];
+  let remaining = total * Math.max(0, Math.min(1, progress));
+  for (let i=0;i<lengths.length;i++) {
+    if (remaining <= lengths[i] || i === lengths.length - 1) {
+      const fraction = lengths[i] ? remaining / lengths[i] : 0;
+      return [path[i][0] + (path[i+1][0] - path[i][0]) * fraction, path[i][1] + (path[i+1][1] - path[i][1]) * fraction];
+    }
+    remaining -= lengths[i];
+  }
+  return path[path.length-1];
+}
+function detailMapEstimatedBusProgress(segment, stops, etaByStop, now = Date.now()) {
+  const from = stops.find(stop => Number(stop.seq) === Number(segment.fromSeq));
+  const to = stops.find(stop => Number(stop.seq) === Number(segment.toSeq));
+  const waveEta = stop => {
+    const state = etaByStop.get(String(stop?.id));
+    const candidates = (state?.etas || []).filter(eta => !eta.sched && eta.iso && Number.isFinite(Date.parse(eta.iso)));
+    return (segment.etaSeq == null ? null : candidates.find(eta => Number(eta.etaSeq) === Number(segment.etaSeq))) || candidates[0] || null;
+  };
+  const a=waveEta(from), b=waveEta(to), ta=Date.parse(a?.iso || ''), tb=Date.parse(b?.iso || '');
+  if (!Number.isFinite(ta) || !Number.isFinite(tb) || tb <= ta) return .5;
+  if (now < ta) return Math.max(.02, Math.min(.18, .18 * (1 - (ta-now)/(5*60000))));
+  if (now >= tb) return .92;
+  return Math.max(.12, Math.min(.90, .12 + .78 * (now-ta)/(tb-ta)));
+}
+function detailMapEstimatedBusIcon(it, segment) {
+  const label = '估算位置：' + it.route + ' 巴士，第 ' + segment.fromSeq + ' 至第 ' + segment.toSeq + ' 站之間；並非實時車輛位置';
+  return L.divIcon({ className:'detail-estimated-bus-wrap', html:'<span class="detail-estimated-bus" role="img" aria-label="' + esc(label) + '" title="' + esc(label) + '"><strong>' + esc(it.route) + '</strong><small>估</small></span>', iconSize:[42,42], iconAnchor:[21,21] });
+}
+function updateDetailMapEstimatedVehicles(wrap, it, stops, road, now = Date.now()) {
+  if (!wrap?._map || !routeDetailState.detailMapOpen) return;
+  const markers = wrap._estimatedBusMarkers || (wrap._estimatedBusMarkers = new Map());
+  const segments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop, now).slice(0,8);
+  const active = new Set();
+  segments.forEach(segment => {
+    const fromIndex=stops.findIndex(stop => Number(stop.seq) === Number(segment.fromSeq));
+    const toIndex=stops.findIndex(stop => Number(stop.seq) === Number(segment.toSeq));
+    if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+    const path=detailMapPathForBusSegment(road,stops,fromIndex,toIndex);
+    const position=detailMapPointAlongPath(path,detailMapEstimatedBusProgress(segment,stops,routeDetailState.etaByStop,now));
+    if (!position || !Number.isFinite(position[0]) || !Number.isFinite(position[1])) return;
+    const key=segment.etaSeq == null ? 'fallback:'+segment.fromSeq+':'+segment.toSeq : 'wave:'+segment.etaSeq;
+    active.add(key);
+    let marker=markers.get(key);
+    if (!marker) {
+      marker=L.marker(position,{icon:detailMapEstimatedBusIcon(it,segment),interactive:false,keyboard:false,zIndexOffset:900});
+      marker.addTo(wrap._map); markers.set(key,marker);
+    } else {
+      marker.setLatLng(position);
+      if (marker._detailFromSeq !== segment.fromSeq || marker._detailToSeq !== segment.toSeq) marker.setIcon(detailMapEstimatedBusIcon(it,segment));
+    }
+    marker._detailFromSeq=segment.fromSeq; marker._detailToSeq=segment.toSeq;
+  });
+  [...markers.keys()].forEach(key => { if (!active.has(key)) { markers.get(key)?.remove?.(); markers.delete(key); } });
+  const legend=wrap.querySelector('[data-detail-map-bus-legend]');
+  if (legend) { legend.hidden=markers.size===0; legend.innerHTML=markers.size ? '<span class="detail-map-bus-legend-tag">估</span><span>'+markers.size+' 部估算巴士 · 非實時位置</span>' : ''; }
+}
+function startDetailMapVehicleAnimation(wrap, it, stops, road) {
+  if (wrap._vehicleAnimationFrame) cancelAnimationFrame(wrap._vehicleAnimationFrame);
+  wrap._vehicleAnimationLastAt=0;
+  const step=now => {
+    if (!wrap.isConnected || !routeDetailState.detailMapOpen || !wrap._map) { wrap._vehicleAnimationFrame=0; return; }
+    if (now-wrap._vehicleAnimationLastAt >= 250) { updateDetailMapEstimatedVehicles(wrap,it,stops,road,Date.now()); wrap._vehicleAnimationLastAt=now; }
+    wrap._vehicleAnimationFrame=requestAnimationFrame(step);
+  };
+  wrap._vehicleAnimationFrame=requestAnimationFrame(step);
+}
+function disposeDetailRouteMap(wrap) {
+  if (!wrap) return;
+  if (wrap._vehicleAnimationFrame) cancelAnimationFrame(wrap._vehicleAnimationFrame);
+  wrap._vehicleAnimationFrame=0;
+  try { wrap._detailStopMarkers?.forEach(marker => marker.remove?.()); } catch {}
+  try { wrap._estimatedBusMarkers?.forEach(marker => marker.remove?.()); } catch {}
+  wrap._detailStopMarkers?.clear?.(); wrap._estimatedBusMarkers?.clear?.();
+  try { wrap._map?.remove?.(); } catch {}
+}
 async function initDetailRouteMap(it) {
   const wrap = routeDetailBody?.querySelector('[data-detail-map-wrap]');
   if (!wrap || !routeDetailState.detailMapOpen) return;
@@ -3294,20 +3452,27 @@ async function initDetailRouteMap(it) {
     if (!stops.length) throw new Error('no-coordinates');
     mapEl.innerHTML = '';
     const map = L.map(mapEl, { zoomControl:true, attributionControl:true });
-    wrap._map = map; addRouteMapTiles(map);
+    wrap._map = map; wrap._detailStopMarkers=new Map(); wrap._estimatedBusMarkers=new Map(); addRouteMapTiles(map);
     const initial = routeDetailState.gpsPosition;
     if (initial) map.setView([Number(initial.latitude), Number(initial.longitude)], 13, {animate:false});
     else map.setView([stops[0].lat, stops[0].lng], 10, {animate:false});
     const timing = await mapEtaEvidence(it, stops);
     const road = await mapRoutePath(it, stops, timing);
+    wrap._routeGeometry=road;
     const points = routeMapBoundsPoints(stops, road);
     addImageStyleRouteLine(map, road);
+    const selected = routeDetailState.mapManualSelectedSeq || routeDetailState.gpsSeq || routeDetailState.selectedSeq;
     stops.forEach(st => {
-      const marker = imageStyleStopMarker(st, st.seq === routeDetailState.selectedSeq);
-      marker.bindPopup('<b>第 ' + st.seq + ' 站</b><br>' + esc(st.name)); marker.addTo(map);
+      const marker = imageStyleStopMarker(st, Number(st.seq) === Number(selected));
+      marker.bindPopup('<b>第 ' + st.seq + ' 站</b><br>' + esc(st.name));
+      marker.on('click', () => selectDetailMapStop(st));
+      marker.addTo(map); wrap._detailStopMarkers.set(String(st.seq),marker);
     });
-    if (routeDetailState.gpsPosition) focusDetailMapOnPosition(routeDetailState.gpsPosition);
+    if (routeDetailState.gpsPosition) focusDetailMapOnPosition(routeDetailState.gpsPosition, {pan:routeDetailState.mapManualSelectedSeq == null});
     else if (points.length) map.fitBounds(L.latLngBounds(points), { padding:[18,18], maxZoom:15 });
+    updateDetailMapSelection();
+    updateDetailMapEstimatedVehicles(wrap,it,stops,road,Date.now());
+    startDetailMapVehicleAnimation(wrap,it,stops,road);
     setTimeout(() => map.invalidateSize(), 80);
   } catch { mapEl.innerHTML = '<div class="map-loading">暫時未有站頭座標資料</div>'; }
 }
