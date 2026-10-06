@@ -64,3 +64,8 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 - `route-location-icon-v3.png`：由原始圖片裁去外圍留白，再以淺灰底重建，避免正方形原圖縮小後圖案只剩中央細小區域。
 - `index.html`：地圖按鈕改為 34px，圖片改為 32px，令定位點及路線更易辨認。
 - `sw.js`／`.github/workflows/pages.yml`：改用 v3 資產並更新部署清單。
+
+## 11. 本次追加修改：加粗虛線路徑
+- `route-location-icon-v4.png`：只將黑色虛線路徑及路徑圓點加粗約一倍，紅色定位點不變。
+- `index.html`／`sw.js`／`.github/workflows/pages.yml`：改用 v4 圖片資產並更新快取／部署清單。
+

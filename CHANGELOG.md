@@ -1,4 +1,7 @@
 # BusPulse HK 修改紀錄
+## 2026-10-06 — 加粗定位圖片的虛線路徑
+將路線圖中黑色虛線路徑加粗約一倍，提升在 34px 小圖示內的可讀性；紅色定位點保持原本比例。圖片改用 `route-location-icon-v4.png`，Service Worker 更新至 `buspulse-hk-shell-v93-route-location-thick-path`。
+
 ## 2026-10-06 — 裁走定位圖片留白並放大圖示
 重新以原始圖片的實際內容邊界裁切，移除四周大幅留白；路線卡地圖按鈕放大至 34px，內部圖片放大至 32px，令兩個紅色定位點填滿圖示區域。圖片改用 `route-location-icon-v3.png`，Service Worker 更新至 `buspulse-hk-shell-v92-route-location-cropped`。
 
