@@ -77,3 +77,8 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 ## 13. 本次追加修改：重做底色及圓角
 - `route-location-icon-v6.png`：確認已移除原圖白底，改用真正淺灰底；黑色路徑加粗，圖片四角使用圓角透明遮罩。
 - `index.html`／`sw.js`／`.github/workflows/pages.yml`：改用 v6 資產並更新快取／部署清單。
+
+## 14. 本次追加修改：恢復紅色圓角外框
+- `index.html`：地圖按鈕強制使用 2px 紅色 `#ff7182` 外框、8px 圓角、`box-sizing:border-box` 及淺灰底，圖片不會覆蓋外框。
+- `sw.js`：快取版本更新至 `buspulse-hk-shell-v96-route-location-red-frame`。
+
