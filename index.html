@@ -954,7 +954,7 @@ body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-a
 .detail-map-panel.open .route-map .image-stop-marker-wrap {cursor:pointer;}
 .detail-map-panel.open .route-map .detail-estimated-bus-wrap {background:transparent;border:0;}
 .detail-map-panel.open .route-map .detail-estimated-bus {position:relative;display:flex;align-items:center;justify-content:center;width:19px;height:19px;box-sizing:border-box;border:1px solid #167b9a;border-radius:50%;background:#f8ffff;color:#0c536d;box-shadow:0 1px 2px rgba(4,44,61,.2);font:750 5px/1 system-ui,sans-serif;animation:detailEstimatedBusPulse 2.2s ease-in-out infinite;}
-.detail-map-panel.open .route-map .detail-estimated-bus strong {max-width:15px;overflow:hidden;text-overflow:clip;white-space:nowrap;}
+.detail-map-panel.open .route-map .detail-estimated-bus strong {max-width:17px;font-size:8px;font-weight:900;letter-spacing:-.25px;overflow:hidden;text-overflow:clip;white-space:nowrap;}
 .detail-map-panel.open .route-map .detail-estimated-bus small {position:absolute;right:-2px;top:-2px;display:grid;place-items:center;width:8px;height:8px;border-radius:50%;border:1px solid #fff;background:#167b9a;color:#fff;font:700 5px/1 system-ui,sans-serif;}
 @keyframes detailEstimatedBusPulse {0%,100%{box-shadow:0 1px 2px rgba(4,44,61,.2),0 0 0 0 rgba(22,123,154,.12)}50%{box-shadow:0 1px 2px rgba(4,44,61,.2),0 0 0 3px rgba(22,123,154,0)}}
 .detail-map-panel.open .route-map .detail-passenger-bus-wrap {background:transparent;border:0;}
@@ -3392,9 +3392,18 @@ function detailMapEstimatedBusProgress(segment, stops, etaByStop, now = Date.now
   if (now >= tb) return .92;
   return Math.max(.12, Math.min(.90, .12 + .78 * (now-ta)/(tb-ta)));
 }
+function detailMapBusNumberFontSize(route) {
+  const text=String(route || ''), context=document.createElement('canvas').getContext('2d');
+  if (!context) return Math.max(4.5,Math.min(8,17/Math.max(1,text.length*.62)));
+  context.font='900 8px system-ui,sans-serif';
+  const measured=context.measureText(text).width;
+  const size=measured ? Math.max(4.5,Math.min(8,136/measured)) : 8;
+  return Math.round(size*10)/10;
+}
 function detailMapEstimatedBusIcon(it, segment) {
   const label = '估算位置：' + it.route + ' 巴士，第 ' + segment.fromSeq + ' 至第 ' + segment.toSeq + ' 站之間；並非實時車輛位置';
-  return L.divIcon({ className:'detail-estimated-bus-wrap', html:'<span class="detail-estimated-bus" role="img" aria-label="' + esc(label) + '" title="' + esc(label) + '"><strong>' + esc(it.route) + '</strong><small>估</small></span>', iconSize:[24,24], iconAnchor:[12,12] });
+  const numberFontSize=detailMapBusNumberFontSize(it.route);
+  return L.divIcon({ className:'detail-estimated-bus-wrap', html:'<span class="detail-estimated-bus" role="img" aria-label="' + esc(label) + '" title="' + esc(label) + '"><strong style="font-size:' + numberFontSize + 'px">' + esc(it.route) + '</strong><small>估</small></span>', iconSize:[24,24], iconAnchor:[12,12] });
 }
 function detailMapNearestRouteProjection(road, coords) {
   const lat=Number(coords?.latitude ?? coords?.lat), lng=Number(coords?.longitude ?? coords?.lng);

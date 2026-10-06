@@ -430,6 +430,21 @@ test('ETA wave estimate places virtual buses between the correct stops', async (
   expect(result.map(x => x.fromSeq)).toEqual([1,2]);
 });
 
+test('bus route number fills the compact marker and scales down for longer labels', async ({ page }) => {
+  await page.goto('./?smoke=route-detail-map-label-size', { waitUntil: 'domcontentloaded' });
+  const result=await page.evaluate(() => ({
+    short:detailMapBusNumberFontSize('74X'),
+    medium:detailMapBusNumberFontSize('290E'),
+    long:detailMapBusNumberFontSize('NR500'),
+    icon:detailMapEstimatedBusIcon({route:'74X'},{fromSeq:1,toSeq:2}).options.html
+  }));
+  expect(result.short).toBe(8);
+  expect(result.medium).toBeLessThanOrEqual(result.short);
+  expect(result.long).toBeLessThan(result.medium);
+  expect(result.long).toBeGreaterThanOrEqual(4.5);
+  expect(result.icon).toContain('font-size:8px');
+});
+
 test('estimated map bus advances along its route as ETA time passes', async ({ page }) => {
   await page.goto('./?smoke=route-detail-map-bus-motion', { waitUntil: 'domcontentloaded' });
   const result = await page.evaluate(() => {
@@ -537,6 +552,7 @@ test('main-board map buttons open a selectable shared map with estimated buses',
   await expect.poll(() => page.locator('.detail-map-panel.open .detail-estimated-bus').count(), { timeout:10000 }).toBeGreaterThan(0);
   await expect(page.locator('.detail-map-panel.open .detail-estimated-bus').first()).toHaveCSS('width','19px');
   await expect(page.locator('.detail-map-panel.open .detail-estimated-bus').first()).toHaveCSS('height','19px');
+  await expect(page.locator('.detail-map-panel.open .detail-estimated-bus strong').first()).toHaveCSS('font-size','8px');
   await page.locator('.detail-map-panel.open .image-stop-marker-wrap').nth(1).click();
   await expect(page.locator('[data-detail-map-context] .detail-map-context-stop-name')).toContainText('第二站');
   await expect(page.locator('.detail-map-panel.open .detail-eta strong').first()).toContainText('3');
