@@ -789,7 +789,66 @@ body.light .stop-row.is-live.is-selected .stop-dot:after{background:#08734d!impo
 .custom-trip-panel{margin:14px 0 18px;padding:14px;border:1px solid rgba(145,170,205,.3);border-radius:16px;background:rgba(20,35,58,.72)}.custom-trip-open{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid rgba(145,170,205,.4);border-radius:12px;background:rgba(10,20,35,.5);color:var(--text);text-align:left;cursor:pointer}.custom-trip-open span{display:flex;flex-direction:column;gap:4px;min-width:0}.custom-trip-open b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.custom-trip-open small{color:var(--faint);font-size:11px}.custom-trip-open strong{flex:none;color:#ffd35a;font-size:12px}.custom-picker-backdrop{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.58)}.custom-picker-drawer{position:fixed;z-index:81;top:0;right:0;bottom:0;width:min(92vw,430px);padding:calc(18px + var(--safe-t)) 16px calc(18px + var(--safe-b));background:#050505;color:#f5f5f5;box-shadow:-10px 0 28px rgba(0,0,0,.4);overflow:auto}.custom-picker-drawer header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.custom-picker-drawer header div{display:flex;flex-direction:column;gap:4px}.custom-picker-drawer header b{font-size:25px;color:#ffd900}.custom-picker-drawer header small{color:#aaa;font-size:12px}.custom-picker-close{width:36px;height:36px;border:0;background:transparent;color:#fff;font-size:30px;cursor:pointer}.custom-picker-tabs{display:flex;border-bottom:1px solid #444;margin-bottom:12px}.custom-picker-tabs button{flex:1;padding:11px 6px;border:1px solid transparent;border-radius:10px 10px 0 0;background:transparent;font:700 16px inherit;cursor:pointer}.custom-picker-tabs button:first-child{color:#36e0a0}.custom-picker-tabs button:last-child{color:#ff8f89}.custom-picker-tabs button:first-child.active{border-color:rgba(54,224,160,.55);border-bottom:4px solid #36e0a0;background:rgba(54,224,160,.12)}.custom-picker-tabs button:last-child.active{border-color:rgba(255,98,92,.55);border-bottom:4px solid #ff625c;background:rgba(255,98,92,.12)}.custom-picker-hint{margin:6px 0 12px;color:#bbb;font-size:13px}.custom-picker-timeline{position:relative;padding:0 0 20px 12px}.custom-picker-timeline:before{content:"";position:absolute;left:23px;top:12px;bottom:18px;width:2px;background:#777}.custom-picker-stop{position:relative;display:flex;align-items:center;width:100%;min-height:82px;padding:10px 8px 10px 0;border:0;background:transparent;color:#fff;text-align:left;cursor:pointer}.custom-picker-dot{z-index:1;flex:none;width:28px;height:28px;margin-right:18px;border:5px solid #aaa;border-radius:50%;background:#050505}.custom-picker-stop.selected .custom-picker-dot{border-color:#fff;background:#fff}.custom-picker-stop.origin .custom-picker-dot{border-color:#36e0a0;background:#36e0a0;box-shadow:0 0 0 3px rgba(54,224,160,.22)}.custom-picker-stop.destination .custom-picker-dot{border-color:#ff625c;background:#ff625c;box-shadow:0 0 0 3px rgba(255,98,92,.24)}.custom-picker-copy{display:flex;flex-direction:column;gap:5px;min-width:0}.custom-picker-copy b{font-size:16px;line-height:1.35}.custom-picker-copy b small{color:#929292;font-size:12px;font-weight:600}.custom-picker-copy em{color:#aaa;font-size:13px;font-style:normal}.custom-picker-stop.selected .custom-picker-copy em,.custom-picker-stop.has-duration .custom-picker-copy em{color:#ffd900;font-weight:800}.custom-picker-stop.origin .custom-picker-copy em{color:#36e0a0;font-weight:800}.custom-picker-stop.destination .custom-picker-copy em{color:#ff8f89;font-weight:800}.custom-picker-stop:active{background:#171717}@media(max-width:430px){.custom-picker-drawer{width:94vw}.custom-picker-copy b{font-size:15px}}
 .custom-trip-fields{display:flex;align-items:end;gap:8px}.custom-trip-fields label{display:flex;flex:1;flex-direction:column;gap:5px;color:var(--faint);font-size:12px;font-weight:800}.custom-trip-fields select{width:100%;min-width:0;padding:10px 8px;border:1px solid rgba(145,170,205,.45);border-radius:10px;background:var(--bg-deep);color:var(--text);font:inherit}.custom-trip-arrow{padding:0 0 10px;color:var(--accent);font-size:20px;font-weight:900}.custom-trip-result{display:flex;flex-direction:column;gap:3px;margin-top:12px;padding:10px 11px;border-radius:10px;background:rgba(10,20,35,.48);color:var(--text)}.custom-trip-result strong{font-size:14px}.custom-trip-result small{color:var(--faint);line-height:1.45}.custom-trip-result.live strong{color:#ffd35a}.custom-trip-result.estimate strong{color:#9fc2ff}.custom-trip-result.unavailable strong,.custom-trip-result.invalid strong{color:#ffb4a8}@media(max-width:430px){.custom-trip-fields{gap:5px}.custom-trip-fields select{font-size:12px;padding-left:5px;padding-right:2px}}
 </style>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="">
+/* Universal button hints: hover/focus on desktop, long-press on touch devices. */
+(function installButtonHints(){
+  const hint = document.createElement('div');
+  hint.className = 'button-hint'; hint.setAttribute('role','tooltip'); hint.hidden = true;
+  document.body.appendChild(hint);
+  let active = null, timer = null, hideTimer = null;
+  const targetOf = node => node?.closest?.('button,[role="button"],a');
+  const textOf = el => {
+    if (!el) return '';
+    const title = el.getAttribute('title') || el.getAttribute('aria-label') || '';
+    return title.trim();
+  };
+  function position(el){
+    if (!el || hint.hidden) return;
+    const r = el.getBoundingClientRect(), gap = 8;
+    const width = Math.min(260, window.innerWidth - 24);
+    hint.style.maxWidth = width + 'px';
+    const h = hint.getBoundingClientRect().height || 32;
+    let top = r.top - h - gap;
+    if (top < 8) top = r.bottom + gap;
+    let left = r.left + (r.width / 2) - (hint.getBoundingClientRect().width / 2);
+    left = Math.max(12, Math.min(left, window.innerWidth - hint.getBoundingClientRect().width - 12));
+    hint.style.left = Math.round(left) + 'px'; hint.style.top = Math.round(top) + 'px';
+  }
+  function show(el, duration=0){
+    const text = textOf(el); if (!text) return;
+    clearTimeout(hideTimer); active = el; hint.textContent = text; hint.hidden = false;
+    hint.classList.add('is-visible'); hint.setAttribute('aria-hidden','false');
+    requestAnimationFrame(() => position(el));
+    if (duration) hideTimer = setTimeout(() => hide(el), duration);
+  }
+  function hide(el){
+    if (el && active !== el) return;
+    clearTimeout(hideTimer); active = null; hint.classList.remove('is-visible'); hint.setAttribute('aria-hidden','true');
+    setTimeout(() => { if (!active) hint.hidden = true; }, 140);
+  }
+  document.addEventListener('pointerover', event => {
+    if (event.pointerType !== 'mouse') return;
+    const el = targetOf(event.target); if (el) show(el);
+  });
+  document.addEventListener('pointerout', event => {
+    if (event.pointerType !== 'mouse') return;
+    const el = targetOf(event.target), next = targetOf(event.relatedTarget);
+    if (el && el !== next) hide(el);
+  });
+  document.addEventListener('focusin', event => { const el = targetOf(event.target); if (el) show(el); });
+  document.addEventListener('focusout', event => { const el = targetOf(event.target); if (el) hide(el); });
+  document.addEventListener('pointerdown', event => {
+    if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
+    const el = targetOf(event.target); if (!el || !textOf(el)) return;
+    clearTimeout(timer); timer = setTimeout(() => show(el, 2200), 520);
+  }, { passive:true });
+  ['pointerup','pointercancel','pointerleave'].forEach(type => document.addEventListener(type, event => {
+    if (event.pointerType === 'touch' || event.pointerType === 'pen') { clearTimeout(timer); timer = null; }
+  }, { passive:true }));
+  window.addEventListener('scroll', () => { if (active) position(active); }, { passive:true });
+  window.addEventListener('resize', () => { if (active) position(active); });
+})();
+</script>
 <style>
 /* Final light-theme switch treatment: no pink/green fills; preserve + 路線. */
 body.light .notification-toggle,
@@ -850,6 +909,13 @@ body.light *,
 .chead-actions .map-head-btn,body.light .chead-actions .map-head-btn{background:#d7dce0!important;color:#ff7182!important;border:2px solid #ff7182!important;border-radius:8px!important}
 .stop .fare{box-sizing:border-box;height:28px;min-height:28px;display:inline-flex;align-items:center;padding:0 9px;font-size:13px;line-height:1}
 .detail-summary .custom-trip-control .custom-trip-open{color:#36e0a0!important;border-color:#36e0a0!important;background:rgba(54,224,160,.1)!important}
+</style>
+
+<style id="button-hints">
+.button-hint{position:fixed;z-index:2000;max-width:min(260px,calc(100vw - 24px));padding:7px 10px;border:1px solid rgba(255,113,130,.78);border-radius:8px;background:#172336;color:#f7f9fc;box-shadow:0 5px 18px rgba(0,0,0,.34);font-size:12px;font-weight:700;line-height:1.35;text-align:center;pointer-events:none;opacity:0;transform:translateY(3px);transition:opacity .12s ease,transform .12s ease}
+.button-hint.is-visible{opacity:1;transform:translateY(0)}
+body.light .button-hint{background:#f5f7f8;color:#18232c;border-color:#b72e43;box-shadow:0 5px 18px rgba(30,45,58,.24)}
+@media (prefers-reduced-motion:reduce){.button-hint{transition:none}}
 </style>
 </head>
 <body>
