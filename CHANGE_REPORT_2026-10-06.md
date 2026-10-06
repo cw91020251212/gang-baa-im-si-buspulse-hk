@@ -95,3 +95,8 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 
 ## 18. 本次追加修改：詳細地圖改為長形全闊
 - `.detail-map-panel .route-map`：移除固定 310px 高度，改為 `width:100%`，高度按手機闊度長形比例計算，範圍 460–680px，讓詳細版本地圖比外邊版本更充分利用畫面。
+
+## 19. 本次追加修改：防止詳細地圖自動關閉
+- `routeDetailState.detailMapOpen`：保存地圖開啟狀態，避免 ETA／GPS 重新渲染時消失。
+- 詳細地圖改成全屏 modal layer，阻擋底層操作；只可用右上角 `×` 關閉。
+- 每次重新渲染前清理舊 Leaflet instance，重新渲染後保留地圖模式並重新初始化。
