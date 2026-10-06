@@ -1,4 +1,7 @@
 # BusPulse HK 修改紀錄
+## 2026-10-06 — 修正定位圖片四角突出圓角框
+將定位圖片本身加入圓角遮罩，並令地圖按鈕裁切溢出內容、保留 1px 內邊距；圖片改用 `route-location-icon-v5.png`，確保四個角不會突出圓角按鈕框。
+
 ## 2026-10-06 — 加粗定位圖片的虛線路徑
 將路線圖中黑色虛線路徑加粗約一倍，提升在 34px 小圖示內的可讀性；紅色定位點保持原本比例。圖片改用 `route-location-icon-v4.png`，Service Worker 更新至 `buspulse-hk-shell-v93-route-location-thick-path`。
 

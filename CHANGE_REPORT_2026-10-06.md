@@ -68,3 +68,9 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 ## 11. 本次追加修改：加粗虛線路徑
 - `route-location-icon-v4.png`：只將黑色虛線路徑及路徑圓點加粗約一倍，紅色定位點不變。
 - `index.html`／`sw.js`／`.github/workflows/pages.yml`：改用 v4 圖片資產並更新快取／部署清單。
+
+## 12. 本次追加修改：圓角框內裁切
+- `route-location-icon-v5.png`：加入與按鈕相符的圓角遮罩。
+- `index.html`：地圖按鈕加上 `overflow:hidden` 及 1px 內邊距，圖片改為 30px 並加圓角，避免四角突出框外。
+- `sw.js`／`.github/workflows/pages.yml`：改用 v5 圖片資產。
+
