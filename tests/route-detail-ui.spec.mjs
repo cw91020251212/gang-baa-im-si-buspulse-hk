@@ -535,6 +535,8 @@ test('main-board map buttons open a selectable shared map with estimated buses',
   await expect.poll(() => page.locator('.detail-map-panel.open .detail-eta strong').first().textContent(), { timeout:10000 }).not.toContain('—');
   await expect(page.locator('.detail-map-panel.open .image-stop-marker-wrap')).toHaveCount(3);
   await expect.poll(() => page.locator('.detail-map-panel.open .detail-estimated-bus').count(), { timeout:10000 }).toBeGreaterThan(0);
+  await expect(page.locator('.detail-map-panel.open .detail-estimated-bus').first()).toHaveCSS('width','19px');
+  await expect(page.locator('.detail-map-panel.open .detail-estimated-bus').first()).toHaveCSS('height','19px');
   await page.locator('.detail-map-panel.open .image-stop-marker-wrap').nth(1).click();
   await expect(page.locator('[data-detail-map-context] .detail-map-context-stop-name')).toContainText('第二站');
   await expect(page.locator('.detail-map-panel.open .detail-eta strong').first()).toContainText('3');
@@ -545,6 +547,44 @@ test('main-board map buttons open a selectable shared map with estimated buses',
   await page.locator('[data-detail-map-close]').click();
   await expect(page.locator('#routeDetail')).not.toHaveClass(/on/);
   await expect(page.locator('[data-map-id]').first()).toBeFocused();
+});
+
+test('GPS passenger position follows the selected route in a compact rider marker', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('buspulse.first-use-tour.v1','1');
+    window.__gps={callbacks:[],next:1};
+    Object.defineProperty(navigator,'geolocation',{configurable:true,value:{
+      watchPosition(success){const id=window.__gps.next++;window.__gps.callbacks.push({id,success});return id;},
+      clearWatch(){}
+    }});
+  });
+  await prepare(page);
+  await page.evaluate(() => {
+    mapEtaEvidence=async()=>null;
+    mapRoutePath=async(_it,stops)=>stops.slice(0,-1).map((stop,i)=>[[stop.lat,stop.lng],[stops[i+1].lat,stops[i+1].lng]]);
+  });
+  await page.locator('[data-detail-id]').click();
+  await page.locator('[data-detail-map]').click();
+  await expect(page.locator('[data-detail-map-wrap]')).toHaveClass(/open/);
+  await page.locator('[data-detail-map-locate]').click();
+  await expect.poll(()=>page.evaluate(()=>routeDetailState.gpsStatus)).toBe('watching');
+  await page.evaluate(()=>window.__gps.callbacks[0].success({coords:{latitude:22.305,longitude:114.206,accuracy:12},timestamp:Date.now()}));
+  const rider=page.locator('.detail-map-panel.open .detail-passenger-bus');
+  await expect(rider).toBeVisible();
+  await expect(rider).toHaveCSS('width','18px');
+  await expect(page.locator('[data-detail-map-bus-legend]')).toContainText('GPS 乘搭位置推算');
+  const projected=await page.evaluate(()=>{
+    const marker=routeDetailBody.querySelector('[data-detail-map-wrap]')?._passengerBusMarker;
+    const point=marker?.getLatLng();
+    return point?{lat:point.lat,lng:point.lng}:null;
+  });
+  expect(projected).not.toBeNull();
+  expect(projected.lat).toBeGreaterThan(22.304);
+  expect(projected.lat).toBeLessThan(22.307);
+  expect(projected.lng).toBeGreaterThan(114.204);
+  expect(projected.lng).toBeLessThan(114.207);
+  await page.locator('[data-detail-map-locate]').click();
+  await expect.poll(()=>page.locator('.detail-map-panel.open .detail-passenger-bus').count()).toBe(0);
 });
 
 test('floating map GPS and close controls respond to real clicks', async ({ page }) => {

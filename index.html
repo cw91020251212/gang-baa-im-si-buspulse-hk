@@ -953,10 +953,12 @@ body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-a
 .detail-map-panel.open .route-map .image-stop-marker.selected:before {background:#fff!important;}
 .detail-map-panel.open .route-map .image-stop-marker-wrap {cursor:pointer;}
 .detail-map-panel.open .route-map .detail-estimated-bus-wrap {background:transparent;border:0;}
-.detail-map-panel.open .route-map .detail-estimated-bus {position:relative;display:flex;align-items:center;justify-content:center;width:38px;height:38px;box-sizing:border-box;border:2px solid #167b9a;border-radius:50%;background:#f8ffff;color:#0c536d;box-shadow:0 2px 7px rgba(4,44,61,.32);font:850 10px/1 system-ui,sans-serif;animation:detailEstimatedBusPulse 2.2s ease-in-out infinite;}
-.detail-map-panel.open .route-map .detail-estimated-bus strong {max-width:31px;overflow:hidden;text-overflow:clip;white-space:nowrap;}
-.detail-map-panel.open .route-map .detail-estimated-bus small {position:absolute;right:-5px;top:-5px;display:grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid #fff;background:#167b9a;color:#fff;font:800 8px/1 system-ui,sans-serif;}
-@keyframes detailEstimatedBusPulse {0%,100%{box-shadow:0 2px 7px rgba(4,44,61,.32),0 0 0 0 rgba(22,123,154,.23)}50%{box-shadow:0 2px 7px rgba(4,44,61,.32),0 0 0 5px rgba(22,123,154,0)}}
+.detail-map-panel.open .route-map .detail-estimated-bus {position:relative;display:flex;align-items:center;justify-content:center;width:19px;height:19px;box-sizing:border-box;border:1px solid #167b9a;border-radius:50%;background:#f8ffff;color:#0c536d;box-shadow:0 1px 2px rgba(4,44,61,.2);font:750 5px/1 system-ui,sans-serif;animation:detailEstimatedBusPulse 2.2s ease-in-out infinite;}
+.detail-map-panel.open .route-map .detail-estimated-bus strong {max-width:15px;overflow:hidden;text-overflow:clip;white-space:nowrap;}
+.detail-map-panel.open .route-map .detail-estimated-bus small {position:absolute;right:-2px;top:-2px;display:grid;place-items:center;width:8px;height:8px;border-radius:50%;border:1px solid #fff;background:#167b9a;color:#fff;font:700 5px/1 system-ui,sans-serif;}
+@keyframes detailEstimatedBusPulse {0%,100%{box-shadow:0 1px 2px rgba(4,44,61,.2),0 0 0 0 rgba(22,123,154,.12)}50%{box-shadow:0 1px 2px rgba(4,44,61,.2),0 0 0 3px rgba(22,123,154,0)}}
+.detail-map-panel.open .route-map .detail-passenger-bus-wrap {background:transparent;border:0;}
+.detail-map-panel.open .route-map .detail-passenger-bus {display:grid;place-items:center;width:18px;height:18px;box-sizing:border-box;border:1px solid #009688;border-radius:50%;background:#e2f7f1;color:#00766d;box-shadow:0 0 0 2px rgba(0,150,136,.16);font:750 6px/1 system-ui,sans-serif;}
 .detail-map-bus-legend {position:absolute;left:58px;top:12px;z-index:700;display:flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid rgba(40,75,91,.25);border-radius:999px;background:rgba(248,253,255,.94);color:#345462;font-size:10px;font-weight:700;line-height:1.1;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.12);}
 .detail-map-bus-legend[hidden] {display:none!important;}
 .detail-map-bus-legend-tag {display:grid;place-items:center;width:15px;height:15px;border-radius:50%;background:#167b9a;color:#fff;font-size:8px;}
@@ -3392,7 +3394,47 @@ function detailMapEstimatedBusProgress(segment, stops, etaByStop, now = Date.now
 }
 function detailMapEstimatedBusIcon(it, segment) {
   const label = '估算位置：' + it.route + ' 巴士，第 ' + segment.fromSeq + ' 至第 ' + segment.toSeq + ' 站之間；並非實時車輛位置';
-  return L.divIcon({ className:'detail-estimated-bus-wrap', html:'<span class="detail-estimated-bus" role="img" aria-label="' + esc(label) + '" title="' + esc(label) + '"><strong>' + esc(it.route) + '</strong><small>估</small></span>', iconSize:[42,42], iconAnchor:[21,21] });
+  return L.divIcon({ className:'detail-estimated-bus-wrap', html:'<span class="detail-estimated-bus" role="img" aria-label="' + esc(label) + '" title="' + esc(label) + '"><strong>' + esc(it.route) + '</strong><small>估</small></span>', iconSize:[24,24], iconAnchor:[12,12] });
+}
+function detailMapNearestRouteProjection(road, coords) {
+  const lat=Number(coords?.latitude ?? coords?.lat), lng=Number(coords?.longitude ?? coords?.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  const scaleLat=111320, scaleLng=scaleLat*Math.max(.2,Math.cos(lat*Math.PI/180));
+  let best=null;
+  detailMapPolylineParts(road).forEach(line => {
+    if (!Array.isArray(line) || line.length < 2) return;
+    for (let i=0;i<line.length-1;i++) {
+      const a=line[i], b=line[i+1];
+      if (!Array.isArray(a) || !Array.isArray(b) || !Number.isFinite(Number(a[0])) || !Number.isFinite(Number(a[1])) || !Number.isFinite(Number(b[0])) || !Number.isFinite(Number(b[1]))) continue;
+      const ax=(Number(a[1])-lng)*scaleLng, ay=(Number(a[0])-lat)*scaleLat;
+      const bx=(Number(b[1])-lng)*scaleLng, by=(Number(b[0])-lat)*scaleLat;
+      const dx=bx-ax, dy=by-ay, denom=dx*dx+dy*dy;
+      const t=denom ? Math.max(0,Math.min(1,-(ax*dx+ay*dy)/denom)) : 0;
+      const east=ax+dx*t, north=ay+dy*t, distanceMeters=Math.hypot(east,north);
+      if (!best || distanceMeters < best.distanceMeters) best={position:[lat+north/scaleLat,lng+east/scaleLng],distanceMeters};
+    }
+  });
+  return best;
+}
+function detailMapPassengerBusIcon(it) {
+  const label='GPS 乘搭位置推算：假設你正乘搭所選的 ' + it.route + ' 路線；非實時車輛定位';
+  return L.divIcon({className:'detail-passenger-bus-wrap',html:'<span class="detail-passenger-bus" role="img" aria-label="'+esc(label)+'" title="'+esc(label)+'">乘</span>',iconSize:[22,22],iconAnchor:[11,11]});
+}
+function updateDetailMapPassengerBusMarker(wrap,it,road) {
+  const state=routeDetailState, gps=state.gpsPosition;
+  const remove=()=>{ try { wrap._passengerBusMarker?.remove?.(); } catch {} wrap._passengerBusMarker=null; };
+  if (state.gpsStatus !== 'watching' || !gps) { remove(); return false; }
+  const projected=detailMapNearestRouteProjection(road,gps);
+  const accuracy=Number(state.gpsPositionAccuracy);
+  const maxDistance=Math.max(250,Math.min(650,Number.isFinite(accuracy) ? accuracy*1.4 : 350));
+  if (!projected || projected.distanceMeters > maxDistance) { remove(); return false; }
+  let marker=wrap._passengerBusMarker;
+  if (!marker || marker._map !== wrap._map) {
+    marker?.remove?.();
+    marker=L.marker(projected.position,{icon:detailMapPassengerBusIcon(it),interactive:false,keyboard:false,zIndexOffset:1100}).addTo(wrap._map);
+    wrap._passengerBusMarker=marker;
+  } else marker.setLatLng(projected.position);
+  return true;
 }
 function updateDetailMapEstimatedVehicles(wrap, it, stops, road, now = Date.now()) {
   if (!wrap?._map || !routeDetailState.detailMapOpen) return;
@@ -3419,8 +3461,15 @@ function updateDetailMapEstimatedVehicles(wrap, it, stops, road, now = Date.now(
     marker._detailFromSeq=segment.fromSeq; marker._detailToSeq=segment.toSeq;
   });
   [...markers.keys()].forEach(key => { if (!active.has(key)) { markers.get(key)?.remove?.(); markers.delete(key); } });
+  const passengerActive=updateDetailMapPassengerBusMarker(wrap,it,road);
   const legend=wrap.querySelector('[data-detail-map-bus-legend]');
-  if (legend) { legend.hidden=markers.size===0; legend.innerHTML=markers.size ? '<span class="detail-map-bus-legend-tag">估</span><span>'+markers.size+' 部估算巴士 · 非實時位置</span>' : ''; }
+  if (legend) {
+    const labels=[];
+    if (markers.size) labels.push(markers.size+' 部 ETA 估算巴士');
+    if (passengerActive) labels.push('GPS 乘搭位置推算');
+    legend.hidden=labels.length===0;
+    legend.innerHTML=labels.length ? '<span class="detail-map-bus-legend-tag">'+(passengerActive?'乘':'估')+'</span><span>'+esc(labels.join(' · ')+' · 非實時')+'</span>' : '';
+  }
 }
 function startDetailMapVehicleAnimation(wrap, it, stops, road) {
   if (wrap._vehicleAnimationFrame) cancelAnimationFrame(wrap._vehicleAnimationFrame);
@@ -3436,6 +3485,8 @@ function disposeDetailRouteMap(wrap) {
   if (!wrap) return;
   if (wrap._vehicleAnimationFrame) cancelAnimationFrame(wrap._vehicleAnimationFrame);
   wrap._vehicleAnimationFrame=0;
+  try { wrap._passengerBusMarker?.remove?.(); } catch {}
+  wrap._passengerBusMarker=null;
   try { wrap._detailStopMarkers?.forEach(marker => marker.remove?.()); } catch {}
   try { wrap._estimatedBusMarkers?.forEach(marker => marker.remove?.()); } catch {}
   wrap._detailStopMarkers?.clear?.(); wrap._estimatedBusMarkers?.clear?.();
