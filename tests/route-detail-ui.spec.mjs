@@ -518,8 +518,8 @@ test('floating map GPS and close controls respond to real clicks', async ({ page
   await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('width', '34px');
   await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('height', '34px');
   await expect(page.locator('[data-detail-map-close]')).toHaveCSS('width', '34px');
-  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('border-top-width', '2px');
-  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('border-top-color', 'rgb(52, 75, 94)');
+  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('border-top-width', '1px');
+  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('border-top-color', 'rgb(161, 176, 188)');
   await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('box-shadow', 'none');
   await expect(page.locator('[data-detail-map-locate] svg')).toHaveCSS('width', '18px');
   await expect(page.locator('[data-detail-map-close] svg')).toHaveCSS('width', '18px');
@@ -532,7 +532,7 @@ test('floating map GPS and close controls respond to real clicks', async ({ page
   await page.locator('[data-detail-map-locate]').click();
   await expect.poll(() => page.evaluate(() => routeDetailState.gpsStatus)).toBe('watching');
   await expect(page.locator('[data-detail-map-locate]')).toHaveClass(/is-active/);
-  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('border-top-color', 'rgb(36, 130, 95)');
+  await expect(page.locator('[data-detail-map-locate]')).toHaveCSS('border-top-color', 'rgb(168, 203, 181)');
   await expect.poll(() => page.evaluate(() => Boolean(routeDetailBody.querySelector('[data-detail-map-wrap]')?._map)), { timeout:10000 }).toBe(true);
   await page.evaluate(() => { window.__mapRef = routeDetailBody.querySelector('[data-detail-map-wrap]')._map; });
   await page.evaluate(() => window.__gps.callbacks[0].success({ coords:{ latitude:22.40, longitude:114.30, accuracy:12 }, timestamp:Date.now() }));
