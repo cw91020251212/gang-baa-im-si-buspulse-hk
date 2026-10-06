@@ -73,3 +73,8 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 - `route-location-icon-v5.png`：加入與按鈕相符的圓角遮罩。
 - `index.html`：地圖按鈕加上 `overflow:hidden` 及 1px 內邊距，圖片改為 30px 並加圓角，避免四角突出框外。
 - `sw.js`／`.github/workflows/pages.yml`：改用 v5 圖片資產。
+
+## 13. 本次追加修改：重做底色及圓角
+- `route-location-icon-v6.png`：確認已移除原圖白底，改用真正淺灰底；黑色路徑加粗，圖片四角使用圓角透明遮罩。
+- `index.html`／`sw.js`／`.github/workflows/pages.yml`：改用 v6 資產並更新快取／部署清單。
+
