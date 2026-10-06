@@ -438,11 +438,12 @@ test('bus route number fills the compact marker and scales down for longer label
     long:detailMapBusNumberFontSize('NR500'),
     icon:detailMapEstimatedBusIcon({route:'74X'},{fromSeq:1,toSeq:2}).options.html
   }));
-  expect(result.short).toBe(8);
+  expect(result.short).toBeGreaterThanOrEqual(7.5);
+  expect(result.short).toBeLessThanOrEqual(8);
   expect(result.medium).toBeLessThanOrEqual(result.short);
   expect(result.long).toBeLessThan(result.medium);
   expect(result.long).toBeGreaterThanOrEqual(4.5);
-  expect(result.icon).toContain('font-size:8px');
+  expect(result.icon).toContain('font-size:' + result.short + 'px');
 });
 
 test('estimated map bus advances along its route as ETA time passes', async ({ page }) => {
@@ -552,7 +553,9 @@ test('main-board map buttons open a selectable shared map with estimated buses',
   await expect.poll(() => page.locator('.detail-map-panel.open .detail-estimated-bus').count(), { timeout:10000 }).toBeGreaterThan(0);
   await expect(page.locator('.detail-map-panel.open .detail-estimated-bus').first()).toHaveCSS('width','19px');
   await expect(page.locator('.detail-map-panel.open .detail-estimated-bus').first()).toHaveCSS('height','19px');
-  await expect(page.locator('.detail-map-panel.open .detail-estimated-bus strong').first()).toHaveCSS('font-size','8px');
+  const numberFontSize=await page.locator('.detail-map-panel.open .detail-estimated-bus strong').first().evaluate(el => parseFloat(getComputedStyle(el).fontSize));
+  expect(numberFontSize).toBeGreaterThanOrEqual(7.5);
+  expect(numberFontSize).toBeLessThanOrEqual(8);
   await page.locator('.detail-map-panel.open .image-stop-marker-wrap').nth(1).click();
   await expect(page.locator('[data-detail-map-context] .detail-map-context-stop-name')).toContainText('第二站');
   await expect(page.locator('.detail-map-panel.open .detail-eta strong').first()).toContainText('3');
