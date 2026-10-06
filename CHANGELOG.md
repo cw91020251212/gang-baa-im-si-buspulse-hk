@@ -1,4 +1,7 @@
 # BusPulse HK 修改紀錄
+## 2026-10-06 — 路線定位圖片改用淺灰色背景
+將路線卡右上角定位圖片的透明／深色顯示改為淺灰色背景（`#d7dce0`），令紅色定位點及黑色虛線路線更清楚；Service Worker 更新至 `buspulse-hk-shell-v91-route-location-light-gray`。
+
 ## 2026-10-06 — 路線卡地圖按鈕改用雙定位點圖片
 將每張路線卡右上角的地圖圖示替換為使用者提供的「兩個定位點及虛線路線」圖片；圖片已移除白色背景並納入 PWA 快取。按鈕尺寸、無障礙標籤及查看地圖功能保持不變，Service Worker 更新至 `buspulse-hk-shell-v90-route-location-image`。
 

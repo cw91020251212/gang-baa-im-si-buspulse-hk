@@ -51,3 +51,8 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 - `index.html`：路線卡右上角的地圖按鈕改用上述圖片，兩張／多張路線卡會共用同一資產；按鈕仍保留原本的 `查看路線地圖` 操作及無障礙名稱。
 - `sw.js`：更新 shell 版本至 `buspulse-hk-shell-v90-route-location-image`，並加入圖片 precache。
 - `.github/workflows/pages.yml`：部署時將圖片複製到 Pages 輸出目錄。
+
+## 8. 本次追加修改：定位圖片改用淺灰色背景
+- `route-location-icon.png`：圖片底色改為淺灰色 `#d7dce0`，改善紅色定位點在深色路線卡上的可見度。
+- `sw.js`：快取版本更新至 `buspulse-hk-shell-v91-route-location-light-gray`，確保裝置取得新圖片。
+
