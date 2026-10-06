@@ -81,4 +81,3 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 ## 14. 本次追加修改：恢復紅色圓角外框
 - `index.html`：地圖按鈕強制使用 2px 紅色 `#ff7182` 外框、8px 圓角、`box-sizing:border-box` 及淺灰底，圖片不會覆蓋外框。
 - `sw.js`：快取版本更新至 `buspulse-hk-shell-v96-route-location-red-frame`。
-
