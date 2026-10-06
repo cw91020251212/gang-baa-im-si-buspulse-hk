@@ -496,3 +496,20 @@ test('screen saver defaults to two minutes without overriding saved preferences'
   await reloadedSaverSettings.locator('summary').click();
   await expect(page.locator('#busSaverDelay')).toHaveValue('45000');
 });
+
+test('floating map GPS and close controls respond to real clicks', async ({ page }) => {
+  await page.context().grantPermissions(['geolocation']);
+  await page.context().setGeolocation({ latitude: 22.30, longitude: 114.20 });
+  await prepare(page);
+  await page.locator('[data-detail-id]').click();
+  await expect(page.locator('.detail-route-line')).toBeVisible();
+  await page.locator('[data-detail-map]').click();
+  await expect(page.locator('[data-detail-map-wrap]')).toHaveClass(/open/);
+  await expect(page.locator('[data-detail-map-locate]')).toBeVisible();
+  await expect(page.locator('[data-detail-map-close]')).toBeVisible();
+  await page.locator('[data-detail-map-locate]').click();
+  await expect.poll(() => page.evaluate(() => routeDetailState.gpsStatus)).toBe('watching');
+  await page.locator('[data-detail-map-close]').click();
+  await expect(page.locator('[data-detail-map-wrap]')).not.toHaveClass(/open/);
+  await expect(page.locator('.detail-map-panel.open')).toHaveCount(0);
+});

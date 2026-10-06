@@ -118,3 +118,8 @@ GitHub Pages 會由 `main` 分支的 workflow 自動測試及部署。更新後�
 ## 23. 取消按鈕旁提示
 - 移除自訂 `.button-hint` 提示框樣式及 hover／focus／手機長按顯示程式。
 - 移除只為提示功能而設的回歸測試；按鈕恢復乾淨外觀，不再額外出現文字框。
+
+## 24. 修正地圖浮動控制掣無反應
+- 透過真實 Playwright click 重現：ETA 卡片覆蓋咗原本放喺面板頂部嘅 GPS／× 控制掣，攔截 pointer events。
+- 將兩個控制掣移入 `.detail-map-canvas`，定位喺地圖畫布右上角，並提高浮層層級；避免再同 ETA 卡片重疊。
+- 新增真實 click 回歸測試，驗證 GPS 狀態會變成 watching，× 會關閉地圖。
