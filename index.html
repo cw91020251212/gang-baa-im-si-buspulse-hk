@@ -79,6 +79,12 @@ body{
 .chead-actions>button{box-sizing:border-box;height:28px;min-height:28px;margin:0;transform:none!important;display:grid;place-items:center;align-self:center}
 .chead-actions .getoff-btn{width:auto;min-width:28px;padding:0 7px;font-size:11px;line-height:1;white-space:nowrap}
 .chead-actions .alarm-btn,.chead-actions .map-head-btn{width:28px;padding:0;font-size:15px;line-height:1}
+.map-head-btn .map-route-icon{width:20px;height:20px;display:block;overflow:visible}
+.map-head-btn .map-route-icon path{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.map-head-btn .map-route-icon circle{fill:currentColor;stroke:none}
+.reverse-pair-option{display:flex;align-items:flex-start;gap:9px;margin:0 0 11px;padding:11px 12px;border:1px solid rgba(54,224,160,.38);border-radius:12px;background:rgba(54,224,160,.08);color:var(--tx);cursor:pointer}
+.reverse-pair-option input{width:19px;height:19px;accent-color:var(--now);margin-top:1px;flex:none}
+.reverse-pair-option span{display:flex;flex-direction:column;gap:3px;line-height:1.3}.reverse-pair-option b{font-size:13px}.reverse-pair-option small{color:var(--faint);font-size:10.5px}
 .stop{
   padding:0 13px 9px 15px; font-size:11.5px; color:var(--faint);
   display:flex; align-items:center; gap:5px;
@@ -2422,7 +2428,7 @@ function shell() {
       '<span class="chead-actions">' +
       '<button class="getoff-btn ' + (getoff[uid(it)]?.active ? 'on' : '') + '" data-getoff-id="' + id + '" type="button" title="' + (getoff[uid(it)]?.active ? '停止落車提醒' : '設定落車提醒') + '" aria-label="' + (getoff[uid(it)]?.active ? '停止落車提醒' : '設定落車提醒') + '">' + (getoff[uid(it)]?.active ? '落車中' : '落車') + '</button>' +
       '<button class="alarm-btn ' + (alarms[uid(it)] ? 'on' : '') + '" data-alarm-id="' + id + '" title="' + (alarms[uid(it)] === true ? '關閉到站提醒' : '開啟到站提醒') + '" aria-label="' + (alarms[uid(it)] === true ? '關閉到站提醒' : '開啟到站提醒') + '" aria-pressed="' + String(alarms[uid(it)] === true) + '">🔔</button>' +
-      '<button class="map-head-btn" data-map-id="' + id + '" title="查看路線地圖" aria-label="查看路線地圖" style="background:transparent!important;color:#ff7182!important;border-color:#ff7182!important"><svg class="map-pin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z"/></svg></button>' +
+      '<button class="map-head-btn" data-map-id="' + id + '" title="查看路線地圖" aria-label="查看路線地圖" style="background:transparent!important;color:#ff7182!important;border-color:#ff7182!important"><svg class="map-route-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 18c0-3.2 2.2-5 5.2-5h3.1c3.1 0 5.7-2.1 5.7-5.3"/><path d="M8 18H5v-3M16 7h3v3"/><circle cx="5" cy="18" r="1.8"/><circle cx="19" cy="7" r="1.8"/></svg></button>' +
       '</span>' +
       '</div>' +
       '<div class="stop"><button class="stop-edit" data-edit-stop="' + id + '" title="更改上車站">&#128205; <b>' + esc(it.stopName || '') + '</b></button><a class="fare" data-fare="' + id + '" title="官方全程車資">全程車資：讀取中</a><button class="detail-entry" data-detail-id="' + id + '" type="button" title="查看完整路線及沿途車站" aria-label="查看完整路線及沿途車站"><svg class="detail-expand-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 12 3 3M3 8V3h5"/><path d="M12 12 21 3M16 3h5v5"/><path d="M12 12 3 21M3 16v5h5"/><path d="M12 12 21 21M16 21h5v-5"/></svg></button></div>' +
@@ -3848,6 +3854,7 @@ async function viewStops(v) {
     '<div class="nearby-stop-picker"><button class="wide p" type="button" id="nearbyStopBtn">⌖ 我喺車站：自動找最近站</button><div class="hint">只會喺你撳掣後要求手機定位；程式會由呢條路線嘅站頭中找最近一個，再畀你確認。</div><div class="nearby-stop-result" id="nearbyStopResult" aria-live="polite"></div></div>' +
     '<div class="map-actions" style="padding:0 0 10px"><button class="map-toggle" id="setupMapBtn"><span>🗺 先睇全條路線地圖</span><span class="map-arrow">⌄</span></button></div>' +
     '<div class="map-wrap" id="setupMapWrap"><div class="map-tools"><button class="locate-btn" id="locateBtn">⌖ 定位我附近</button></div><div class="route-map"></div></div>' +
+    (v.editId ? '' : '<label class="reverse-pair-option"><input type="checkbox" id="pairReverseSel" checked> <span><b>同時加入反方向</b><small>例如大埔 → 荃灣會一併加入荃灣 → 大埔；之後仍可單獨刪除</small></span></label>') +
     '<div class="hint" style="margin:0 0 10px">' + (v.editId ? '揀新上車站，會直接更新原有路線卡，不會新增路線。' : '唔知站名可以先撳上面「自動找最近站」，或者喺下面手動揀你上車嗰個站。') + '（' + stops.length + ' 個）</div>' +
     '<div class="list">' + stops.map((s, i) =>
       '<button class="li sm" data-s="' + i + '">' +
@@ -3863,7 +3870,34 @@ async function viewStops(v) {
     b.addEventListener('click', () => addItem(v, stops[+b.dataset.s])));
 }
 
-function addItem(v, s) {
+function stationNameKey(name) {
+  return String(name || '').toLowerCase().replace(/[\s()（）\-—–·・,，.。\/\\「」『』]/g, '');
+}
+function reverseVariantFor(v) {
+  if (!v || !['KMB','CTB'].includes(v.co)) return null;
+  const variants = Array.isArray(window.__vs) ? window.__vs : [];
+  return variants.find(candidate => candidate !== v && candidate.co === v.co && String(candidate.route) === String(v.route) && String(candidate.service_type || '1') === String(v.service_type || '1') && (candidate.dir || candidate.bound) !== (v.dir || v.bound)) || null;
+}
+async function findReverseStop(v, s) {
+  const reverse = reverseVariantFor(v);
+  if (!reverse) return null;
+  let reverseStops;
+  try { reverseStops = await getRouteStopsCached(reverse); } catch { return null; }
+  const key = stationNameKey(s.name);
+  const exact = reverseStops.find(stop => stationNameKey(stop.name) === key);
+  if (exact) return { variant:reverse, stop:exact };
+  if (Number.isFinite(Number(s.lat)) && Number.isFinite(Number(s.lng))) {
+    const nearby = reverseStops.map(stop => ({ stop, distance:Math.hypot(Number(stop.lat) - Number(s.lat), Number(stop.lng) - Number(s.lng)) })).filter(x => Number.isFinite(x.distance)).sort((a,b) => a.distance - b.distance)[0];
+    if (nearby && nearby.distance <= 0.006) return { variant:reverse, stop:nearby.stop };
+  }
+  return null;
+}
+function routeItemFrom(v, s) {
+  const base = { co:v.co, route:v.route, origin:v.origin || '', dest:v.dest || '', bound:v.bound, dir:v.dir, service_type:v.service_type, seq:s.seq, stopId:s.id, stopName:s.name };
+  if (v.co === 'GMB') return { co:'GMB', route:v.route, origin:v.origin || '', dest:v.dest || '', region:v.region, route_id:v.route_id, route_seq:v.route_seq, seq:s.seq, stopId:s.id, stopName:s.name };
+  return base;
+}
+async function addItem(v, s) {
   if (v.editId) {
     const index = items.findIndex(x => uid(x) === v.editId);
     if (index < 0) { viewHome(); return; }
@@ -3880,20 +3914,23 @@ function addItem(v, s) {
     }
     items[index] = next; save(); saveAlarms(); saveGetoff(); shell(); refresh(); viewHome(); return;
   }
-  const it = v.co === 'GMB'
-    ? { co:'GMB', route:v.route, region:v.region, route_id:v.route_id,
-        route_seq:v.route_seq, seq:s.seq, stopId:s.id, stopName:s.name, dest:v.dest }
-    : v.co === 'KMB'
-    ? { co:'KMB', route:v.route, bound:v.bound, dir:v.dir, service_type:v.service_type,
-        seq:s.seq, stopId:s.id, stopName:s.name, dest:v.dest }
-    : { co:'CTB', route:v.route, bound:v.bound, dir:v.dir,
-        seq:s.seq, stopId:s.id, stopName:s.name, dest:v.dest };
+  const it = routeItemFrom(v, s);
   if (items.some(x => uid(x) === uid(it))) { viewHome(); return; }
   // 新增路線預設關閉到站鬧鐘。只有使用者主動撳該路線的 🔔，
   // 先可以加入本機提醒；單純允許系統通知唔等於
   // 同意所有新路線自動響鬧鐘。
   items.push(it);
   alarms[uid(it)] = false;
+  const pairEnabled = $('#pairReverseSel')?.checked !== false;
+  if (pairEnabled && v.co !== 'GMB') {
+    const paired = await findReverseStop(v, s);
+    if (paired) {
+      const reverse = routeItemFrom(paired.variant, paired.stop);
+      reverse.origin = paired.variant.origin || it.dest;
+      reverse.dest = paired.variant.dest || it.origin;
+      if (!items.some(x => uid(x) === uid(reverse))) { items.push(reverse); alarms[uid(reverse)] = false; }
+    }
+  }
   save(); saveAlarms(); shell(); refresh(); viewHome();
 }
 
