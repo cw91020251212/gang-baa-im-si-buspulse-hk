@@ -4358,7 +4358,7 @@ async function viewStops(v) {
     '<div class="nearby-stop-picker"><button class="wide p" type="button" id="nearbyStopBtn">⌖ 我喺車站：自動找最近站</button><div class="hint">只會喺你撳掣後要求手機定位；程式會由呢條路線嘅站頭中找最近一個，再畀你確認。</div><div class="nearby-stop-result" id="nearbyStopResult" aria-live="polite"></div></div>' +
     '<div class="map-actions" style="padding:0 0 10px"><button class="map-toggle" id="setupMapBtn"><span>🗺 先睇全條路線地圖</span><span class="map-arrow">⌄</span></button></div>' +
     '<div class="map-wrap" id="setupMapWrap"><div class="map-tools"><button class="locate-btn" id="locateBtn">⌖ 定位我附近</button></div><div class="route-map"></div></div>' +
-    (v.editId ? '' : '<label class="reverse-pair-option"><input type="checkbox" id="pairReverseSel" checked> <span><b>同時加入反方向</b><small>只有此站在反方向仍可上車時才會加入；如果此站是反方向終點，就不會重複加入。</small></span></label>') +
+    (v.editId ? '' : '<label class="reverse-pair-option"><input type="checkbox" id="pairReverseSel" checked> <span><b>同時加入反方向</b><small>反方向同站可上車就沿用該站；如果此站是反方向終點，會改用反方向起點作為回程上車站。</small></span></label>') +
     '<div class="hint" style="margin:0 0 10px">' + (v.editId ? '揀新上車站，會直接更新原有路線卡，不會新增路線。' : '唔知站名可以先撳上面「自動找最近站」，或者喺下面手動揀你上車嗰個站。') + '（' + stops.length + ' 個）</div>' +
     '<div class="list">' + stops.map((s, i) =>
       '<button class="li sm" data-s="' + i + '">' +
@@ -4394,9 +4394,11 @@ async function findReverseStop(v, s) {
   if (sameId) return { variant:reverse, stop:sameId };
   const exactMatches = reverseStops.filter(stop => stationNameKey(stop.name) === key);
   if (exactMatches.length) {
-    // The final stop in the reverse direction is an arrival point, not a second boarding card.
     const exact = exactMatches.find(stop => Number(stop.seq) < lastSeq);
-    return exact ? { variant:reverse, stop:exact } : null;
+    if (exact) return { variant:reverse, stop:exact };
+    // If this station is the reverse route's terminal, pair at that direction's first boarding stop.
+    const reverseOrigin = [...boardableStops].sort((a,b) => Number(a.seq) - Number(b.seq))[0];
+    return reverseOrigin ? { variant:reverse, stop:reverseOrigin, pairedAtRouteOrigin:true } : null;
   }
   if (Number.isFinite(Number(s.lat)) && Number.isFinite(Number(s.lng))) {
     const nearby = boardableStops.map(stop => ({ stop, distance:Math.hypot(Number(stop.lat) - Number(s.lat), Number(stop.lng) - Number(s.lng)) })).filter(x => Number.isFinite(x.distance)).sort((a,b) => a.distance - b.distance)[0];
