@@ -37,6 +37,7 @@ jobs:
           sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > /tmp/buspulse-inline.js
           node --check /tmp/buspulse-inline.js
           node --check landsd-map-compare.js
+          node --check landsd-map-provider.js
           node --check sw.js
           node --check bus-gap-estimator.js
       - name: Check whitespace
@@ -61,9 +62,11 @@ jobs:
           rm -rf _site
           mkdir -p _site
           mkdir -p _site/assets
-          cp index.html bus-gap-estimator.js landsd-map-compare.html landsd-map-compare.js manifest.json sw.js icon-192.png icon-512.png route-location-icon-v6.png fare-index.json place-index.json _site/
+          cp index.html bus-gap-estimator.js landsd-map-compare.html landsd-map-compare.js landsd-map-provider.js landsd-map-provider.css manifest.json sw.js icon-192.png icon-512.png route-location-icon-v6.png fare-index.json place-index.json _site/
           cp assets/landsd-logo.png _site/assets/
           test -f _site/index.html
+          test -f _site/landsd-map-provider.js
+          test -f _site/landsd-map-provider.css
           test -f _site/landsd-map-compare.html
           test -f _site/landsd-map-compare.js
           test -f _site/assets/landsd-logo.png
