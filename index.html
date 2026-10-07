@@ -963,17 +963,18 @@ body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-a
 .detail-map-bus-legend[hidden] {display:none!important;}
 .detail-map-bus-legend-tag {display:grid;place-items:center;width:15px;height:15px;border-radius:50%;background:#167b9a;color:#fff;font-size:8px;}
 
-/* Map actions: manual refresh stays visible in the full-screen map. */
+/* Keep the icon refresh action below the estimate legend, clear of its text on narrow phones. */
 .detail-map-panel.open .detail-map-canvas .map-tools .detail-map-refresh {
-  display:flex!important; align-items:center; justify-content:center; gap:4px;
-  width:auto!important; min-width:64px!important; height:34px!important; min-height:34px!important;
-  padding:0 8px!important; border:1px solid #a1b0bc!important; border-radius:999px!important;
+  position:absolute!important; top:46px!important; right:0!important; z-index:1001!important;
+  display:grid!important; place-items:center;
+  width:30px!important; min-width:30px!important; height:30px!important; min-height:30px!important;
+  padding:0!important; border:1px solid #a1b0bc!important; border-radius:50%!important;
   background:#f7f9fc!important; color:#167b9a!important; box-shadow:0 1px 3px rgba(20,35,50,.18)!important;
-  font:800 11px/1 system-ui,sans-serif!important; cursor:pointer;
+  cursor:pointer;
 }
-.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-refresh > span:first-child {font-size:20px;line-height:1;}
+.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-refresh-icon {display:block;width:17px;height:17px;}
 .detail-map-panel.open .detail-map-canvas .map-tools .detail-map-refresh[disabled] {opacity:.72;cursor:wait;}
-.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-refresh[aria-busy="true"] > span:first-child {animation:detailMapRefreshSpin .8s linear infinite;}
+.detail-map-panel.open .detail-map-canvas .map-tools .detail-map-refresh[aria-busy="true"] .detail-map-refresh-icon {animation:detailMapRefreshSpin .8s linear infinite;}
 @keyframes detailMapRefreshSpin {to{transform:rotate(360deg)}}
 /* One small step larger: retain the compact map badge while enlarging its route text and estimate dot. */
 .detail-map-panel.open .route-map .detail-estimated-bus {width:21px!important;height:21px!important;min-width:21px!important;min-height:21px!important;}
@@ -1406,7 +1407,7 @@ function forgetAlarmPlan(id, key) {
   if (!alarmPlans[id].length) delete alarmPlans[id];
   saveAlarmPlans();
 }
-function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:120000 }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:120000 }; } }
+function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:300000 }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:300000 }; } }
 function normalizeAlarms(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
   return Object.fromEntries(Object.entries(raw).map(([id, enabled]) => [id, enabled === true]));
@@ -2572,7 +2573,7 @@ function renderRouteDetail() {
   routeDetailBody.classList.remove('detail-loading');
   routeDetailBody.innerHTML =
     '<div class="detail-summary">' + detailActionButtons(it) + '<div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><div class="detail-meta-row"><span class="summary-count">共 ' + routeDetailState.stops.length + ' 個站</span><span class="summary-buses" title="按同一輪 ETA 逐段推算">ETA 推算行駛中：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 部' : '讀取中') + '</span></div><div class="detail-meta-row"><span class="summary-coverage">' + detailEtaCoverageText() + '</span></div><div class="detail-meta-row"><span class="summary-schedule">' + detailScheduleSummary() + '</span></div><div class="detail-meta-row"><span class="summary-fare">全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + customTripPanel(routeDetailState.stops) + '</div>' +
-    '<div class="detail-map-panel' + (routeDetailState.detailMapOpen ? ' open' : '') + '" data-detail-map-wrap><div class="detail-map-head"><span>路線地圖</span></div>' + (routeDetailState.detailMapOpen ? detailEtaPanel(current) + detailMapContextMarkup(it, current) : '') + '<div class="detail-map-canvas"><div class="route-map"></div><div class="detail-map-bus-legend" data-detail-map-bus-legend hidden></div><div class="map-tools">' + (routeDetailState.detailMapOpen ? '<button class="detail-map-refresh" data-detail-map-refresh type="button" aria-label="即時更新全部車站 ETA" title="即時更新全部車站 ETA"><span aria-hidden="true">↻</span><span>更新</span></button>' : '') + '<button class="locate-btn' + (routeDetailState.gpsStatus === 'watching' ? ' is-active' : '') + '" data-detail-map-locate type="button" aria-pressed="' + String(routeDetailState.gpsStatus === 'watching') + '" aria-label="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '" title="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '">' + '<svg class="gps-crosshair" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1.5v5.5M12 17v5.5M1.5 12h5.5M17 12h5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>' + '</button><button class="detail-map-close" type="button" data-detail-map-close aria-label="關閉路線地圖" title="關閉路線地圖"><svg class="map-close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></div></div></div>' +
+    '<div class="detail-map-panel' + (routeDetailState.detailMapOpen ? ' open' : '') + '" data-detail-map-wrap><div class="detail-map-head"><span>路線地圖</span></div>' + (routeDetailState.detailMapOpen ? detailEtaPanel(current) + detailMapContextMarkup(it, current) : '') + '<div class="detail-map-canvas"><div class="route-map"></div><div class="detail-map-bus-legend" data-detail-map-bus-legend hidden></div><div class="map-tools">' + (routeDetailState.detailMapOpen ? '<button class="detail-map-refresh" data-detail-map-refresh type="button" aria-label="即時更新全部車站 ETA" title="即時更新全部車站 ETA"><svg class="detail-map-refresh-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M5.07 9A8 8 0 0 1 19.2 7.2L20 12M18.93 15A8 8 0 0 1 4.8 16.8L4 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' : '') + '<button class="locate-btn' + (routeDetailState.gpsStatus === 'watching' ? ' is-active' : '') + '" data-detail-map-locate type="button" aria-pressed="' + String(routeDetailState.gpsStatus === 'watching') + '" aria-label="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '" title="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '">' + '<svg class="gps-crosshair" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1.5v5.5M12 17v5.5M1.5 12h5.5M17 12h5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>' + '</button><button class="detail-map-close" type="button" data-detail-map-close aria-label="關閉路線地圖" title="關閉路線地圖"><svg class="map-close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></div></div></div>' +
     '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
     detailGpsPanel(it, current) +
     '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +
@@ -2638,10 +2639,16 @@ function renderRouteDetail() {
     if (button.disabled || routeDetailState.detailEtaLoading) return;
     button.disabled = true; button.setAttribute('aria-busy', 'true');
     button.setAttribute('aria-label', '正在更新全部車站 ETA'); button.title = '正在更新全部車站 ETA';
-    refreshRouteDetailEtas().catch(() => {}).finally(() => {
+    const startedAt = Date.now();
+    const finishRefresh = () => {
       if (!button.isConnected) return;
       button.disabled = false; button.removeAttribute('aria-busy');
       button.setAttribute('aria-label', '即時更新全部車站 ETA'); button.title = '即時更新全部車站 ETA';
+    };
+    refreshRouteDetailEtas().catch(() => {}).finally(() => {
+      const remainingSpinMs = Math.max(0, 2400 - (Date.now() - startedAt));
+      if (remainingSpinMs) window.setTimeout(finishRefresh, remainingSpinMs);
+      else finishRefresh();
     });
   });
   routeDetailBody.querySelector('[data-detail-reverse]')?.addEventListener('click', switchRouteDetailDirection);
@@ -4351,7 +4358,7 @@ async function viewStops(v) {
     '<div class="nearby-stop-picker"><button class="wide p" type="button" id="nearbyStopBtn">⌖ 我喺車站：自動找最近站</button><div class="hint">只會喺你撳掣後要求手機定位；程式會由呢條路線嘅站頭中找最近一個，再畀你確認。</div><div class="nearby-stop-result" id="nearbyStopResult" aria-live="polite"></div></div>' +
     '<div class="map-actions" style="padding:0 0 10px"><button class="map-toggle" id="setupMapBtn"><span>🗺 先睇全條路線地圖</span><span class="map-arrow">⌄</span></button></div>' +
     '<div class="map-wrap" id="setupMapWrap"><div class="map-tools"><button class="locate-btn" id="locateBtn">⌖ 定位我附近</button></div><div class="route-map"></div></div>' +
-    (v.editId ? '' : '<label class="reverse-pair-option"><input type="checkbox" id="pairReverseSel" checked> <span><b>同時加入反方向</b><small>例如大埔 → 荃灣會一併加入荃灣 → 大埔；之後仍可單獨刪除</small></span></label>') +
+    (v.editId ? '' : '<label class="reverse-pair-option"><input type="checkbox" id="pairReverseSel" checked> <span><b>同時加入反方向</b><small>只有此站在反方向仍可上車時才會加入；如果此站是反方向終點，就不會重複加入。</small></span></label>') +
     '<div class="hint" style="margin:0 0 10px">' + (v.editId ? '揀新上車站，會直接更新原有路線卡，不會新增路線。' : '唔知站名可以先撳上面「自動找最近站」，或者喺下面手動揀你上車嗰個站。') + '（' + stops.length + ' 個）</div>' +
     '<div class="list">' + stops.map((s, i) =>
       '<button class="li sm" data-s="' + i + '">' +
@@ -4380,11 +4387,19 @@ async function findReverseStop(v, s) {
   if (!reverse) return null;
   let reverseStops;
   try { reverseStops = await getRouteStopsCached(reverse); } catch { return null; }
+  const lastSeq = Math.max(...reverseStops.map(stop => Number(stop.seq)).filter(Number.isFinite));
+  const boardableStops = reverseStops.filter(stop => Number.isFinite(Number(stop.seq)) && Number(stop.seq) < lastSeq);
   const key = stationNameKey(s.name);
-  const exact = reverseStops.find(stop => stationNameKey(stop.name) === key);
-  if (exact) return { variant:reverse, stop:exact };
+  const sameId = s.id == null ? null : boardableStops.find(stop => String(stop.id) === String(s.id));
+  if (sameId) return { variant:reverse, stop:sameId };
+  const exactMatches = reverseStops.filter(stop => stationNameKey(stop.name) === key);
+  if (exactMatches.length) {
+    // The final stop in the reverse direction is an arrival point, not a second boarding card.
+    const exact = exactMatches.find(stop => Number(stop.seq) < lastSeq);
+    return exact ? { variant:reverse, stop:exact } : null;
+  }
   if (Number.isFinite(Number(s.lat)) && Number.isFinite(Number(s.lng))) {
-    const nearby = reverseStops.map(stop => ({ stop, distance:Math.hypot(Number(stop.lat) - Number(s.lat), Number(stop.lng) - Number(s.lng)) })).filter(x => Number.isFinite(x.distance)).sort((a,b) => a.distance - b.distance)[0];
+    const nearby = boardableStops.map(stop => ({ stop, distance:Math.hypot(Number(stop.lat) - Number(s.lat), Number(stop.lng) - Number(s.lng)) })).filter(x => Number.isFinite(x.distance)).sort((a,b) => a.distance - b.distance)[0];
     if (nearby && nearby.distance <= 0.006) return { variant:reverse, stop:nearby.stop };
   }
   return null;

@@ -380,6 +380,24 @@ test('reverse direction swaps supported route variants without inventing a GMB v
   expect(result.gmb).toBeNull();
 });
 
+test('reverse auto-pair skips a terminal arrival stop but keeps a boardable shared stop', async ({ page }) => {
+  await page.goto('./?smoke=route-detail-reverse-pair', { waitUntil:'domcontentloaded' });
+  const result = await page.evaluate(async () => {
+    const outbound = { co:'KMB', route:'74X', bound:'O', dir:'O', service_type:'1', origin:'大埔中心', dest:'觀塘碼頭' };
+    const inbound = { co:'KMB', route:'74X', bound:'I', dir:'I', service_type:'1', origin:'觀塘碼頭', dest:'大埔中心' };
+    window.__vs = [outbound, inbound];
+    routeStopsCache.set(routeVariantKey(inbound), [
+      { seq:1, id:'KT', name:'觀塘碼頭', lat:22.31, lng:114.22 },
+      { seq:2, id:'middle', name:'太和站', lat:22.45, lng:114.16 },
+      { seq:3, id:'TP904', name:'大埔中心總站', lat:22.45, lng:114.16 }
+    ]);
+    const terminal = await findReverseStop(outbound, { seq:1, id:'TP904', name:'大埔中心總站', lat:22.45, lng:114.16 });
+    const middle = await findReverseStop(outbound, { seq:3, id:'middle', name:'太和站', lat:22.45, lng:114.16 });
+    return { terminalSkipped:terminal === null, middleStop:middle?.stop?.id, reverseBound:middle?.variant?.bound };
+  });
+  expect(result).toEqual({ terminalSkipped:true, middleStop:'middle', reverseBound:'I' });
+});
+
 test('detail fare lookup follows direction and never invents first or last service times', async ({ page }) => {
   await page.goto('./?smoke=route-detail-metadata', { waitUntil: 'domcontentloaded' });
   const result = await page.evaluate(() => ({
@@ -552,7 +570,7 @@ test('returning to the app closes the screen saver before showing the main UI', 
   expect(state).toEqual({ before:true, after:false, visible:false });
 });
 
-test('screen saver defaults to two minutes without overriding saved preferences', async ({ page }) => {
+test('screen saver defaults to five minutes without overriding saved preferences', async ({ page }) => {
   await page.addInitScript(() => {
     if (sessionStorage.getItem('screensaver-default-test-cleaned')) return;
     localStorage.removeItem('busboard.preferences.v1');
@@ -562,7 +580,7 @@ test('screen saver defaults to two minutes without overriding saved preferences'
   await page.locator('#prefsBtn').click();
   const saverSettings = page.locator('details.settings-group').filter({ hasText:'螢幕保護' });
   await saverSettings.locator('summary').click();
-  await expect(page.locator('#busSaverDelay')).toHaveValue('120000');
+  await expect(page.locator('#busSaverDelay')).toHaveValue('300000');
 
   await page.evaluate(() => localStorage.setItem('busboard.preferences.v1', JSON.stringify({ screenSaverIdle:45000 })));
   await page.reload({ waitUntil:'domcontentloaded' });
@@ -575,6 +593,7 @@ test('screen saver defaults to two minutes without overriding saved preferences'
 test('main-board map opens selectable map with estimated buses and manual ETA refresh', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('buspulse.first-use-tour.v1','1'));
   const getEtaRequestCount = await prepare(page);
+  await page.setViewportSize({ width:320, height:800 });
   await page.evaluate(() => {
     mapEtaEvidence = async () => null;
     mapRoutePath = async (_it, stops) => stops.slice(0,-1).map((stop,i) => [[stop.lat,stop.lng],[stops[i+1].lat,stops[i+1].lng]]);
@@ -598,10 +617,27 @@ test('main-board map opens selectable map with estimated buses and manual ETA re
   const mapRefresh=page.locator('[data-detail-map-refresh]');
   await expect(mapRefresh).toBeVisible();
   await expect(mapRefresh).toHaveAttribute('aria-label','即時更新全部車站 ETA');
+  await expect(mapRefresh).toHaveText('');
+  await expect(mapRefresh).toHaveCSS('width','30px');
+  await expect(mapRefresh).toHaveCSS('height','30px');
+  const legend=page.locator('[data-detail-map-bus-legend]');
+  await expect(legend).toBeVisible();
+  await expect(legend).toContainText('ETA 估算巴士');
+  const controlsOverlapLegend=await page.evaluate(() => {
+    const a=document.querySelector('[data-detail-map-refresh]').getBoundingClientRect();
+    const b=document.querySelector('[data-detail-map-bus-legend]').getBoundingClientRect();
+    return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  });
+  expect(controlsOverlapLegend).toBe(false);
   const beforeRefresh=getEtaRequestCount();
   await mapRefresh.click();
+  await expect(mapRefresh).toHaveAttribute('aria-busy','true');
+  await expect(mapRefresh).toBeDisabled();
+  await expect(mapRefresh.locator('svg')).toHaveCSS('animation-duration','0.8s');
   await expect.poll(() => getEtaRequestCount()).toBeGreaterThan(beforeRefresh);
-  await expect(mapRefresh).toBeEnabled();
+  await page.waitForTimeout(1900);
+  await expect(mapRefresh).toBeDisabled();
+  await expect(mapRefresh).toBeEnabled({ timeout:1500 });
   await page.locator('.detail-map-panel.open .image-stop-marker-wrap').nth(1).click();
   await expect(page.locator('[data-detail-map-context] .detail-map-context-stop-name')).toContainText('第二站');
   await expect(page.locator('.detail-map-panel.open .detail-eta strong').first()).toContainText('3');
