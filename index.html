@@ -1050,6 +1050,7 @@ body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-a
   <div class="bus-saver-vehicle" id="busSaverVehicle" aria-hidden="true"><div class="bus-saver-body"><span class="bus-saver-roof"></span><span class="bus-saver-destination">BUS</span><span class="bus-saver-window w1"></span><span class="bus-saver-window w2"></span><span class="bus-saver-window w3"></span><span class="bus-saver-door"></span><span class="bus-saver-lower-stripe"></span><span class="bus-saver-logo">BP</span><span class="bus-saver-lamp"></span><i class="bus-saver-wheel a"></i><i class="bus-saver-wheel b"></i></div></div>
   <div class="bus-saver-hint">螢幕保護中 · 輕觸返回巴士報時器</div>
 </div>
+<script src="./bus-gap-estimator.js"></script>
 <script>
 'use strict';
 /* ===================================================================
@@ -1812,7 +1813,7 @@ const fareMemo = new Map();
 const routeDetailState = {
   open:false, routeId:null, variantKey:null, stops:[], stopsStatus:'idle',
   stopsError:null, selectedSeq:null, selectedStopId:null, etaByStop:new Map(),
-  etaHistory:new Map(), detailEtaLoading:false, detailLastFetchAt:0,
+  etaHistory:new Map(), gapModel:BusGapEstimator.createModel(), detailEtaLoading:false, detailLastFetchAt:0,
   vehicleInference:{ status:'hidden', fromStopId:null, toStopId:null, reason:null, observedAt:null },
   generation:0, abortController:null, etaRequest:null, fareLabel:null, scheduleLabel:null, serviceOpen:false, detailTicker:null, detailLastOK:null, sweepStatus:'idle',
   gpsWatch:null, gpsNetworkWatch:null, gpsSeq:null, gpsPosition:null, gpsPositionAccuracy:null, gpsSource:null, gpsPositionTime:0, gpsStatus:'idle', gpsError:null, gpsErrorCount:0,
@@ -2212,7 +2213,7 @@ async function switchRouteDetailDirection() {
   if (!next) return;
   const request = beginRouteDetailGeneration();
   routeDetailState.item = next; routeDetailState.routeId = uid(next); routeDetailState.variantKey = routeVariantKey(next);
-  routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = null; routeDetailState.selectedStopId = null; routeDetailState.etaByStop.clear(); routeDetailState.etaRequest = null; routeDetailState.fareLabel = null; routeDetailState.sweepStatus = 'loading';
+  routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = null; routeDetailState.selectedStopId = null; routeDetailState.etaByStop.clear(); routeDetailState.etaHistory.clear(); routeDetailState.gapModel = BusGapEstimator.createModel(); routeDetailState.etaRequest = null; routeDetailState.fareLabel = null; routeDetailState.sweepStatus = 'loading';
   startRouteDetailTicker(); renderRouteDetail();
   try {
     const stops = await getRouteStopsCached(next, { signal:request.signal });
@@ -2225,22 +2226,12 @@ async function switchRouteDetailDirection() {
   } catch (e) { if (isCurrentRouteDetailGeneration(request.generation)) { routeDetailState.stopsStatus = 'error'; renderRouteDetail(); } }
 }
 function smoothDetailEtas(stopId, etas) {
-  const now = Date.now(), key = String(stopId);
-  const history = routeDetailState.etaHistory.get(key) || [];
-  const next = (etas || []).map((eta, index) => {
-    const rawIso = eta.iso, rawTime = Date.parse(rawIso);
-    if (!Number.isFinite(rawTime) || eta.sched) return {...eta};
-    const previous = history.filter(x => x.index === index && now - x.at <= 5 * 60000).map(x => x.time);
-    const samples = [...previous, rawTime].sort((a,b) => a - b);
-    const median = samples[Math.floor(samples.length / 2)] || rawTime;
-    const smoothedTime = Math.round(rawTime * 0.6 + median * 0.4);
-    return {...eta, rawIso, iso:new Date(smoothedTime).toISOString(), min:Math.round((smoothedTime - now) / 60000)};
-  });
-  next.forEach((eta, index) => {
-    const time = Date.parse(eta.rawIso || eta.iso);
-    if (Number.isFinite(time) && !eta.sched) history.push({ index, time, at:now });
-  });
-  routeDetailState.etaHistory.set(key, history.filter(x => now - x.at <= 5 * 60000).slice(-25));
+  // Official arrival times must not be blended with a previous queue rank:
+  // after a bus passes, rank 1 belongs to a DIFFERENT arrival.
+  const now = Date.now(), key = String(stopId), history = routeDetailState.etaHistory.get(key) || [];
+  const next = (etas || []).map(eta => ({...eta, rawIso:eta.rawIso || eta.iso}));
+  next.forEach(eta => { const time=Date.parse(eta.rawIso); if (Number.isFinite(time) && !eta.sched) history.push({time,at:now}); });
+  routeDetailState.etaHistory.set(key, history.filter(x => now-x.at <= 5*60000).slice(-25));
   return next;
 }
 function applyDetailEtaResult(it, stop, etas, error, batchId) {
@@ -2359,12 +2350,12 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
   for (let i = 0; i < stops.length - 2; i++) {
     const from = stops[i];
     const a = etaByStop.get(String(from.id));
-    const ea = (a?.etas || []).find(eta => !eta.sched && eta.iso && Number.isFinite(Date.parse(eta.iso)) && Date.parse(eta.iso) >= now - 2 * 60000 && Date.parse(eta.iso) - now <= 5 * 60000);
+    const ea = liveEta(from);
     if (!ea) continue;
     for (let j = i + 2; j < stops.length; j++) {
       const to = stops[j];
       const b = etaByStop.get(String(to.id));
-      const eb = (b?.etas || []).find(eta => !eta.sched && eta.iso && Number.isFinite(Date.parse(eta.iso)) && Date.parse(eta.iso) >= now - 2 * 60000 && Date.parse(eta.iso) - now <= 5 * 60000);
+      const eb = liveEta(to);
       if (!eb) continue;
       const distance = routeDistance(i, j);
       const travelMinutes = distance > 0 ? Math.max(2, Math.min(15, distance / 1000 / 12 * 60)) : 0;
@@ -2383,46 +2374,15 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
       break;
     }
   }
-  // Long adjacent gaps (e.g. expressway stretches with no intermediate stop)
-  // can be invisible when the upstream stop has no ETA. Use each fresh live
-  // arrival ETA at the downstream stop plus the measured gap distance to infer
-  // how many vehicles could already be travelling between these two stops.
-  // The 12 km/h proxy is deliberately conservative; every result stays low
-  // confidence and is explicitly an estimate, never live vehicle telemetry.
-  for (let i = 0; i < stops.length - 1; i++) {
-    const from = stops[i], to = stops[i + 1], distance = routeDistance(i, i + 1);
-    if (distance < 700) continue;
-    const travelMinutes = Math.max(2, Math.min(15, distance / 1000 / 12 * 60));
-    const arrivals = liveEtas(to, travelMinutes)
-      .map((eta, index) => ({ eta, index, time:Date.parse(eta.iso) }))
-      .filter(item => item.time > now && item.time - now <= travelMinutes * 60000)
-      .sort((a,b) => a.time - b.time);
-    arrivals.forEach(({ eta, index, time }) => {
-      const etaSeq = eta.etaSeq == null || !Number.isFinite(Number(eta.etaSeq)) ? null : Number(eta.etaSeq);
-      const fallbackWave = etaSeq == null && index === 0 ? 1 : null;
-      const covered = result.some(existing => {
-        const spansGap = Number(existing.fromSeq) <= Number(from.seq) && Number(existing.toSeq) >= Number(to.seq);
-        if (!spansGap) return false;
-        if (etaSeq != null && existing.etaSeq != null && Number(existing.etaSeq) === etaSeq) return true;
-        if (fallbackWave != null && existing.etaSeq != null && Number(existing.etaSeq) === fallbackWave) return true;
-        return index === 0 && existing.etaSeq == null && Number(existing.toSeq) === Number(to.seq);
-      });
-      if (covered) return;
-      const markerId = 'long-gap:' + from.seq + ':' + to.seq + ':' + (etaSeq == null ? Math.round(time / 60000) + ':' + index : etaSeq);
-      if (result.some(existing => existing.markerId === markerId)) return;
-      result.push({
-        fromSeq:Number(from.seq), toSeq:Number(to.seq), etaSeq,
-        confidence:'low', score:58, scoreLabel:'低', approaching:true,
-        inferredFromDownstreamEta:true, distanceMeters:Math.round(distance),
-        travelMinutes:Math.round(travelMinutes), progressStartAt:time - travelMinutes * 60000,
-        progressEndAt:time, markerId
-      });
-    });
-  }
-  return result.sort((a,b) => (b.score || 0) - (a.score || 0) || a.fromSeq - b.fromSeq);
+  // Long sections use queue alignment and temporal evidence, never eta_seq as
+  // a global vehicle ID. Replace overlapping legacy hypotheses, not add both.
+  const model = stops === routeDetailState.stops ? routeDetailState.gapModel : BusGapEstimator.createModel();
+  const gaps = BusGapEstimator.estimate(stops, etaByStop, now, model);
+  const local = result.filter(segment => !gaps.managedGaps.some(gap => Number(segment.fromSeq) <= gap.fromSeq && Number(segment.toSeq) >= gap.toSeq));
+  return [...local, ...gaps.segments].sort((a,b) => (b.score || 0) - (a.score || 0) || a.fromSeq - b.fromSeq);
 }
 function selectDetailMapBusSegments(segments, limit = 8, progressFor = () => .5) {
-  const max = Math.max(0, Math.floor(Number(limit) || 0));
+  let max = Math.max(0, Math.floor(Number(limit) || 0));
   if (!max) return [];
   const rank = (a,b) => (b.score || 0) - (a.score || 0) || Number(a.fromSeq) - Number(b.fromSeq);
   const ranked = [...(segments || [])].sort(rank);
@@ -2449,6 +2409,7 @@ function selectDetailMapBusSegments(segments, limit = 8, progressFor = () => .5)
     items.sort((a,b) => Math.abs(progress(a)-.5) - Math.abs(progress(b)-.5) || rank(a,b));
     return { items, distance:Math.max(...items.map(item => Number(item.distanceMeters) || 0)), fromSeq:Math.min(...items.map(item => Number(item.fromSeq) || 0)) };
   }).sort((a,b) => b.distance-a.distance || a.fromSeq-b.fromSeq);
+  max = Math.max(max, groups.length); // Do not hide entire sections just because there are more than eight.
   // Reserve one evidence-backed marker per long no-stop section before local
   // stop-to-stop candidates consume the eight-marker map budget.
   groups.forEach(group => add(group.items[0]));
@@ -2607,7 +2568,7 @@ function renderRouteDetail() {
   // but is not allowed to disagree with what the user can see.
   const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop);
   applyEtaPositionFallback(virtualSegments);
-  const markerAfter = new Map(virtualSegments.map(segment => [segment.fromSeq, '<div class="detail-inference virtual" role="status" aria-label="估計 ' + esc(it.route) + ' 巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="virtual-bus-card"><span class="virtual-route-label" aria-hidden="true">' + esc(it.route) + '</span><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計 ' + esc(it.route) + ' 巴士位置"></span></span><span class="virtual-bus-copy"><b>' + (segment.confidence === 'low' ? '低信心度：估計位置附近有巴士' : segment.approaching ? '估計位置：巴士即將到站' : '估計位置：巴士正在途中行駛') + '</b><small>' + (segment.confidence === 'low' ? '按站點距離及 ETA 推算：' + esc(segment.travelMinutes) + ' 分鐘路段；' : segment.confidence === 'medium' ? '按站序及 ETA 推算；' : '按同一 ETA 波次推算；') + '第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間 · 信心度 ' + esc(segment.score) + '/100（' + esc(segment.scoreLabel) + '）</small></span></div>']));
+  const markerAfter = new Map(); virtualSegments.forEach(segment => { const markup='<div class="detail-inference virtual" role="status" aria-label="估計 ' + esc(it.route) + ' 巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="virtual-bus-card"><span class="virtual-route-label" aria-hidden="true">' + esc(it.route) + '</span><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計 ' + esc(it.route) + ' 巴士位置"></span></span><span class="virtual-bus-copy"><b>' + (segment.confidence === 'low' ? '低信心度：估計位置附近有巴士' : segment.approaching ? '估計位置：巴士即將到站' : '估計位置：巴士正在途中行駛') + '</b><small>' + (segment.confidence === 'low' ? '按站點距離及 ETA 推算：' + esc(Math.round(segment.travelMinutes)) + ' 分鐘路段；' : segment.confidence === 'medium' ? '按站序及 ETA 推算；' : '按同一 ETA 波次推算；') + '第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間 · 信心度 ' + esc(segment.score) + '/100（' + esc(segment.scoreLabel) + '）</small></span></div>'; markerAfter.set(segment.fromSeq,(markerAfter.get(segment.fromSeq) || '')+markup); });
   const visibleBusCount = virtualSegments.length;
   const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
   const nearStation = null;
@@ -2620,7 +2581,7 @@ function renderRouteDetail() {
   }
   routeDetailBody.classList.remove('detail-loading');
   routeDetailBody.innerHTML =
-    '<div class="detail-summary">' + detailActionButtons(it) + '<div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><div class="detail-meta-row"><span class="summary-count">共 ' + routeDetailState.stops.length + ' 個站</span><span class="summary-buses" title="按同一輪 ETA 逐段推算">ETA 推算行駛中：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 部' : '讀取中') + '</span></div><div class="detail-meta-row"><span class="summary-coverage">' + detailEtaCoverageText() + '</span></div><div class="detail-meta-row"><span class="summary-schedule">' + detailScheduleSummary() + '</span></div><div class="detail-meta-row"><span class="summary-fare">全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + customTripPanel(routeDetailState.stops) + '</div>' +
+    '<div class="detail-summary">' + detailActionButtons(it) + '<div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><div class="detail-meta-row"><span class="summary-count">共 ' + routeDetailState.stops.length + ' 個站</span><span class="summary-buses" title="ETA 候選位置，不代表實際巴士數">ETA 候選位置：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 個' : '讀取中') + '</span></div><div class="detail-meta-row"><span class="summary-coverage">' + detailEtaCoverageText() + '</span></div><div class="detail-meta-row"><span class="summary-schedule">' + detailScheduleSummary() + '</span></div><div class="detail-meta-row"><span class="summary-fare">全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + customTripPanel(routeDetailState.stops) + '</div>' +
     '<div class="detail-map-panel' + (routeDetailState.detailMapOpen ? ' open' : '') + '" data-detail-map-wrap><div class="detail-map-head"><span>路線地圖</span></div>' + (routeDetailState.detailMapOpen ? detailEtaPanel(current) + detailMapContextMarkup(it, current) : '') + '<div class="detail-map-canvas"><div class="route-map"></div><div class="detail-map-bus-legend" data-detail-map-bus-legend hidden></div><div class="map-tools">' + (routeDetailState.detailMapOpen ? '<button class="detail-map-refresh" data-detail-map-refresh type="button" aria-label="即時更新全部車站 ETA" title="即時更新全部車站 ETA"><svg class="detail-map-refresh-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 2v6h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 12a9 9 0 0 0 15 6.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' : '') + '<button class="locate-btn' + (routeDetailState.gpsStatus === 'watching' ? ' is-active' : '') + '" data-detail-map-locate type="button" aria-pressed="' + String(routeDetailState.gpsStatus === 'watching') + '" aria-label="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '" title="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '">' + '<svg class="gps-crosshair" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1.5v5.5M12 17v5.5M1.5 12h5.5M17 12h5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>' + '</button><button class="detail-map-close" type="button" data-detail-map-close aria-label="關閉路線地圖" title="關閉路線地圖"><svg class="map-close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></div></div></div>' +
     '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
     detailGpsPanel(it, current) +
@@ -2707,7 +2668,7 @@ function renderRouteDetail() {
 async function openRouteDetail(it, trigger, options = {}) {
   routeDetailReturnFocus = trigger || document.activeElement;
   routeDetailReturnFocusId = routeDetailReturnFocus?.getAttribute?.('data-detail-id') || routeDetailReturnFocus?.getAttribute?.('data-map-id') || uid(it); routeDetailReturnFocusAttr = routeDetailReturnFocus?.hasAttribute?.('data-map-id') ? 'data-map-id' : 'data-detail-id';
-  routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.etaHistory.clear(); routeDetailState.detailEtaLoading = false; routeDetailState.detailLastFetchAt = 0; routeDetailState.fareLabel = null; routeDetailState.scheduleLabel = null; routeDetailState.serviceOpen = false; routeDetailState.customPickerOpen = false; routeDetailState.customPickerMode = 'from'; routeDetailState.sweepStatus = 'loading'; routeDetailState.detailMapOpen = options.openMap === true; routeDetailState.mapReturnToBoard = options.openMap === true; routeDetailState.mapViewLocked = false; routeDetailState.mapManualSelectedSeq = null;
+  routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.etaHistory.clear(); routeDetailState.gapModel = BusGapEstimator.createModel(); routeDetailState.detailEtaLoading = false; routeDetailState.detailLastFetchAt = 0; routeDetailState.fareLabel = null; routeDetailState.scheduleLabel = null; routeDetailState.serviceOpen = false; routeDetailState.customPickerOpen = false; routeDetailState.customPickerMode = 'from'; routeDetailState.sweepStatus = 'loading'; routeDetailState.detailMapOpen = options.openMap === true; routeDetailState.mapReturnToBoard = options.openMap === true; routeDetailState.mapViewLocked = false; routeDetailState.mapManualSelectedSeq = null;
   const request = beginRouteDetailGeneration();
   routeDetail.classList.add('on'); routeDetail.setAttribute('aria-hidden', 'false'); document.body.classList.add('detail-open'); startRouteDetailTicker();
   routeDetailBody.innerHTML = '<div class="detail-loading">' + (options.openMap ? '載入路線地圖…' : '載入路線站點…') + '</div>';
@@ -3402,7 +3363,8 @@ async function roadSegmentPath(a, b, timing) {
   const directKm = Math.hypot((b.lat - a.lat) * 111, (b.lng - a.lng) * 102);
   try {
     const q = await getJSON('https://router.project-osrm.org/route/v1/driving/' + a.lng + ',' + a.lat + ';' + b.lng + ',' + b.lat + '?overview=full&geometries=geojson&steps=false&alternatives=true&continue_straight=true', 12000);
-    const etaGap = etaSegmentGapMinutes(a, b, timing);
+    // Queue heads at A and B need not be the same vehicle. Their ETA
+    // difference cannot reject a valid road shape or select an alternative.
     const padLat = Math.max(.015, Math.abs(b.lat - a.lat) * .75 + .005);
     const padLng = Math.max(.015, Math.abs(b.lng - a.lng) * .75 + .005);
     const minLat = Math.min(a.lat, b.lat) - padLat, maxLat = Math.max(a.lat, b.lat) + padLat;
@@ -3410,18 +3372,15 @@ async function roadSegmentPath(a, b, timing) {
     const candidates = (q.routes || []).map(route => {
       const line = route.geometry?.coordinates || [];
       const routeKm = Number(route.distance || 0) / 1000;
-      const routeMinutes = Number(route.duration || 0) / 60;
       const outside = line.some(x => x[1] < minLat || x[1] > maxLat || x[0] < minLng || x[0] > maxLng);
-      const timeBad = etaGap != null && routeMinutes > 0 && (routeMinutes > Math.max(etaGap * 2.5, etaGap + 4) || routeMinutes < Math.max(.25, etaGap * .35));
       // Reject a route that leaves the adjacent-stop corridor and then comes
       // back to it: that is the common OSRM failure here, not a bus shape.
       const detourRatio = routeKm / Math.max(directKm, .05);
       const backtrack = detourRatio > 3.2 && routeKm > 1.2;
-      if (line.length < 2 || !routeKm || outside || routeKm > 6 || timeBad || backtrack) return null;
+      if (line.length < 2 || !routeKm || outside || routeKm < directKm * .85 || routeKm > Math.max(6, directKm * 3.2) || backtrack) return null;
       // OSRM's driving profile excludes footways and pedestrian paths; keep only
       // its road geometry, never connect endpoints with a straight fallback.
-      const timeDelta = etaGap == null || routeMinutes <= 0 ? 0 : Math.abs(routeMinutes - etaGap);
-      return { line, score: routeKm + timeDelta * .08, routeKm };
+      return { line, score: routeKm, routeKm };
     }).filter(Boolean).sort((x, y) => x.score - y.score)[0];
     return candidates ? candidates.line.map(x => [x[1], x[0]]) : null;
   } catch { return null; }
@@ -3474,18 +3433,19 @@ function detailMapAdjacentRoutePath(road, from, to) {
     const score = a.distance + b.distance;
     if (score >= (best?.score ?? Infinity)) return;
     const slice = a.index <= b.index ? line.slice(a.index, b.index + 1) : line.slice(b.index, a.index + 1).reverse();
-    if (slice.length >= 2) best = { score, slice };
+    if (slice.length >= 2) best = { score, slice, maxEndpoint:Math.max(a.distance,b.distance) };
   });
-  if (best && best.score <= 3000) return [start, ...best.slice, end];
-  return [start, end];
+  if (best && best.score <= 500 && best.maxEndpoint <= 250) { const path=[start,...best.slice,end]; path.routeVerified=true; return path; }
+  const fallback=[start,end]; fallback.routeVerified=false; return fallback;
 }
 function detailMapPathForBusSegment(road, stops, fromIndex, toIndex) {
-  const points = [];
+  const points = []; points.routeVerified=true;
   const direction = fromIndex <= toIndex ? 1 : -1;
   for (let i = fromIndex; i !== toIndex; i += direction) {
     const a = stops[i], b = stops[i + direction];
     if (!a || !b) continue;
     const segment = detailMapAdjacentRoutePath(road, a, b);
+    if (!segment.routeVerified) points.routeVerified=false;
     segment.forEach(point => {
       const last = points[points.length - 1];
       if (!last || detailMapDistanceMeters(last, point) > .5) points.push(point);
@@ -3512,7 +3472,7 @@ function detailMapPointAlongPath(path, progress) {
 function detailMapEstimatedBusProgress(segment, stops, etaByStop, now = Date.now()) {
   const inferredStart = Number(segment.progressStartAt), inferredEnd = Number(segment.progressEndAt);
   if (Number.isFinite(inferredStart) && Number.isFinite(inferredEnd) && inferredEnd > inferredStart) {
-    return Math.max(.12, Math.min(.90, .12 + .78 * (now - inferredStart) / (inferredEnd - inferredStart)));
+    return Math.max(0, Math.min(1, (now - inferredStart) / (inferredEnd - inferredStart)));
   }
   const from = stops.find(stop => Number(stop.seq) === Number(segment.fromSeq));
   const to = stops.find(stop => Number(stop.seq) === Number(segment.toSeq));
@@ -3536,7 +3496,9 @@ function detailMapBusNumberFontSize(route) {
   return Math.round(size*10)/10;
 }
 function detailMapEstimatedBusIcon(it, segment) {
-  const label = '估算位置：' + it.route + ' 巴士，第 ' + segment.fromSeq + ' 至第 ' + segment.toSeq + ' 站之間；並非實時車輛位置';
+  const methodLabels={'paired-endpoints':'兩端 ETA 配對','departure-history':'ETA 隊列變化推算離站','queue-prefix':'兩端到站隊列反推','learned-travel-time':'區段 ETA 時差反推','speed-bound':'道路距離／速度界限反推'};
+  const note=segment.longGapEstimate ? '；' + (methodLabels[segment.method] || 'ETA 推算') + '，信心' + segment.scoreLabel + '，約 ' + Math.round(segment.travelMinutes) + ' 分鐘區段車程' : '';
+  const label = '估算位置：' + it.route + ' 巴士，第 ' + segment.fromSeq + ' 至第 ' + segment.toSeq + ' 站之間' + note + '；並非實時車輛位置或已識別車輛';
   const numberFontSize=detailMapBusNumberFontSize(it.route);
   return L.divIcon({ className:'detail-estimated-bus-wrap', html:'<span class="detail-estimated-bus" role="img" aria-label="' + esc(label) + '" title="' + esc(label) + '"><strong style="font-size:' + numberFontSize + 'px">' + esc(it.route) + '</strong><small>估</small></span>', iconSize:[26,26], iconAnchor:[13,13] });
 }
@@ -3590,7 +3552,10 @@ function updateDetailMapEstimatedVehicles(wrap, it, stops, road, now = Date.now(
     const fromIndex=stops.findIndex(stop => Number(stop.seq) === Number(segment.fromSeq));
     const toIndex=stops.findIndex(stop => Number(stop.seq) === Number(segment.toSeq));
     if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
-    const path=detailMapPathForBusSegment(road,stops,fromIndex,toIndex);
+    const paths=wrap._busSegmentPaths || (wrap._busSegmentPaths=new Map()), pathKey=segment.fromSeq+':'+segment.toSeq;
+    if (!paths.has(pathKey)) paths.set(pathKey,detailMapPathForBusSegment(road,stops,fromIndex,toIndex));
+    const path=paths.get(pathKey);
+    if (segment.longGapEstimate && !path.routeVerified) return;
     const position=detailMapPointAlongPath(path,detailMapEstimatedBusProgress(segment,stops,routeDetailState.etaByStop,now));
     if (!position || !Number.isFinite(position[0]) || !Number.isFinite(position[1])) return;
     const key=segment.markerId || (segment.etaSeq == null ? 'fallback:'+segment.fromSeq+':'+segment.toSeq : 'wave:'+segment.etaSeq);
@@ -3600,10 +3565,13 @@ function updateDetailMapEstimatedVehicles(wrap, it, stops, road, now = Date.now(
       marker=L.marker(position,{icon:detailMapEstimatedBusIcon(it,segment),interactive:false,keyboard:false,zIndexOffset:900});
       marker.addTo(wrap._map); markers.set(key,marker);
     } else {
-      marker.setLatLng(position);
+      if (segment.longGapEstimate) {
+        const current=marker.getLatLng(), elapsed=Math.max(0,now-(marker._lastMotionAt || now)), alpha=1-Math.exp(-elapsed/1600);
+        marker.setLatLng([current.lat+(position[0]-current.lat)*alpha,current.lng+(position[1]-current.lng)*alpha]);
+      } else marker.setLatLng(position);
       if (marker._detailFromSeq !== segment.fromSeq || marker._detailToSeq !== segment.toSeq) marker.setIcon(detailMapEstimatedBusIcon(it,segment));
     }
-    marker._detailFromSeq=segment.fromSeq; marker._detailToSeq=segment.toSeq;
+    marker._lastMotionAt=now; marker._detailFromSeq=segment.fromSeq; marker._detailToSeq=segment.toSeq;
   });
   [...markers.keys()].forEach(key => { if (!active.has(key)) { markers.get(key)?.remove?.(); markers.delete(key); } });
   const passengerActive=updateDetailMapPassengerBusMarker(wrap,it,road);
@@ -3612,6 +3580,7 @@ function updateDetailMapEstimatedVehicles(wrap, it, stops, road, now = Date.now(
     const labels=[];
     const estimateCountLabel=markers.size+(candidates.length>segments.length?'/'+candidates.length:'')+' 個 ETA 推算點';
     if (markers.size) labels.push(estimateCountLabel);
+    else if (candidates.length) labels.push('有 ETA 候選 · 道路資料不足');
     if (passengerActive) labels.push('GPS 乘搭位置推算');
     legend.hidden=labels.length===0;
     legend.title='數字是地圖顯示點數／估算候選位置數；只按 ETA 推算，並非全線實際巴士車數或實時車輛定位。';
@@ -3657,7 +3626,13 @@ async function initDetailRouteMap(it) {
     else map.setView([stops[0].lat, stops[0].lng], 10, {animate:false});
     const timing = await mapEtaEvidence(it, stops);
     const road = await mapRoutePath(it, stops, timing);
-    wrap._routeGeometry=road;
+    wrap._routeGeometry=road; wrap._busSegmentPaths=new Map();
+    for (let i=1;i<stops.length;i++) {
+      const path=detailMapAdjacentRoutePath(road,stops[i-1],stops[i]);
+      stops[i].roadGeometryVerified=path.routeVerified===true;
+      stops[i].roadDistanceFromPreviousMeters=path.routeVerified ? path.slice(1).reduce((total,point,j)=>total+detailMapDistanceMeters(path[j],point),0) : null;
+      wrap._busSegmentPaths.set(stops[i-1].seq+':'+stops[i].seq,path);
+    }
     const points = routeMapBoundsPoints(stops, road);
     addImageStyleRouteLine(map, road);
     const selected = routeDetailState.mapManualSelectedSeq || routeDetailState.gpsSeq || routeDetailState.selectedSeq;

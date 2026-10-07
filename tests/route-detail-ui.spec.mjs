@@ -234,7 +234,7 @@ test('map keeps the OSRM fallback when no matching official route shape exists',
   }));
   await page.route('https://router.project-osrm.org/**', route => route.fulfill({
     status:200, contentType:'application/json',
-    body:JSON.stringify({routes:[{distance:500,duration:120,geometry:{coordinates:[[114.2,22.3],[114.205,22.305],[114.21,22.31]]}}]})
+    body:JSON.stringify({routes:[{distance:1600,duration:120,geometry:{coordinates:[[114.2,22.3],[114.205,22.305],[114.21,22.31]]}}]})
   }));
   await page.goto('./?smoke=route-detail-ui', { waitUntil:'domcontentloaded' });
   const path = await page.evaluate(() => mapRoutePath({co:'KMB',route:'74X',dir:'O',service_type:'1'}, [
@@ -243,7 +243,7 @@ test('map keeps the OSRM fallback when no matching official route shape exists',
   expect(path).toEqual([[[22.3,114.2],[22.305,114.205],[22.31,114.21]]]);
 });
 
-test('map route rejects a road duration that contradicts the official ETA gap', async ({ page }) => {
+test('map route rejects reported mileage shorter than its endpoint distance', async ({ page }) => {
   await page.route('https://router.project-osrm.org/**', route => route.fulfill({
     status:200, contentType:'application/json',
     body:JSON.stringify({ routes:[{ distance:500, duration:900, geometry:{ coordinates:[[114.2,22.3],[114.205,22.305],[114.21,22.31]] } }] })
@@ -462,15 +462,19 @@ test('ETA wave estimate places virtual buses between the correct stops', async (
   expect(result.map(x => x.fromSeq)).toEqual([1,2]);
 });
 
-test('downstream arrival ETA estimates buses on a long adjacent no-stop segment', async ({ page }) => {
+test('endpoint ETA queues estimate buses on a long adjacent no-stop segment', async ({ page }) => {
   await page.goto('./?smoke=route-detail-long-gap-arrivals', { waitUntil: 'domcontentloaded' });
   const result=await page.evaluate(() => {
     const now=Date.now();
-    const stops=[{id:'a',seq:1,cumulativeDistanceMeters:0},{id:'b',seq:2,cumulativeDistanceMeters:1000}];
-    const etaByStop=new Map([['b',{status:'ready',fetchedAt:new Date(now).toISOString(),sourceTimestamp:new Date(now).toISOString(),etas:[
+    const stops=[{id:'a',seq:1,cumulativeDistanceMeters:0},{id:'b',seq:2,cumulativeDistanceMeters:8000}];
+    const meta={status:'ready',fetchedAt:new Date(now).toISOString(),sourceTimestamp:new Date(now).toISOString()};
+    const etaByStop=new Map([['a',{...meta,etas:[
+      {etaSeq:1,iso:new Date(now+600000).toISOString()},
+      {etaSeq:2,iso:new Date(now+1200000).toISOString()}
+    ]}],['b',{...meta,etas:[
       {etaSeq:1,iso:new Date(now+120000).toISOString()},
-      {etaSeq:2,iso:new Date(now+240000).toISOString()},
-      {etaSeq:3,iso:new Date(now+420000).toISOString()}
+      {etaSeq:2,iso:new Date(now+660000).toISOString()},
+      {etaSeq:3,iso:new Date(now+1320000).toISOString()}
     ]}]]);
     const segments=deriveVirtualBusSegments(stops,etaByStop,now);
     return segments.map(segment=>({
@@ -482,7 +486,7 @@ test('downstream arrival ETA estimates buses on a long adjacent no-stop segment'
   });
   expect(result).toHaveLength(2);
   expect(result.map(segment=>segment.etaSeq)).toEqual([1,2]);
-  expect(result.every(segment=>segment.fromSeq===1 && segment.toSeq===2 && segment.inferred && segment.travelMinutes===5)).toBe(true);
+  expect(result.every(segment=>segment.fromSeq===1 && segment.toSeq===2 && segment.inferred && segment.travelMinutes===12)).toBe(true);
   expect(result[0].progress).toBeGreaterThan(result[1].progress);
   expect(new Set(result.map(segment=>segment.markerId)).size).toBe(2);
 });
@@ -775,4 +779,63 @@ test('floating map GPS and close controls respond to real clicks', async ({ page
   await page.locator('[data-detail-map-close]').click();
   await expect(page.locator('[data-detail-map-wrap]')).not.toHaveClass(/open/);
   await expect(page.locator('.detail-map-panel.open')).toHaveCount(0);
+});
+
+
+test('official ETA stays raw when a different arrival moves into the same rank', async ({ page }) => {
+  await page.goto('./?smoke=eta-queue-rank-change', { waitUntil:'domcontentloaded' });
+  const result=await page.evaluate(() => {
+    const now=Date.now();
+    routeDetailState.etaHistory.set('a',[{index:0,time:now+60000,at:now}]);
+    const expected=new Date(now+12*60000).toISOString();
+    const actual=smoothDetailEtas('a',[{iso:expected,etaSeq:1,min:12}])[0];
+    return {expected,iso:actual.iso,rawIso:actual.rawIso};
+  });
+  expect(result.iso).toBe(result.expected);
+  expect(result.rawIso).toBe(result.expected);
+});
+
+test('long ETA candidates do not fly in a straight line when route geometry is missing', async ({ page }) => {
+  await page.addInitScript(()=>localStorage.setItem('buspulse.first-use-tour.v1','1'));
+  await prepare(page);
+  await page.evaluate(()=>{
+    getRouteStopsCached=async()=>validRouteStops([
+      {id:'stop-1',seq:1,name:'A',lat:22.30,lng:114.20},
+      {id:'stop-2',seq:2,name:'B',lat:22.354,lng:114.20}
+    ]);
+    mapEtaEvidence=async()=>null;
+    mapRoutePath=async()=>[];
+  });
+  await page.locator('[data-map-id]').first().click();
+  await expect(page.locator('[data-detail-map-bus-legend]')).toContainText('道路資料不足');
+  await expect(page.locator('.detail-map-panel.open .detail-estimated-bus')).toHaveCount(0);
+});
+
+test('more than eight evidence-backed long sections do not lose whole sections', async ({ page }) => {
+  await page.goto('./?smoke=long-gap-adaptive-budget', {waitUntil:'domcontentloaded'});
+  const count=await page.evaluate(()=>{
+    const gaps=Array.from({length:10},(_,i)=>({fromSeq:i+1,toSeq:i+2,score:58,inferredFromDownstreamEta:true,distanceMeters:6000,markerId:'gap:'+i}));
+    return selectDetailMapBusSegments(gaps,8).length;
+  });
+  expect(count).toBe(10);
+});
+
+test('long-gap progress uses true endpoint interpolation without edge compression', async ({ page }) => {
+  await page.goto('./?smoke=long-gap-linear-progress',{waitUntil:'domcontentloaded'});
+  const result=await page.evaluate(()=>{
+    const now=Date.now(), segment={progressStartAt:now,progressEndAt:now+600000};
+    return [0,300000,600000].map(offset=>detailMapEstimatedBusProgress(segment,[],new Map(),now+offset));
+  });
+  expect(result).toEqual([0,.5,1]);
+});
+
+
+test('a valid long highway shape is not rejected by different endpoint ETA queue heads', async ({ page }) => {
+  await page.route('https://router.project-osrm.org/**',r=>r.fulfill({contentType:'application/json',body:JSON.stringify({routes:[{distance:21000,duration:1200,geometry:{coordinates:[[114,22.4],[114.1,22.4],[114.2,22.4]]}}]})}));
+  await page.goto('./?smoke=long-highway-shape',{waitUntil:'domcontentloaded'});
+  const path=await page.evaluate(()=>roadSegmentPath({id:'A',lat:22.4,lng:114},{id:'B',lat:22.4,lng:114.2},new Map([
+    ['A',{iso:new Date(Date.now()+60000).toISOString(),etaSeq:1}],
+    ['B',{iso:new Date(Date.now()+180000).toISOString(),etaSeq:1}]
+  ])));
+  expect(path).toEqual([[22.4,114],[22.4,114.1],[22.4,114.2]]);
 });

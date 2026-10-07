@@ -37,6 +37,7 @@ jobs:
           sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > /tmp/buspulse-inline.js
           node --check /tmp/buspulse-inline.js
           node --check sw.js
+          node --check bus-gap-estimator.js
       - name: Check whitespace
         run: git diff --check
 
@@ -58,7 +59,7 @@ jobs:
         run: |
           rm -rf _site
           mkdir -p _site
-          cp index.html manifest.json sw.js icon-192.png icon-512.png route-location-icon-v6.png fare-index.json place-index.json _site/
+          cp index.html bus-gap-estimator.js manifest.json sw.js icon-192.png icon-512.png route-location-icon-v6.png fare-index.json place-index.json _site/
           test -f _site/index.html
           test -f _site/sw.js
           test ! -e _site/tests
