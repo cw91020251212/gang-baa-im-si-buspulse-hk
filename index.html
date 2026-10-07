@@ -2421,6 +2421,48 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
   }
   return result.sort((a,b) => (b.score || 0) - (a.score || 0) || a.fromSeq - b.fromSeq);
 }
+function selectDetailMapBusSegments(segments, limit = 8, progressFor = () => .5) {
+  const max = Math.max(0, Math.floor(Number(limit) || 0));
+  if (!max) return [];
+  const rank = (a,b) => (b.score || 0) - (a.score || 0) || Number(a.fromSeq) - Number(b.fromSeq);
+  const ranked = [...(segments || [])].sort(rank);
+  const identity = segment => String(segment.markerId || [segment.fromSeq, segment.toSeq, segment.etaSeq == null ? 'fallback' : segment.etaSeq].join(':'));
+  const selected = [], selectedIds = new Set();
+  const add = segment => {
+    if (!segment || selected.length >= max) return false;
+    const id = identity(segment);
+    if (selectedIds.has(id)) return false;
+    selectedIds.add(id); selected.push(segment); return true;
+  };
+  const longGaps = new Map();
+  ranked.forEach(segment => {
+    if (!segment.inferredFromDownstreamEta || Number(segment.distanceMeters) < 700) return;
+    const key = Number(segment.fromSeq) + ':' + Number(segment.toSeq);
+    if (!longGaps.has(key)) longGaps.set(key, []);
+    longGaps.get(key).push(segment);
+  });
+  const progress = segment => {
+    try { const value = Number(progressFor(segment)); return Number.isFinite(value) ? value : .5; }
+    catch { return .5; }
+  };
+  const groups = [...longGaps.values()].map(items => {
+    items.sort((a,b) => Math.abs(progress(a)-.5) - Math.abs(progress(b)-.5) || rank(a,b));
+    return { items, distance:Math.max(...items.map(item => Number(item.distanceMeters) || 0)), fromSeq:Math.min(...items.map(item => Number(item.fromSeq) || 0)) };
+  }).sort((a,b) => b.distance-a.distance || a.fromSeq-b.fromSeq);
+  // Reserve one evidence-backed marker per long no-stop section before local
+  // stop-to-stop candidates consume the eight-marker map budget.
+  groups.forEach(group => add(group.items[0]));
+  // If capacity remains, include additional ETA-supported vehicles in those
+  // sections round-robin, then use the ordinary confidence-ranked candidates.
+  for (let round=1; selected.length<max; round++) {
+    let added=false;
+    groups.forEach(group => { if (group.items[round] && add(group.items[round])) added=true; });
+    if (!added) break;
+  }
+  ranked.forEach(add);
+  return selected.sort(rank);
+}
+
 function applyEtaPositionFallback(segments) {
   const state = routeDetailState;
   if (state.gpsStatus !== 'watching' || !segments.length) return;
@@ -2684,10 +2726,22 @@ function closeRouteDetail(options = {}) {
   const useHistory = options.history !== false;
   closeRouteDetailState(); routeDetailState.item = null; routeDetail.classList.remove('on'); routeDetail.setAttribute('aria-hidden', 'true'); document.body.classList.remove('detail-open');
   updateInfoBar();
-  const returnTarget = routeDetailReturnFocus?.isConnected ? routeDetailReturnFocus : (routeDetailReturnFocusId ? board.querySelector('[' + routeDetailReturnFocusAttr + '="' + cssEscape(routeDetailReturnFocusId) + '"]') : null);
-  returnTarget?.focus?.();
+  const returnFocus = routeDetailReturnFocus, returnFocusId = routeDetailReturnFocusId, returnFocusAttr = routeDetailReturnFocusAttr;
+  const restoreFocus = () => {
+    if (routeDetailState.open) return;
+    const target = returnFocus?.isConnected ? returnFocus : (returnFocusId ? board.querySelector('[' + returnFocusAttr + '="' + cssEscape(returnFocusId) + '"]') : null);
+    target?.focus?.({ preventScroll:true });
+  };
+  const backHistoryEntry = useHistory && history.state?.buspulseRouteDetail;
+  restoreFocus();
+  if (backHistoryEntry) {
+    let fallbackTimer = 0;
+    const restoreAfterPop = () => { window.clearTimeout(fallbackTimer); restoreFocus(); };
+    window.addEventListener('popstate', restoreAfterPop, { once:true });
+    fallbackTimer = window.setTimeout(() => { window.removeEventListener('popstate', restoreAfterPop); restoreFocus(); }, 250);
+    history.back();
+  }
   routeDetailReturnFocus = null; routeDetailReturnFocusId = null; routeDetailReturnFocusAttr = null;
-  if (useHistory && history.state?.buspulseRouteDetail) history.back();
 }
 
 function shell() {
@@ -3529,7 +3583,8 @@ function updateDetailMapPassengerBusMarker(wrap,it,road) {
 function updateDetailMapEstimatedVehicles(wrap, it, stops, road, now = Date.now()) {
   if (!wrap?._map || !routeDetailState.detailMapOpen) return;
   const markers = wrap._estimatedBusMarkers || (wrap._estimatedBusMarkers = new Map());
-  const segments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop, now).slice(0,8);
+  const candidates = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop, now);
+  const segments = selectDetailMapBusSegments(candidates, 8, segment => detailMapEstimatedBusProgress(segment, stops, routeDetailState.etaByStop, now));
   const active = new Set();
   segments.forEach(segment => {
     const fromIndex=stops.findIndex(stop => Number(stop.seq) === Number(segment.fromSeq));
@@ -3555,9 +3610,12 @@ function updateDetailMapEstimatedVehicles(wrap, it, stops, road, now = Date.now(
   const legend=wrap.querySelector('[data-detail-map-bus-legend]');
   if (legend) {
     const labels=[];
-    if (markers.size) labels.push(markers.size+' 部 ETA 估算巴士');
+    const estimateCountLabel=markers.size+(candidates.length>segments.length?'/'+candidates.length:'')+' 個 ETA 推算點';
+    if (markers.size) labels.push(estimateCountLabel);
     if (passengerActive) labels.push('GPS 乘搭位置推算');
     legend.hidden=labels.length===0;
+    legend.title='數字是地圖顯示點數／估算候選位置數；只按 ETA 推算，並非全線實際巴士車數或實時車輛定位。';
+    legend.setAttribute('aria-label',legend.title);
     legend.innerHTML=labels.length ? '<span class="detail-map-bus-legend-tag">'+(passengerActive?'乘':'估')+'</span><span>'+esc(labels.join(' · ')+' · 非實時')+'</span>' : '';
   }
 }

@@ -487,6 +487,21 @@ test('downstream arrival ETA estimates buses on a long adjacent no-stop segment'
   expect(new Set(result.map(segment=>segment.markerId)).size).toBe(2);
 });
 
+test('map reserves ETA-supported vehicles on long no-stop highway gaps under the marker cap', async ({ page }) => {
+  await page.goto('./?smoke=route-detail-highway-gap-budget', { waitUntil:'domcontentloaded' });
+  const result=await page.evaluate(() => {
+    const city=Array.from({length:10},(_,i)=>({fromSeq:i+1,toSeq:i+2,etaSeq:1,score:82,confidence:'high'}));
+    const highway=[
+      {fromSeq:12,toSeq:13,etaSeq:1,score:58,inferredFromDownstreamEta:true,distanceMeters:8019,progress:.403,markerId:'long-gap:12:13:1'},
+      {fromSeq:12,toSeq:13,etaSeq:2,score:58,inferredFromDownstreamEta:true,distanceMeters:8019,progress:.310,markerId:'long-gap:12:13:2'}
+    ];
+    const selected=selectDetailMapBusSegments([...city,...highway],8,segment=>segment.progress ?? .5);
+    return {count:selected.length,longGap:selected.filter(segment=>segment.inferredFromDownstreamEta).map(segment=>segment.markerId)};
+  });
+  expect(result.count).toBe(8);
+  expect(result.longGap).toEqual(['long-gap:12:13:1','long-gap:12:13:2']);
+});
+
 test('distance fallback does not invent buses for a short stop gap', async ({ page }) => {
   await page.goto('./?smoke=route-detail-short-gap-no-bus', { waitUntil: 'domcontentloaded' });
   const result=await page.evaluate(() => {
@@ -635,7 +650,9 @@ test('main-board map opens selectable map with estimated buses and manual ETA re
   expect(refreshPaths).toEqual(['M21 2v6h-6','M3 12a9 9 0 0 1 15-6.7L21 8','M3 12a9 9 0 0 0 15 6.7']);
   const legend=page.locator('[data-detail-map-bus-legend]');
   await expect(legend).toBeVisible();
-  await expect(legend).toContainText('ETA 估算巴士');
+  await expect(legend).toContainText('ETA 推算點');
+  await expect(legend).not.toContainText('部 ETA 估算巴士');
+  await expect(legend).toHaveAttribute('title',/非全線實際巴士車數/);
   await expect(legend.locator('span').last()).toHaveCSS('text-shadow','none');
   await expect(page.locator('.detail-map-panel.open .detail-estimated-bus strong').first()).toHaveCSS('text-shadow','none');
   const controlsOverlapLegend=await page.evaluate(() => {
