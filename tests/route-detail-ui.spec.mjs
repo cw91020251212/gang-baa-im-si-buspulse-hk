@@ -631,9 +631,13 @@ test('main-board map opens selectable map with estimated buses and manual ETA re
   await expect(mapRefresh).toHaveText('');
   await expect(mapRefresh).toHaveCSS('width','30px');
   await expect(mapRefresh).toHaveCSS('height','30px');
+  const refreshPaths=await mapRefresh.locator('svg path').evaluateAll(paths=>paths.map(path=>path.getAttribute('d')));
+  expect(refreshPaths).toEqual(['M21 2v6h-6','M3 12a9 9 0 0 1 15-6.7L21 8','M3 12a9 9 0 0 0 15 6.7']);
   const legend=page.locator('[data-detail-map-bus-legend]');
   await expect(legend).toBeVisible();
   await expect(legend).toContainText('ETA 估算巴士');
+  await expect(legend.locator('span').last()).toHaveCSS('text-shadow','none');
+  await expect(page.locator('.detail-map-panel.open .detail-estimated-bus strong').first()).toHaveCSS('text-shadow','none');
   const controlsOverlapLegend=await page.evaluate(() => {
     const a=document.querySelector('[data-detail-map-refresh]').getBoundingClientRect();
     const b=document.querySelector('[data-detail-map-bus-legend]').getBoundingClientRect();
