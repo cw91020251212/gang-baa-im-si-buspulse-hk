@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-Hant-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f6f5">
+  <title>地圖底圖試比｜港巴即時</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" crossorigin="">
+  <style>
+    :root{color-scheme:light;--ink:#1d2932;--muted:#687780;--line:#dbe2e3;--paper:#fff;--wash:#f4f6f5;--green:#197e69;--blue:#43719a}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--wash);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans TC","PingFang TC",sans-serif;-webkit-font-smoothing:antialiased}
+    .page{max-width:1360px;margin:auto;padding:20px clamp(14px,3vw,36px) 28px}
+    .topline{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+    .back{color:#176d5b;text-decoration:none;font-size:14px;font-weight:650}
+    .eyebrow{color:var(--green);font-size:12px;font-weight:750;letter-spacing:.09em;text-transform:uppercase}
+    h1{font-size:clamp(22px,3vw,32px);line-height:1.2;margin:6px 0 7px;letter-spacing:-.025em}
+    .intro{margin:0;color:var(--muted);font-size:14px;line-height:1.6;max-width:760px}
+    .controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:18px 0 14px}
+    .controls label{font-size:13px;color:#58666e;font-weight:650}
+    select,.button{min-height:38px;padding:8px 12px;border:1px solid #cbd5d6;border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:13px}
+    .button{cursor:pointer;font-weight:650}
+    .button:hover{border-color:#77a79c;background:#f8fbf9}
+    .sync-control{display:flex;align-items:center;gap:7px;padding:0 8px;color:#52636a;font-size:13px}
+    .sync-control input{accent-color:var(--green);width:16px;height:16px}
+    .meter-note{margin-left:auto;color:#718087;font-size:12px}
+    .compare{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+    .map-card{min-width:0;background:var(--paper);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 3px 16px #142c3510}
+    .card-head{min-height:70px;padding:13px 16px 11px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .title-group{display:flex;align-items:center;gap:10px;min-width:0}
+    .index{width:30px;height:30px;flex:none;border-radius:9px;display:grid;place-items:center;background:#e6f2ef;color:#116e5c;font-size:13px;font-weight:800}
+    .map-card.landsd .index{background:#e9f0e2;color:#588340}
+    h2{margin:0;font-size:16px;line-height:1.35}
+    .subhead{margin-top:2px;color:var(--muted);font-size:12px}
+    .map-chip{flex:none;padding:5px 9px;border-radius:999px;background:#f1f4f4;color:#627079;font-size:11px;font-weight:700}
+    .map-frame{height:min(54vh,500px);min-height:360px;position:relative;background:#eeefeb}
+    .map{position:absolute;inset:0;width:100%;height:100%}
+    .landsd-mark{position:absolute;z-index:500;bottom:9px;left:9px;display:flex;align-items:center;gap:6px;padding:4px 7px;border:1px solid #dfe4dc;border-radius:7px;background:#fffffff2;color:#35443e;text-decoration:none;box-shadow:0 1px 6px #1b29331c;pointer-events:auto}
+    .landsd-mark img{display:block;width:81px;height:23px;object-fit:contain}
+    .landsd-mark span{font-size:9px;font-weight:650;white-space:nowrap}
+    .map-status{min-height:73px;padding:11px 15px 10px;border-top:1px solid #edf0ef}
+    .stats{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline}
+    .stat-label{color:#7b898f;font-size:11px}
+    .stat-value{color:#33434b;font-size:13px;font-weight:750;font-variant-numeric:tabular-nums}
+    .state-line{margin-top:5px;min-height:18px;color:#718087;font-size:11px;line-height:1.4}
+    .state-line.error{color:#a44942}
+    .state-line.ready{color:#21715e}
+    .credits{min-height:50px;border-top:1px solid #edf0ef;padding:9px 13px;display:flex;align-items:center;justify-content:space-between;gap:12px;color:#627078;font-size:10px;line-height:1.4}
+    .credit-link{white-space:nowrap;color:#63737b;text-decoration:none}
+    .method{display:grid;grid-template-columns:auto 1fr;gap:10px;margin:15px 0 0;padding:12px 14px;border:1px solid #e0e6e4;border-radius:12px;background:#f9fbfa;color:#66757c;font-size:12px;line-height:1.55}
+    .method strong{color:#3e5751}
+    .foot{margin-top:13px;color:#7c898f;font-size:11px;line-height:1.6}
+    .leaflet-container{font:12px/1.45 system-ui,-apple-system,"Noto Sans TC",sans-serif}
+    @media(max-width:700px){
+      .page{padding:14px 12px calc(22px + env(safe-area-inset-bottom))}
+      .topline{margin-bottom:12px}
+      .controls{gap:8px;margin:14px 0 11px}
+      .meter-note{width:100%;margin:0}
+      .compare{grid-template-columns:1fr;gap:13px}
+      .card-head{min-height:60px;padding:10px 12px}
+      .map-frame{height:clamp(255px,36vh,340px);min-height:255px}
+      .map-status{min-height:68px;padding:9px 12px}
+      .credits{padding:8px 10px;gap:7px}
+      .landsd-mark{bottom:7px;left:7px;gap:4px;padding:3px 5px}
+      .landsd-mark img{width:70px;height:20px}
+      .landsd-mark span{font-size:8px}
+      .method{grid-template-columns:1fr;gap:3px}
+    }
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <nav class="topline" aria-label="頁面導覽">
+      <div><div class="eyebrow">底圖試驗 · MAP LAB</div><h1>同一個香港，兩種底圖</h1>
+        <p class="intro">左邊係目前 Leaflet＋OpenStreetMap；右邊載入地政總署官方 MapLibre 矢量樣式，含地名及交通標記。兩邊同步移動，比較道路、地鐵符號清晰度同初次載入速度。</p></div>
+      <a class="back" href="./index.html">返回 BusPulse　←</a>
+    </nav>
+
+    <section class="controls" aria-label="比較設定">
+      <label for="place">共同位置</label>
+      <select id="place" aria-label="選擇共同地圖位置">
+        <option value="central">中環・金鐘</option>
+        <option value="kowloon">九龍・旺角</option>
+        <option value="shatin">沙田站</option>
+        <option value="tuenmun">屯門市中心</option>
+      </select>
+      <label class="sync-control"><input id="sync" type="checkbox" checked>同步拖曳／縮放</label>
+      <button class="button" id="reset" type="button">重設比較位置</button>
+      <span class="meter-note">時間由本頁開始載入地圖資料時計；style 樣式檔及瓦片／標籤均計入。每次打開另記，快取會影響結果。</span>
+    </section>
+
+    <section class="compare" aria-label="底圖比較">
+      <article class="map-card osm">
+        <header class="card-head"><div class="title-group"><span class="index">A</span><div><h2>目前地圖</h2><div class="subhead">Leaflet · OpenStreetMap</div></div></div><span class="map-chip">現行底圖</span></header>
+        <div class="map-frame"><div class="map" id="osm-map" aria-label="Leaflet OpenStreetMap 地圖"></div></div>
+        <div class="map-status" aria-live="polite"><div class="stats"><span><span class="stat-label">首塊</span> <strong class="stat-value" id="osm-first">準備中</strong></span><span><span class="stat-label">畫面就緒</span> <strong class="stat-value" id="osm-ready">—</strong></span><span><span class="stat-label">已載入</span> <strong class="stat-value" id="osm-count">0 塊</strong></span></div><div class="state-line" id="osm-state">等待地圖載入…</div></div>
+        <footer class="credits"><span>© OpenStreetMap contributors</span><a class="credit-link" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">版權與資料來源 ↗</a></footer>
+      </article>
+
+      <article class="map-card landsd">
+        <header class="card-head"><div class="title-group"><span class="index">B</span><div><h2>地政總署矢量圖</h2><div class="subhead">MapLibre GL · Vector Map API</div></div></div><span class="map-chip">官方矢量圖層</span></header>
+        <div class="map-frame landsd-frame"><div class="map" id="landsd-map" aria-label="地政總署矢量地形圖"></div><a class="landsd-mark" href="https://portal.csdi.gov.hk/csdi-webpage/apidoc/VectorMapAPI" target="_blank" rel="noreferrer" aria-label="Map from Lands Department；查看官方資料及使用條款"><img src="./assets/landsd-logo.png" alt="地政總署 Lands Department 標誌"><span>Map from Lands Department</span></a></div>
+        <div class="map-status" aria-live="polite"><div class="stats"><span><span class="stat-label">首塊</span> <strong class="stat-value" id="landsd-first">準備中</strong></span><span><span class="stat-label">畫面就緒</span> <strong class="stat-value" id="landsd-ready">—</strong></span><span><span class="stat-label">矢量塊</span> <strong class="stat-value" id="landsd-count">0 塊</strong></span></div><div class="state-line" id="landsd-state">正在取得官方樣式及矢量標記…</div></div>
+        <footer class="credits"><span>圖層：LandsD 官方矢量底圖、地名及交通符號</span><a class="credit-link" href="https://portal.csdi.gov.hk/csdi-webpage/apidoc/VectorMapAPI" target="_blank" rel="noreferrer">官方 API／使用條款 ↗</a></footer>
+      </article>
+    </section>
+
+    <aside class="method"><strong>點樣睇結果</strong><span>「首塊」係第一塊可見地圖瓦片繪出時間；「畫面就緒」係 MapLibre 首屏地圖載入完成時間，包含官方樣式檔、矢量圖及所需標籤／符號資源；「矢量塊」只計 PBF 向量塊，不包括 PNG 標籤／glyph 總數。OSM 則量首屏底圖瓦片；兩者都不計 Leaflet／MapLibre 程式本身下載。結果按此裝置、當時網絡及快取即時量度，不代表每次都一樣；此頁只比較底圖，未載入巴士路線及即時 ETA。</span></aside>
+    <p class="foot">地政總署 API 有服務使用限制；本頁只載入目前視野需要的樣式、字型、符號及地圖圖塊，不預先大量下載。版權聲明及地政總署標誌依官方 API 指引展示。</p>
+  </main>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin=""></script>
+  <script src="./landsd-map-compare.js"></script>
+</body>
+</html>
