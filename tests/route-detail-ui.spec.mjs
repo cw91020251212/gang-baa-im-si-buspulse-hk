@@ -6,6 +6,7 @@ const item = {
 };
 
 async function prepare(page) {
+  let etaRequestCount = 0;
   await page.addInitScript(value => {
     localStorage.setItem('busboard.items.v1', JSON.stringify([value]));
     localStorage.setItem('busboard.user-defaults.v1', '[]');
@@ -25,6 +26,7 @@ async function prepare(page) {
     ] })
   }));
   await page.route('**/v1/transport/kmb/route-eta/**', route => {
+    etaRequestCount += 1;
     const now = Date.now();
     return route.fulfill({
       status: 200, contentType: 'application/json',
@@ -46,6 +48,7 @@ async function prepare(page) {
   }));
   await page.goto('./?smoke=route-detail-ui', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('[data-detail-id]')).toBeVisible();
+  return () => etaRequestCount;
 }
 
 test('opens full-screen timeline and changes selected stop without side effects', async ({ page }) => {
@@ -474,8 +477,8 @@ test('bus route number fills the compact marker and scales down for longer label
     long:detailMapBusNumberFontSize('NR500'),
     icon:detailMapEstimatedBusIcon({route:'74X'},{fromSeq:1,toSeq:2}).options.html
   }));
-  expect(result.short).toBeGreaterThanOrEqual(7.5);
-  expect(result.short).toBeLessThanOrEqual(8);
+  expect(result.short).toBeGreaterThanOrEqual(8.5);
+  expect(result.short).toBeLessThanOrEqual(9);
   expect(result.medium).toBeLessThanOrEqual(result.short);
   expect(result.long).toBeLessThan(result.medium);
   expect(result.long).toBeGreaterThanOrEqual(4.5);
@@ -569,9 +572,9 @@ test('screen saver defaults to two minutes without overriding saved preferences'
   await expect(page.locator('#busSaverDelay')).toHaveValue('45000');
 });
 
-test('main-board map buttons open a selectable shared map with estimated buses', async ({ page }) => {
+test('main-board map opens selectable map with estimated buses and manual ETA refresh', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('buspulse.first-use-tour.v1','1'));
-  await prepare(page);
+  const getEtaRequestCount = await prepare(page);
   await page.evaluate(() => {
     mapEtaEvidence = async () => null;
     mapRoutePath = async (_it, stops) => stops.slice(0,-1).map((stop,i) => [[stop.lat,stop.lng],[stops[i+1].lat,stops[i+1].lng]]);
@@ -587,11 +590,18 @@ test('main-board map buttons open a selectable shared map with estimated buses',
   await expect.poll(() => page.locator('.detail-map-panel.open .detail-eta strong').first().textContent(), { timeout:10000 }).not.toContain('—');
   await expect(page.locator('.detail-map-panel.open .image-stop-marker-wrap')).toHaveCount(3);
   await expect.poll(() => page.locator('.detail-map-panel.open .detail-estimated-bus').count(), { timeout:10000 }).toBeGreaterThan(0);
-  await expect(page.locator('.detail-map-panel.open .detail-estimated-bus').first()).toHaveCSS('width','19px');
-  await expect(page.locator('.detail-map-panel.open .detail-estimated-bus').first()).toHaveCSS('height','19px');
+  await expect(page.locator('.detail-map-panel.open .detail-estimated-bus').first()).toHaveCSS('width','21px');
+  await expect(page.locator('.detail-map-panel.open .detail-estimated-bus').first()).toHaveCSS('height','21px');
   const numberFontSize=await page.locator('.detail-map-panel.open .detail-estimated-bus strong').first().evaluate(el => parseFloat(getComputedStyle(el).fontSize));
-  expect(numberFontSize).toBeGreaterThanOrEqual(7.5);
-  expect(numberFontSize).toBeLessThanOrEqual(8);
+  expect(numberFontSize).toBeGreaterThanOrEqual(8.5);
+  expect(numberFontSize).toBeLessThanOrEqual(9);
+  const mapRefresh=page.locator('[data-detail-map-refresh]');
+  await expect(mapRefresh).toBeVisible();
+  await expect(mapRefresh).toHaveAttribute('aria-label','即時更新全部車站 ETA');
+  const beforeRefresh=getEtaRequestCount();
+  await mapRefresh.click();
+  await expect.poll(() => getEtaRequestCount()).toBeGreaterThan(beforeRefresh);
+  await expect(mapRefresh).toBeEnabled();
   await page.locator('.detail-map-panel.open .image-stop-marker-wrap').nth(1).click();
   await expect(page.locator('[data-detail-map-context] .detail-map-context-stop-name')).toContainText('第二站');
   await expect(page.locator('.detail-map-panel.open .detail-eta strong').first()).toContainText('3');
