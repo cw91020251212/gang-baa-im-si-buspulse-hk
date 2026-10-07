@@ -2253,18 +2253,19 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
   // Core identity/order is guaranteed by validRouteStops.  The score below
   // records supporting evidence; auxiliary fields never veto that core.
   const scoreLabel = score => score >= 85 ? '高' : score >= 65 ? '中' : '低';
-  const liveEta = (stop, maxAheadMinutes = 5) => {
+  const liveEtas = (stop, maxAheadMinutes = 5) => {
     const state = etaByStop.get(String(stop.id));
-    if (!state || state.status !== 'ready' || state.stale) return null;
+    if (!state || state.status !== 'ready' || state.stale) return [];
     const fetchedAt = Date.parse(state.fetchedAt || '');
     const sourceAt = Date.parse(state.sourceTimestamp || '');
-    if (!Number.isFinite(fetchedAt) || now - fetchedAt > 90000) return null;
-    if (Number.isFinite(sourceAt) && now - sourceAt > 150000) return null;
-    return (state.etas || []).find(eta => {
+    if (!Number.isFinite(fetchedAt) || now - fetchedAt > 90000) return [];
+    if (Number.isFinite(sourceAt) && now - sourceAt > 150000) return [];
+    return (state.etas || []).filter(eta => {
       const time = eta.iso && Date.parse(eta.iso);
       return !eta.sched && Number.isFinite(time) && time >= now - 2 * 60000 && time - now <= maxAheadMinutes * 60000;
-    }) || null;
+    });
   };
+  const liveEta = (stop, maxAheadMinutes = 5) => liveEtas(stop, maxAheadMinutes)[0] || null;
   const routeDistance = (fromIndex, toIndex) => {
     const fromCumulative = Number(stops[fromIndex]?.cumulativeDistanceMeters);
     const toCumulative = Number(stops[toIndex]?.cumulativeDistanceMeters);
@@ -2358,6 +2359,42 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
       }
       break;
     }
+  }
+  // Long adjacent gaps (e.g. expressway stretches with no intermediate stop)
+  // can be invisible when the upstream stop has no ETA. Use each fresh live
+  // arrival ETA at the downstream stop plus the measured gap distance to infer
+  // how many vehicles could already be travelling between these two stops.
+  // The 12 km/h proxy is deliberately conservative; every result stays low
+  // confidence and is explicitly an estimate, never live vehicle telemetry.
+  for (let i = 0; i < stops.length - 1; i++) {
+    const from = stops[i], to = stops[i + 1], distance = routeDistance(i, i + 1);
+    if (distance < 700) continue;
+    const travelMinutes = Math.max(2, Math.min(15, distance / 1000 / 12 * 60));
+    const arrivals = liveEtas(to, travelMinutes)
+      .map((eta, index) => ({ eta, index, time:Date.parse(eta.iso) }))
+      .filter(item => item.time > now && item.time - now <= travelMinutes * 60000)
+      .sort((a,b) => a.time - b.time);
+    arrivals.forEach(({ eta, index, time }) => {
+      const etaSeq = eta.etaSeq == null || !Number.isFinite(Number(eta.etaSeq)) ? null : Number(eta.etaSeq);
+      const fallbackWave = etaSeq == null && index === 0 ? 1 : null;
+      const covered = result.some(existing => {
+        const spansGap = Number(existing.fromSeq) <= Number(from.seq) && Number(existing.toSeq) >= Number(to.seq);
+        if (!spansGap) return false;
+        if (etaSeq != null && existing.etaSeq != null && Number(existing.etaSeq) === etaSeq) return true;
+        if (fallbackWave != null && existing.etaSeq != null && Number(existing.etaSeq) === fallbackWave) return true;
+        return index === 0 && existing.etaSeq == null && Number(existing.toSeq) === Number(to.seq);
+      });
+      if (covered) return;
+      const markerId = 'long-gap:' + from.seq + ':' + to.seq + ':' + (etaSeq == null ? Math.round(time / 60000) + ':' + index : etaSeq);
+      if (result.some(existing => existing.markerId === markerId)) return;
+      result.push({
+        fromSeq:Number(from.seq), toSeq:Number(to.seq), etaSeq,
+        confidence:'low', score:58, scoreLabel:'低', approaching:true,
+        inferredFromDownstreamEta:true, distanceMeters:Math.round(distance),
+        travelMinutes:Math.round(travelMinutes), progressStartAt:time - travelMinutes * 60000,
+        progressEndAt:time, markerId
+      });
+    });
   }
   return result.sort((a,b) => (b.score || 0) - (a.score || 0) || a.fromSeq - b.fromSeq);
 }
@@ -2506,7 +2543,7 @@ function renderRouteDetail() {
   const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop);
   applyEtaPositionFallback(virtualSegments);
   const markerAfter = new Map(virtualSegments.map(segment => [segment.fromSeq, '<div class="detail-inference virtual" role="status" aria-label="估計 ' + esc(it.route) + ' 巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="virtual-bus-card"><span class="virtual-route-label" aria-hidden="true">' + esc(it.route) + '</span><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計 ' + esc(it.route) + ' 巴士位置"></span></span><span class="virtual-bus-copy"><b>' + (segment.confidence === 'low' ? '低信心度：估計位置附近有巴士' : segment.approaching ? '估計位置：巴士即將到站' : '估計位置：巴士正在途中行駛') + '</b><small>' + (segment.confidence === 'low' ? '按站點距離及 ETA 推算：' + esc(segment.travelMinutes) + ' 分鐘路段；' : segment.confidence === 'medium' ? '按站序及 ETA 推算；' : '按同一 ETA 波次推算；') + '第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間 · 信心度 ' + esc(segment.score) + '/100（' + esc(segment.scoreLabel) + '）</small></span></div>']));
-  const visibleBusCount = markerAfter.size;
+  const visibleBusCount = virtualSegments.length;
   const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
   const nearStation = null;
   const nearStationEta = null;
@@ -3379,6 +3416,10 @@ function detailMapPointAlongPath(path, progress) {
   return path[path.length-1];
 }
 function detailMapEstimatedBusProgress(segment, stops, etaByStop, now = Date.now()) {
+  const inferredStart = Number(segment.progressStartAt), inferredEnd = Number(segment.progressEndAt);
+  if (Number.isFinite(inferredStart) && Number.isFinite(inferredEnd) && inferredEnd > inferredStart) {
+    return Math.max(.12, Math.min(.90, .12 + .78 * (now - inferredStart) / (inferredEnd - inferredStart)));
+  }
   const from = stops.find(stop => Number(stop.seq) === Number(segment.fromSeq));
   const to = stops.find(stop => Number(stop.seq) === Number(segment.toSeq));
   const waveEta = stop => {
@@ -3457,7 +3498,7 @@ function updateDetailMapEstimatedVehicles(wrap, it, stops, road, now = Date.now(
     const path=detailMapPathForBusSegment(road,stops,fromIndex,toIndex);
     const position=detailMapPointAlongPath(path,detailMapEstimatedBusProgress(segment,stops,routeDetailState.etaByStop,now));
     if (!position || !Number.isFinite(position[0]) || !Number.isFinite(position[1])) return;
-    const key=segment.etaSeq == null ? 'fallback:'+segment.fromSeq+':'+segment.toSeq : 'wave:'+segment.etaSeq;
+    const key=segment.markerId || (segment.etaSeq == null ? 'fallback:'+segment.fromSeq+':'+segment.toSeq : 'wave:'+segment.etaSeq);
     active.add(key);
     let marker=markers.get(key);
     if (!marker) {

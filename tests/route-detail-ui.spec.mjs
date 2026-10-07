@@ -430,6 +430,42 @@ test('ETA wave estimate places virtual buses between the correct stops', async (
   expect(result.map(x => x.fromSeq)).toEqual([1,2]);
 });
 
+test('downstream arrival ETA estimates buses on a long adjacent no-stop segment', async ({ page }) => {
+  await page.goto('./?smoke=route-detail-long-gap-arrivals', { waitUntil: 'domcontentloaded' });
+  const result=await page.evaluate(() => {
+    const now=Date.now();
+    const stops=[{id:'a',seq:1,cumulativeDistanceMeters:0},{id:'b',seq:2,cumulativeDistanceMeters:1000}];
+    const etaByStop=new Map([['b',{status:'ready',fetchedAt:new Date(now).toISOString(),sourceTimestamp:new Date(now).toISOString(),etas:[
+      {etaSeq:1,iso:new Date(now+120000).toISOString()},
+      {etaSeq:2,iso:new Date(now+240000).toISOString()},
+      {etaSeq:3,iso:new Date(now+420000).toISOString()}
+    ]}]]);
+    const segments=deriveVirtualBusSegments(stops,etaByStop,now);
+    return segments.map(segment=>({
+      fromSeq:segment.fromSeq,toSeq:segment.toSeq,etaSeq:segment.etaSeq,
+      inferred:segment.inferredFromDownstreamEta,travelMinutes:segment.travelMinutes,
+      progress:detailMapEstimatedBusProgress(segment,stops,etaByStop,now),
+      markerId:segment.markerId
+    }));
+  });
+  expect(result).toHaveLength(2);
+  expect(result.map(segment=>segment.etaSeq)).toEqual([1,2]);
+  expect(result.every(segment=>segment.fromSeq===1 && segment.toSeq===2 && segment.inferred && segment.travelMinutes===5)).toBe(true);
+  expect(result[0].progress).toBeGreaterThan(result[1].progress);
+  expect(new Set(result.map(segment=>segment.markerId)).size).toBe(2);
+});
+
+test('distance fallback does not invent buses for a short stop gap', async ({ page }) => {
+  await page.goto('./?smoke=route-detail-short-gap-no-bus', { waitUntil: 'domcontentloaded' });
+  const result=await page.evaluate(() => {
+    const now=Date.now();
+    const stops=[{id:'a',seq:1,cumulativeDistanceMeters:0},{id:'b',seq:2,cumulativeDistanceMeters:550}];
+    const etaByStop=new Map([['b',{status:'ready',fetchedAt:new Date(now).toISOString(),etas:[{etaSeq:1,iso:new Date(now+120000).toISOString()}]}]]);
+    return deriveVirtualBusSegments(stops,etaByStop,now);
+  });
+  expect(result).toHaveLength(0);
+});
+
 test('bus route number fills the compact marker and scales down for longer labels', async ({ page }) => {
   await page.goto('./?smoke=route-detail-map-label-size', { waitUntil: 'domcontentloaded' });
   const result=await page.evaluate(() => ({
