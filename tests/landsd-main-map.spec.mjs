@@ -195,7 +195,11 @@ test('main Leaflet adapter renders the official live LandsD map (@live)', async 
     if (request.url().includes('mapapi.geodata.gov.hk')) serviceRequests.add(request.url().split('?')[0]);
   });
   await page.setViewportSize({ width: 1440, height: 960 });
-  await page.goto('/index.html', { waitUntil: 'domcontentloaded' });
+  const configuredBase = process.env.BUSPULSE_BASE_URL;
+  const livePageURL = configuredBase
+    ? new URL('index.html', configuredBase.endsWith('/') ? configuredBase : `${configuredBase}/`).href
+    : '/index.html';
+  await page.goto(livePageURL, { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => {
     const container = document.createElement('div');
     container.id = 'landsd-main-map-test';
