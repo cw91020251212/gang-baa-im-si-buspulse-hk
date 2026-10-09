@@ -380,7 +380,7 @@ test('reverse direction swaps supported route variants without inventing a GMB v
   expect(result.gmb).toBeNull();
 });
 
-test('reverse auto-pair uses the opposite origin when the selected stop is its terminal', async ({ page }) => {
+test('reverse auto-pair always uses the opposite direction origin', async ({ page }) => {
   await page.goto('./?smoke=route-detail-reverse-pair', { waitUntil:'domcontentloaded' });
   const result = await page.evaluate(async () => {
     const outbound = { co:'KMB', route:'74X', bound:'O', dir:'O', service_type:'1', origin:'大埔中心', dest:'觀塘碼頭' };
@@ -394,17 +394,17 @@ test('reverse auto-pair uses the opposite origin when the selected stop is its t
     ]);
     const terminal = await findReverseStop(outbound, { seq:1, id:'TP904', name:'大埔中心總站', lat:22.45, lng:114.16 });
     const middle = await findReverseStop(outbound, { seq:3, id:'middle', name:'太和站', lat:22.40, lng:114.19 });
-    await addItem(outbound, { seq:1, id:'TP904', name:'大埔中心總站' });
+    await addItem(outbound, { seq:3, id:'middle', name:'太和站' });
     const cards = items.map(({dir,stopId,stopName,dest}) => ({dir,stopId,stopName,dest}));
     return { terminalStop:terminal?.stop?.id, terminalFallback:terminal?.pairedAtRouteOrigin===true, middleStop:middle?.stop?.id, middleFallback:middle?.pairedAtRouteOrigin===true, reverseBound:middle?.variant?.bound, cards };
   });
   expect(result.terminalStop).toBe('KT');
   expect(result.terminalFallback).toBe(true);
-  expect(result.middleStop).toBe('middle');
-  expect(result.middleFallback).toBe(false);
+  expect(result.middleStop).toBe('KT');
+  expect(result.middleFallback).toBe(true);
   expect(result.reverseBound).toBe('I');
   expect(result.cards).toEqual([
-    {dir:'O',stopId:'TP904',stopName:'大埔中心總站',dest:'觀塘碼頭'},
+    {dir:'O',stopId:'middle',stopName:'太和站',dest:'觀塘碼頭'},
     {dir:'I',stopId:'KT',stopName:'觀塘碼頭',dest:'大埔中心'}
   ]);
 });
