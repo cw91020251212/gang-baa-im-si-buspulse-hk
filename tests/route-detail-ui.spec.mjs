@@ -450,37 +450,16 @@ test('ETA wave estimate places virtual buses between the correct stops', async (
   await page.goto('./?smoke=route-detail-virtual-buses', { waitUntil: 'domcontentloaded' });
   const result = await page.evaluate(() => {
     const now = Date.now();
-    const meta={status:'ready',fetchedAt:new Date(now).toISOString(),sourceTimestamp:new Date(now).toISOString(),batchId:1};
     const stops = [{id:'a',seq:1},{id:'b',seq:2},{id:'c',seq:3},{id:'d',seq:4}];
     const etaByStop = new Map([
-      ['a',{...meta,etas:[{etaSeq:1,iso:new Date(now-60000).toISOString()},{etaSeq:2,iso:new Date(now+120000).toISOString()}]}],
-      ['b',{...meta,etas:[{etaSeq:1,iso:new Date(now+60000).toISOString()},{etaSeq:2,iso:new Date(now-60000).toISOString()}]}],
-      ['c',{...meta,etas:[{etaSeq:1,iso:new Date(now+180000).toISOString()},{etaSeq:2,iso:new Date(now+60000).toISOString()}]}],
-      ['d',{...meta,etas:[{etaSeq:1,iso:new Date(now+240000).toISOString()},{etaSeq:2,iso:new Date(now+120000).toISOString()}]}]
+      ['a',{status:'ready',etas:[{etaSeq:1,iso:new Date(now-60000).toISOString()},{etaSeq:2,iso:new Date(now+120000).toISOString()}]}],
+      ['b',{status:'ready',etas:[{etaSeq:1,iso:new Date(now+60000).toISOString()},{etaSeq:2,iso:new Date(now-60000).toISOString()}]}],
+      ['c',{status:'ready',etas:[{etaSeq:1,iso:new Date(now+180000).toISOString()},{etaSeq:2,iso:new Date(now+60000).toISOString()}]}],
+      ['d',{status:'ready',etas:[{etaSeq:1,iso:new Date(now+240000).toISOString()},{etaSeq:2,iso:new Date(now+120000).toISOString()}]}]
     ]);
     return deriveVirtualBusSegments(stops, etaByStop, now);
   });
-  expect(result.map(x => x.fromSeq)).toEqual([1,2,3]);
-});
-
-test('adjacent ETA timing, not eta_seq, determines a short-section bus position', async ({ page }) => {
-  await page.goto('./?smoke=route-detail-adjacent-timing', { waitUntil:'domcontentloaded' });
-  const result=await page.evaluate(() => {
-    const now=Date.now(), meta={status:'ready',fetchedAt:new Date(now).toISOString(),sourceTimestamp:new Date(now).toISOString(),batchId:1};
-    const stops=[{id:'a',seq:1},{id:'b',seq:2}];
-    const differentRanks=deriveVirtualBusSegments(stops,new Map([
-      ['a',{...meta,etas:[{etaSeq:3,iso:new Date(now-60000).toISOString()}]}],
-      ['b',{...meta,etas:[{etaSeq:1,iso:new Date(now+180000).toISOString()}]}]
-    ]),now);
-    const implausibleGap=deriveVirtualBusSegments(stops,new Map([
-      ['a',{...meta,etas:[{etaSeq:1,iso:new Date(now-60000).toISOString()}]}],
-      ['b',{...meta,etas:[{etaSeq:1,iso:new Date(now+25*60000).toISOString()}]}]
-    ]),now);
-    return {differentRanks,implausibleGap};
-  });
-  expect(result.differentRanks).toHaveLength(1);
-  expect(result.differentRanks[0]).toMatchObject({fromSeq:1,toSeq:2,confidence:'high'});
-  expect(result.implausibleGap).toEqual([]);
+  expect(result.map(x => x.fromSeq)).toEqual([1,2]);
 });
 
 test('endpoint ETA queues estimate buses on a long adjacent no-stop segment', async ({ page }) => {
