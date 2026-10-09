@@ -2270,8 +2270,7 @@ function deriveEstimatedSegments(stops, etaByStop, now = Date.now()) {
   return candidates.length ? [candidates.sort((x,y) => Math.abs(x.fromSeq - (stops[0]?.seq || 0)) - Math.abs(y.fromSeq - (stops[0]?.seq || 0)))[0]] : [];
 }
 function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
-  // Core identity/order is guaranteed by validRouteStops.  The score below
-  // records supporting evidence; auxiliary fields never veto that core.
+  // eta_seq is only the arrival order at one stop, never a cross-stop vehicle ID.
   const scoreLabel = score => score >= 85 ? '高' : score >= 65 ? '中' : '低';
   const liveEtas = (stop, maxAheadMinutes = 5) => {
     const state = etaByStop.get(String(stop.id));
@@ -2300,38 +2299,35 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
     }
     return metres;
   };
-  const byWave = new Map();
-  stops.forEach(stop => {
-    const state = etaByStop.get(String(stop.id));
-    const fetchedAt = Date.parse(state?.fetchedAt || '');
-    const sourceAt = Date.parse(state?.sourceTimestamp || '');
-    if (!state || state.status !== 'ready' || state.stale || (Number.isFinite(fetchedAt) && now - fetchedAt > 90000) || (Number.isFinite(sourceAt) && now - sourceAt > 150000)) return;
-    (state?.etas || []).forEach(eta => {
-      const time = eta.iso && Date.parse(eta.iso);
-      if (!Number.isFinite(time) || eta.sched) return;
-      const wave = eta.etaSeq == null ? 1 : Number(eta.etaSeq);
-      if (!Number.isFinite(wave)) return;
-      if (!byWave.has(wave)) byWave.set(wave, []);
-      byWave.get(wave).push({ seq:Number(stop.seq), time });
-    });
-  });
   const result = [];
-  for (const [etaSeq, points] of byWave) {
-    points.sort((a,b) => a.seq - b.seq);
-    let segment = null;
-    for (let i = 0; i < points.length - 1; i++) {
-      const a = points[i], b = points[i + 1];
-      if (b.time <= a.time) continue;
-      if (a.time <= now && now < b.time) { segment = { fromSeq:a.seq, toSeq:b.seq, etaSeq, confidence:'high', score:95, scoreLabel:'高' }; break; }
-    }
-    if (!segment && points[0] && points[0].time > now && points[0].time - now <= 5 * 60000 && points[1] && points[1].time > points[0].time) {
-      segment = { fromSeq:points[0].seq, toSeq:points[1].seq, etaSeq, confidence:'high', score:92, scoreLabel:'高', approaching:true };
-    }
-    if (segment) result.push(segment);
+  const comparableBatch = (a, b) => {
+    if (a?.batchId != null && b?.batchId != null) return a.batchId === b.batchId;
+    const ta = Date.parse(a?.sourceTimestamp || a?.fetchedAt || '');
+    const tb = Date.parse(b?.sourceTimestamp || b?.fetchedAt || '');
+    return !Number.isFinite(ta) || !Number.isFinite(tb) || Math.abs(ta - tb) <= 90000;
+  };
+  for (let i = 0; i < stops.length - 1; i++) {
+    const from = stops[i], to = stops[i + 1];
+    const fromState = etaByStop.get(String(from.id)), toState = etaByStop.get(String(to.id));
+    if (!comparableBatch(fromState, toState)) continue;
+    const departed = liveEtas(from, 20).map(eta => ({ eta, time:Date.parse(eta.iso) }))
+      .filter(item => item.time <= now).sort((a, b) => b.time - a.time);
+    const arriving = liveEtas(to, 20).map(eta => ({ eta, time:Date.parse(eta.iso) }))
+      .filter(item => item.time > now).sort((a, b) => a.time - b.time);
+    const usedDepartures = new Set();
+    arriving.forEach(arrival => {
+      const departure = departed.find(item => !usedDepartures.has(item) && arrival.time - item.time >= 30000 && arrival.time - item.time <= 20 * 60000);
+      if (!departure) return;
+      usedDepartures.add(departure);
+      result.push({
+        fromSeq:Number(from.seq), toSeq:Number(to.seq), etaSeq:null,
+        markerId:'adjacent:' + from.seq + ':' + to.seq + ':' + Math.round(arrival.time / 60000),
+        confidence:'high', score:90, scoreLabel:'高'
+      });
+    });
   }
-  // Some API responses omit or change etaSeq between nearby stops.  When
-  // consecutive stops still report a strictly increasing live ETA, keep the
-  // visible bus marker instead of losing it solely because the wave id differs.
+  // An ETA that has not reached the upstream stop yet remains only an
+  // approaching cue. It must not be treated as a vehicle identity.
   const occupied = new Set(result.map(segment => segment.fromSeq));
   for (let i = 0; i < stops.length - 1; i++) {
     const from = stops[i], to = stops[i + 1];
