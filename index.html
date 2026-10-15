@@ -962,6 +962,8 @@ body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-a
 .detail-map-panel.open .route-map .detail-estimated-bus {position:relative;display:flex;align-items:center;justify-content:center;width:19px;height:19px;box-sizing:border-box;border:1px solid #167b9a;border-radius:50%;background:#f8ffff;color:#0c536d;box-shadow:0 1px 2px rgba(4,44,61,.2);font:750 5px/1 system-ui,sans-serif;animation:detailEstimatedBusPulse 2.2s ease-in-out infinite;}
 .detail-map-panel.open .route-map .detail-estimated-bus strong {max-width:17px;font-size:8px;font-weight:900;letter-spacing:-.25px;overflow:hidden;text-overflow:clip;white-space:nowrap;}
 .detail-map-panel.open .route-map .detail-estimated-bus small {position:absolute;right:-2px;top:-2px;display:grid;place-items:center;width:8px;height:8px;border-radius:50%;border:1px solid #fff;background:#167b9a;color:#fff;font:700 5px/1 system-ui,sans-serif;}
+.detail-map-panel.open .route-map .detail-estimated-bus.schedule-only {border-style:dashed;border-color:#a86b0b;background:#fff8e8;color:#6b4907;}
+.detail-map-panel.open .route-map .detail-estimated-bus.schedule-only small {background:#a86b0b;}
 @keyframes detailEstimatedBusPulse {0%,100%{box-shadow:0 1px 2px rgba(4,44,61,.2),0 0 0 0 rgba(22,123,154,.12)}50%{box-shadow:0 1px 2px rgba(4,44,61,.2),0 0 0 3px rgba(22,123,154,0)}}
 .detail-map-panel.open .route-map .detail-passenger-bus-wrap {background:transparent;border:0;}
 .detail-map-panel.open .route-map .detail-passenger-bus {display:grid;place-items:center;width:18px;height:18px;box-sizing:border-box;border:1px solid #009688;border-radius:50%;background:#e2f7f1;color:#00766d;box-shadow:0 0 0 2px rgba(0,150,136,.16);font:750 6px/1 system-ui,sans-serif;}
@@ -2385,7 +2387,7 @@ function deriveVirtualBusSegments(stops, etaByStop, now = Date.now()) {
   const model = stops === routeDetailState.stops ? routeDetailState.gapModel : BusGapEstimator.createModel();
   const gaps = BusGapEstimator.estimate(stops, etaByStop, now, model);
   const local = result.filter(segment => !gaps.managedGaps.some(gap => Number(segment.fromSeq) <= gap.fromSeq && Number(segment.toSeq) >= gap.toSeq));
-  return [...local, ...gaps.segments].sort((a,b) => (b.score || 0) - (a.score || 0) || a.fromSeq - b.fromSeq);
+  return [...local, ...gaps.segments, ...(gaps.scheduleSegments || [])].sort((a,b) => (b.score || 0) - (a.score || 0) || a.fromSeq - b.fromSeq);
 }
 function selectDetailMapBusSegments(segments, limit = 8, progressFor = () => .5) {
   let max = Math.max(0, Math.floor(Number(limit) || 0));
@@ -2402,7 +2404,7 @@ function selectDetailMapBusSegments(segments, limit = 8, progressFor = () => .5)
   };
   const longGaps = new Map();
   ranked.forEach(segment => {
-    if (!segment.inferredFromDownstreamEta || Number(segment.distanceMeters) < 700) return;
+    if (!(segment.inferredFromDownstreamEta || segment.scheduleOnly) || Number(segment.distanceMeters) < 700) return;
     const key = Number(segment.fromSeq) + ':' + Number(segment.toSeq);
     if (!longGaps.has(key)) longGaps.set(key, []);
     longGaps.get(key).push(segment);
@@ -3461,6 +3463,22 @@ function detailMapPathForBusSegment(road, stops, fromIndex, toIndex) {
   }
   return points;
 }
+function prepareDetailMapRoadDistances(stops, road) {
+  for (let i=0;i<stops.length-1;i++) {
+    const from=stops[i], to=stops[i+1], path=detailMapAdjacentRoutePath(road,from,to);
+    if (!path.routeVerified) {
+      to.roadGeometryVerified=false;
+      delete to.roadDistanceFromPreviousMeters;
+      continue;
+    }
+    let metres=0;
+    for (let j=0;j<path.length-1;j++) metres+=detailMapDistanceMeters(path[j],path[j+1]);
+    if (Number.isFinite(metres) && metres>0) {
+      to.roadGeometryVerified=true;
+      to.roadDistanceFromPreviousMeters=metres;
+    }
+  }
+}
 function detailMapPointAlongPath(path, progress) {
   if (!Array.isArray(path) || !path.length) return null;
   if (path.length === 1) return path[0];
@@ -3504,11 +3522,12 @@ function detailMapBusNumberFontSize(route) {
   return Math.round(size*10)/10;
 }
 function detailMapEstimatedBusIcon(it, segment) {
-  const methodLabels={'paired-endpoints':'兩端 ETA 配對','departure-history':'ETA 隊列變化推算離站','queue-prefix':'兩端到站隊列反推','learned-travel-time':'區段 ETA 時差反推','speed-bound':'道路距離／速度界限反推','distance-prior':'路段距離先驗回推'};
+  const methodLabels={'paired-endpoints':'兩端 ETA 配對','departure-history':'ETA 隊列變化推算離站','queue-prefix':'兩端到站隊列反推','learned-travel-time':'區段 ETA 時差反推','speed-bound':'道路距離／速度界限反推','distance-prior':'路段距離先驗回推','scheduled-endpoints':'原定班次兩端 ETA 推算','scheduled-distance-prior':'原定班次路段距離推算','scheduled-headway-projection':'首站班距與沿線 ETA 推算'};
   const note=segment.longGapEstimate ? '；' + (methodLabels[segment.method] || 'ETA 推算') + '，信心' + segment.scoreLabel + '，約 ' + Math.round(segment.travelMinutes) + ' 分鐘區段車程' : '';
-  const label = '估算位置：' + it.route + ' 巴士，第 ' + segment.fromSeq + ' 至第 ' + segment.toSeq + ' 站之間' + note + '；並非實時車輛位置或已識別車輛';
+  const scheduleOnly=Boolean(segment.scheduleOnly), badge=scheduleOnly?'班':'估';
+  const label = (scheduleOnly?'按原定班次推算位置：':'ETA 推算位置：') + it.route + ' 巴士，第 ' + segment.fromSeq + ' 至第 ' + segment.toSeq + ' 站之間' + note + '；並非實時車輛位置或已識別車輛';
   const numberFontSize=detailMapBusNumberFontSize(it.route);
-  return L.divIcon({ className:'detail-estimated-bus-wrap', html:'<span class="detail-estimated-bus" role="img" aria-label="' + esc(label) + '" title="' + esc(label) + '"><strong style="font-size:' + numberFontSize + 'px">' + esc(it.route) + '</strong><small>估</small></span>', iconSize:[26,26], iconAnchor:[13,13] });
+  return L.divIcon({ className:'detail-estimated-bus-wrap', html:'<span class="detail-estimated-bus' + (scheduleOnly?' schedule-only':'') + '" role="img" aria-label="' + esc(label) + '" title="' + esc(label) + '"><strong style="font-size:' + numberFontSize + 'px">' + esc(it.route) + '</strong><small>' + badge + '</small></span>', iconSize:[26,26], iconAnchor:[13,13] });
 }
 function detailMapNearestRouteProjection(road, coords) {
   const lat=Number(coords?.latitude ?? coords?.lat), lng=Number(coords?.longitude ?? coords?.lng);
@@ -3553,6 +3572,11 @@ function updateDetailMapPassengerBusMarker(wrap,it,road) {
 function updateDetailMapEstimatedVehicles(wrap, it, stops, road, now = Date.now()) {
   if (!wrap?._map || !routeDetailState.detailMapOpen) return;
   const markers = wrap._estimatedBusMarkers || (wrap._estimatedBusMarkers = new Map());
+  const routeKey=(routeDetailState.stops || []).map(stop=>String(stop.id)).join('|');
+  if (Array.isArray(road) && road.length && (wrap._estimatedRoadFor !== road || wrap._estimatedRoadRouteKey !== routeKey)) {
+    prepareDetailMapRoadDistances(routeDetailState.stops || [],road);
+    wrap._estimatedRoadFor=road; wrap._estimatedRoadRouteKey=routeKey;
+  }
   const candidates = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop, now);
   const segments = selectDetailMapBusSegments(candidates, 8, segment => detailMapEstimatedBusProgress(segment, stops, routeDetailState.etaByStop, now));
   const active = new Set();
@@ -3577,23 +3601,26 @@ function updateDetailMapEstimatedVehicles(wrap, it, stops, road, now = Date.now(
         const current=marker.getLatLng(), elapsed=Math.max(0,now-(marker._lastMotionAt || now)), alpha=1-Math.exp(-elapsed/1600);
         marker.setLatLng([current.lat+(position[0]-current.lat)*alpha,current.lng+(position[1]-current.lng)*alpha]);
       } else marker.setLatLng(position);
-      if (marker._detailFromSeq !== segment.fromSeq || marker._detailToSeq !== segment.toSeq) marker.setIcon(detailMapEstimatedBusIcon(it,segment));
+      if (marker._detailFromSeq !== segment.fromSeq || marker._detailToSeq !== segment.toSeq || marker._detailScheduleOnly !== Boolean(segment.scheduleOnly)) marker.setIcon(detailMapEstimatedBusIcon(it,segment));
     }
-    marker._lastMotionAt=now; marker._detailFromSeq=segment.fromSeq; marker._detailToSeq=segment.toSeq;
+    marker._lastMotionAt=now; marker._detailFromSeq=segment.fromSeq; marker._detailToSeq=segment.toSeq; marker._detailScheduleOnly=Boolean(segment.scheduleOnly);
   });
   [...markers.keys()].forEach(key => { if (!active.has(key)) { markers.get(key)?.remove?.(); markers.delete(key); } });
   const passengerActive=updateDetailMapPassengerBusMarker(wrap,it,road);
   const legend=wrap.querySelector('[data-detail-map-bus-legend]');
   if (legend) {
     const labels=[];
+    const scheduleCount=[...markers.values()].filter(marker=>marker._detailScheduleOnly).length;
     const estimateCountLabel=markers.size+(candidates.length>segments.length?'/'+candidates.length:'')+' 個 ETA 推算點';
-    if (markers.size) labels.push(estimateCountLabel);
-    else if (candidates.length) labels.push('有 ETA 候選 · 道路資料不足');
+    if (markers.size) {
+      labels.push(estimateCountLabel);
+      if (scheduleCount) labels.push('含 ' + scheduleCount + ' 個原定班次估算');
+    } else if (candidates.length) labels.push(candidates.some(segment=>segment.scheduleOnly)?'有原定班次候選 · 道路資料不足':'有 ETA 候選 · 道路資料不足');
     if (passengerActive) labels.push('GPS 乘搭位置推算');
     legend.hidden=labels.length===0;
-    legend.title='數字是地圖顯示點數／估算候選位置數；只按 ETA 推算，並非全線實際巴士車數或實時車輛定位。';
+    legend.title='地圖點位是推算而非 GPS：「估」按非預定 ETA 推算，「班」按原定班次與車程先驗推算；兩者均非實時、非全線實際巴士車數。';
     legend.setAttribute('aria-label',legend.title);
-    legend.innerHTML=labels.length ? '<span class="detail-map-bus-legend-tag">'+(passengerActive?'乘':'估')+'</span><span>'+esc(labels.join(' · ')+' · 非實時')+'</span>' : '';
+    legend.innerHTML=labels.length ? '<span class="detail-map-bus-legend-tag">'+(passengerActive?'乘':markers.size && scheduleCount===markers.size?'班':'估')+'</span><span>'+esc(labels.join(' · ')+' · 非實時')+'</span>' : '';
   }
 }
 function startDetailMapVehicleAnimation(wrap, it, stops, road) {

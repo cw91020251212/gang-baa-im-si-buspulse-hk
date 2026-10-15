@@ -820,6 +820,35 @@ test('more than eight evidence-backed long sections do not lose whole sections',
   expect(count).toBe(10);
 });
 
+test('schedule-only long-gap candidates are reserved ahead of crowded city markers', async ({ page }) => {
+  await page.goto('./?smoke=scheduled-long-gap-budget', {waitUntil:'domcontentloaded'});
+  const result=await page.evaluate(()=>{
+    const city=Array.from({length:10},(_,i)=>({fromSeq:i+1,toSeq:i+2,score:82,markerId:'city:'+i}));
+    const scheduled={fromSeq:12,toSeq:13,score:32,scoreLabel:'低',travelMinutes:10,scheduleOnly:true,longGapEstimate:true,method:'scheduled-headway-projection',distanceMeters:9000,markerId:'schedule:12:13'};
+    const old=globalThis.L; globalThis.L={divIcon:options=>({options})};
+    try {
+      return {selected:selectDetailMapBusSegments([...city,scheduled],8).map(segment=>segment.markerId),icon:detailMapEstimatedBusIcon({route:'N271'},scheduled).options.html};
+    } finally { globalThis.L=old; }
+  });
+  expect(result.selected).toContain('schedule:12:13');
+  expect(result.icon).toContain('schedule-only');
+  expect(result.icon).toContain('<small>班</small>');
+  expect(result.icon).toContain('按原定班次推算位置');
+  expect(result.icon).toContain('首站班距與沿線 ETA 推算');
+});
+
+test('verified route geometry supplies road mileage to the long-gap estimator', async ({ page }) => {
+  await page.goto('./?smoke=verified-road-distance', {waitUntil:'domcontentloaded'});
+  const result=await page.evaluate(()=>{
+    const stops=[{id:'A',seq:1,lat:22.30,lng:114.20},{id:'B',seq:2,lat:22.354,lng:114.20}];
+    const road=[[22.30,114.20],[22.34,114.20],[22.34,114.24],[22.354,114.20]];
+    prepareDetailMapRoadDistances(stops,road);
+    return {verified:stops[1].roadGeometryVerified,metres:stops[1].roadDistanceFromPreviousMeters};
+  });
+  expect(result.verified).toBe(true);
+  expect(result.metres).toBeGreaterThan(10000);
+});
+
 test('long-gap progress uses true endpoint interpolation without edge compression', async ({ page }) => {
   await page.goto('./?smoke=long-gap-linear-progress',{waitUntil:'domcontentloaded'});
   const result=await page.evaluate(()=>{

@@ -12,11 +12,13 @@
     return fetched != null && now-fetched >= -30000 && now-fetched <= 90000
       && (source == null || (now-source >= -30000 && now-source <= 150000));
   }
-  function queue(state, now) {
+  function queue(state, now, scheduled = false) {
     if (!fresh(state,now)) return [];
-    const rows = (state.etas || []).filter(e => !e.sched).map(e => ({time:stamp(e.rawIso || e.iso), rank:e.etaSeq ?? null}));
+    const lookback = scheduled === null || scheduled ? 120*MINUTE : 2*MINUTE;
+    const rows = (state.etas || []).filter(e => scheduled === null || Boolean(e.sched) === scheduled)
+      .map(e => ({time:stamp(e.rawIso || e.iso), rank:e.etaSeq ?? null}));
     const out=[];
-    rows.filter(e => e.time != null && e.time >= now-2*MINUTE && e.time <= now+120*MINUTE)
+    rows.filter(e => e.time != null && e.time >= now-lookback && e.time <= now+120*MINUTE)
       .sort((a,b) => a.time-b.time).forEach(e => { if (!out.some(x => Math.abs(x.time-e.time)<15000)) out.push(e); });
     return out.slice(0,4);
   }
@@ -64,6 +66,38 @@
     }
     return best;
   }
+  function steadyHeadway(rows) {
+    if (rows.length<3) return null;
+    const intervals=rows.slice(1).map((row,i)=>row.time-rows[i].time);
+    const headway=median(intervals);
+    if (!(headway>=5*MINUTE && headway<=90*MINUTE)) return null;
+    const tolerance=Math.max(MINUTE,headway*.15);
+    return intervals.every(value=>Math.abs(value-headway)<=tolerance) ? headway : null;
+  }
+  function routeDistanceTo(stops,index) {
+    let metres=0;
+    for (let i=0;i<index;i++) {
+      const segment=distance(stops,i);
+      if (!(segment.metres>0)) return null;
+      metres+=segment.metres;
+    }
+    return metres>0 ? metres : null;
+  }
+  function routeOffset(stops,targetIndex,etaByStop,originState,originSchedule,now) {
+    if (targetIndex<=0 || !fresh(originState,now)) return null;
+    const target=stops[targetIndex], targetState=etaByStop.get(String(target?.id));
+    if (!fresh(targetState,now) || !aligned(originState,targetState)) return null;
+    const arrivals=queue(targetState,now,null), metres=routeDistanceTo(stops,targetIndex);
+    if (arrivals.length<2 || !(metres>0)) return null;
+    const minTime=Math.max(30000,metres/1000/90*60*MINUTE);
+    const maxTime=Math.max(2*MINUTE,metres/1000/8*60*MINUTE);
+    const prior=clamp(metres/1000/30*60*MINUTE,minTime,maxTime);
+    const matched=matchQueues(originSchedule,arrivals,minTime,maxTime,prior);
+    if (matched.pairs.length<2) return null;
+    const durations=matched.pairs.map(pair=>pair.duration), centre=median(durations);
+    if (Math.max(...durations)-Math.min(...durations)>Math.max(3*MINUTE,centre*.4)) return null;
+    return {minutes:centre/MINUTE,pairs:matched.pairs.length};
+  }
   function recordDeparture(section,a,now) {
     const previous=section.previousA;
     if (previous && a.length && now-previous.at<=90000) {
@@ -81,7 +115,10 @@
     section.previousA={rows:a,at:now};
   }
   function estimate(stops,etaByStop,now=Date.now(),model=createModel()) {
-    const segments=[], managedGaps=[];
+    const segments=[], scheduleSegments=[], managedGaps=[];
+    const originState=etaByStop.get(String(stops[0]?.id));
+    const originSchedule=fresh(originState,now)?queue(originState,now,true):[];
+    const originHeadway=steadyHeadway(originSchedule);
     for (let i=0;i<stops.length-1;i++) {
       const from=stops[i], to=stops[i+1], length=distance(stops,i);
       if (length.metres<2000) continue;
@@ -90,19 +127,24 @@
       if (!fresh(stateB,now)) continue;
       const a=fresh(stateA,now)?queue(stateA,now):[], b=queue(stateB,now);
       if (a.length && !aligned(stateA,stateB)) continue;
+      // Scheduled rows use a separate channel. They are never mixed into live
+      // calibration, departure history, or the ordinary `segments` output.
+      const scheduledA=fresh(stateA,now)&&aligned(stateA,stateB)?queue(stateA,now,true):[];
+      const scheduledB=queue(stateB,now,true);
       const key=String(from.id)+'>'+String(to.id);
       let section=model.sections.get(key);
       if (!section || Math.abs(length.metres-section.metres)>section.metres*.3) {
-        section={metres:length.metres,samples:[],departures:[],tracks:[],signature:null,measurement:null,previousA:null};
+        section={metres:length.metres,samples:[],departures:[],tracks:[],scheduleTracks:[],signature:null,measurement:null,previousA:null};
         model.sections.set(key,section);
       }
+      if (!Array.isArray(section.scheduleTracks)) section.scheduleTracks=[];
       section.samples=section.samples.filter(sample=>now-sample.observedAt>=-30000 && now-sample.observedAt<=15*MINUTE);
       // Broad physical bounds. 30km/h is ONLY an uncalibrated distance prior;
       // without endpoint/history evidence, use only the fastest-travel bound.
       const minTime=Math.max(30000,length.metres/1000/90*60*MINUTE);
       const maxTime=Math.max(2*MINUTE,length.metres/1000/8*60*MINUTE);
       const prior=clamp(median(section.samples.map(sample=>sample.duration))||length.metres/1000/30*60*MINUTE,minTime,maxTime);
-      const signature=[length.metres,stateA?.fetchedAt,stateB.fetchedAt,...a.map(x=>x.time),'/',...b.map(x=>x.time)].join('|');
+      const signature=[length.metres,stateA?.fetchedAt,stateB.fetchedAt,...a.map(x=>x.time),'/',...b.map(x=>x.time),'#schedule',...scheduledA.map(x=>x.time),'/',...scheduledB.map(x=>x.time),'#origin',originState?.fetchedAt,originHeadway,...originSchedule.map(x=>x.time)].join('|');
       if (signature!==section.signature) {
         recordDeparture(section,a,now);
         const matched=matchQueues(a,b,minTime,maxTime,prior);
@@ -132,8 +174,6 @@
               // A fresh downstream live ETA can support a low-confidence
               // occupancy hypothesis throughout the plausible section travel
               // window, even before this browser has calibrated the section.
-              // Requiring only the fastest-travel bound made long corridors
-              // look empty during cold start despite buses queued downstream.
               const distancePrior=remaining<=duration;
               if (!prefix && !learned && !imminent && !distancePrior) return;
               start=end-duration;
@@ -156,11 +196,82 @@
             progressStartAt:start,progressEndAt:end,arrivalAt:end,
             progressRange:[clamp(1-(end-now)/minTime,0,1),clamp(1-(end-now)/maxTime,0,1)]});
         });
-        section.tracks=next; section.signature=signature;
+        const scheduleMatched=matchQueues(scheduledA,scheduledB,minTime,maxTime,prior);
+        const scheduleNext=[], usedScheduleTracks=new Set();
+        scheduledB.forEach((arrival,index) => {
+          if (arrival.time<=now) return;
+          const pair=scheduleMatched.pairs.find(p=>p.b===index);
+          // A paired timetable bus whose A-stop time is still ahead has not
+          // entered this gap yet; do not move it onto the road early.
+          if (pair && scheduledA[pair.a].time>now) return;
+          let start=null, end=arrival.time, method='', score=38;
+          if (pair && scheduledA[pair.a].time<=now) {
+            start=scheduledA[pair.a].time; method='scheduled-endpoints'; score=44;
+          } else {
+            // If A has no usable schedule row (commonly because its predicted
+            // arrival has passed), back-project the B timetable ETA over the
+            // road-distance travel prior. This is explicitly schedule-only.
+            if (end-now>duration) return;
+            start=end-duration; method='scheduled-distance-prior';
+          }
+          if (start>now || end<=now) return;
+          // A current live ETA for the same passage is more informative; retain
+          // it and avoid drawing a second, timetable-only icon on top of it.
+          if (next.some(track=>Math.abs(track.progressEndAt-end)<=2*MINUTE)) return;
+          const headway=Math.min(index?end-scheduledB[index-1].time:Infinity,scheduledB[index+1]?scheduledB[index+1].time-end:Infinity);
+          const tolerance=Math.max(MINUTE,Math.min(3*MINUTE,Number.isFinite(headway)?headway*.25:2*MINUTE));
+          const old=section.scheduleTracks.map((track,j)=>({track,j,error:Math.abs(track.progressEndAt-end)}))
+            .filter(x=>!usedScheduleTracks.has(x.j) && x.error<=tolerance).sort((x,y)=>x.error-y.error)[0];
+          if (old) usedScheduleTracks.add(old.j);
+          const id=old?.track.markerId || 'schedule:'+key+':'+model.nextTrack++;
+          scheduleNext.push({fromSeq:Number(from.seq),toSeq:Number(to.seq),etaSeq:arrival.rank,markerId:id,
+            confidence:'low',score,scoreLabel:'低',method,longGapEstimate:true,scheduleOnly:true,
+            distanceMeters:Math.round(length.metres),distanceSource:length.kind,travelMinutes:(end-start)/MINUTE,
+            progressStartAt:start,progressEndAt:end,arrivalAt:end,
+            progressRange:[clamp(1-(end-now)/minTime,0,1),clamp(1-(end-now)/maxTime,0,1)]});
+        });
+        // When the operator exposes a regular timetable only at the route
+        // origin, align it with fresh ETA queues along the route to estimate
+        // origin-to-gap travel offsets. Back-project only departures on that
+        // observed cadence, and wait briefly past the predicted A arrival to
+        // reduce premature placements from low-confidence timing offsets.
+        if (i>0 && originHeadway!=null && aligned(originState,stateA) && aligned(originState,stateB)) {
+          const offsetA=routeOffset(stops,i,etaByStop,originState,originSchedule,now);
+          const offsetB=routeOffset(stops,i+1,etaByStop,originState,originSchedule,now);
+          if (offsetA && offsetB) {
+            const routeGapMinutes=offsetB.minutes-offsetA.minutes, routeGapTime=routeGapMinutes*MINUTE;
+            if (routeGapTime>=minTime && routeGapTime<=maxTime) {
+              const entryGrace=Math.min(3*MINUTE,routeGapTime*.25);
+              const backSteps=Math.min(4,Math.ceil(offsetA.minutes*MINUTE/originHeadway)+1);
+              const departures=[];
+              for (const anchor of originSchedule) for (let back=0;back<=backSteps;back++) {
+                const departure=anchor.time-back*originHeadway;
+                if (departures.some(value=>Math.abs(value-departure)<MINUTE)) continue;
+                departures.push(departure);
+                const start=departure+offsetA.minutes*MINUTE, end=departure+offsetB.minutes*MINUTE;
+                if (start+entryGrace>now || end<=now) continue;
+                if (next.some(track=>Math.abs(track.progressEndAt-end)<=2*MINUTE)
+                    || scheduleNext.some(track=>Math.abs(track.progressEndAt-end)<=2*MINUTE)) continue;
+                const tolerance=Math.max(2*MINUTE,Math.min(4*MINUTE,originHeadway*.15));
+                const old=section.scheduleTracks.map((track,j)=>({track,j,error:Math.abs(track.progressEndAt-end)}))
+                  .filter(x=>!usedScheduleTracks.has(x.j) && x.error<=tolerance).sort((x,y)=>x.error-y.error)[0];
+                if (old) usedScheduleTracks.add(old.j);
+                const id=old?.track.markerId || 'schedule:'+key+':'+model.nextTrack++;
+                scheduleNext.push({fromSeq:Number(from.seq),toSeq:Number(to.seq),etaSeq:null,markerId:id,
+                  confidence:'low',score:32,scoreLabel:'低',method:'scheduled-headway-projection',longGapEstimate:true,
+                  scheduleOnly:true,inferredFromScheduleHeadway:true,distanceMeters:Math.round(length.metres),distanceSource:length.kind,
+                  travelMinutes:routeGapMinutes,progressStartAt:start,progressEndAt:end,arrivalAt:end,
+                  progressRange:[clamp(1-(end-now)/minTime,0,1),clamp(1-(end-now)/maxTime,0,1)]});
+              }
+            }
+          }
+        }
+        section.tracks=next; section.scheduleTracks=scheduleNext; section.signature=signature;
       }
       segments.push(...section.tracks.filter(track=>track.progressStartAt<=now && track.progressEndAt>now));
+      scheduleSegments.push(...section.scheduleTracks.filter(track=>track.progressStartAt<=now && track.progressEndAt>now));
     }
-    return {segments,managedGaps};
+    return {segments,scheduleSegments,managedGaps};
   }
   root.BusGapEstimator={createModel,estimate,matchQueues,fresh};
 })(globalThis);

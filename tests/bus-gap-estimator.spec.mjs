@@ -7,6 +7,8 @@ const stops=(metres=8000)=>[{id:'A',seq:1,cumulativeDistanceMeters:0},{id:'B',se
 const state=(minutes,now=base,extra={})=>({status:'ready',fetchedAt:iso(now),sourceTimestamp:iso(now),batchId:1,
   etas:minutes.map((m,i)=>({iso:iso(now+m*60000),etaSeq:i+1})),...extra});
 const run=(a,b,metres=8000,now=base,model=estimator.createModel())=>estimator.estimate(stops(metres),new Map([['A',a],['B',b]]),now,model).segments;
+const runDetailed=(a,b,metres=8000,now=base,model=estimator.createModel())=>estimator.estimate(stops(metres),new Map([['A',a],['B',b]]),now,model);
+const scheduledState=(minutes,now=base,extra={})=>state([],now,{...extra,etas:minutes.map((m,i)=>({iso:iso(now+m*60000),etaSeq:i+1,sched:true}))});
 
 test('long section pairs queue times rather than equal ETA ranks',()=>{
   const result=run(state([10,20]),state([2,11,22]));
@@ -52,6 +54,66 @@ test('20km no-stop section has no artificial fifteen-minute ceiling',()=>{
   const result=run(undefined,state([2]),20000);
   expect(result).toHaveLength(1);
   expect(result[0].travelMinutes).toBe(40);
+});
+
+test('scheduled B-only ETA back-projects a separate low-confidence position within the route window',()=>{
+  const result=runDetailed(scheduledState([20]),scheduledState([10]));
+  expect(result.segments).toHaveLength(0);
+  expect(result.scheduleSegments).toHaveLength(1);
+  expect(result.scheduleSegments[0]).toMatchObject({scheduleOnly:true,method:'scheduled-distance-prior',confidence:'low',distanceMeters:8000,distanceSource:'stop-distance',travelMinutes:16});
+  expect(result.scheduleSegments[0].progressStartAt).toBe(base-6*60000);
+  expect(result.scheduleSegments[0].progressEndAt).toBe(base+10*60000);
+});
+
+test('scheduled endpoint pair is shown only after its upstream time and never trains live travel samples',()=>{
+  const model=estimator.createModel();
+  const result=runDetailed(scheduledState([-1]),scheduledState([9]),6000,base,model);
+  expect(result.scheduleSegments).toHaveLength(1);
+  expect(result.scheduleSegments[0]).toMatchObject({scheduleOnly:true,method:'scheduled-endpoints',confidence:'low',travelMinutes:10});
+  expect(model.sections.get('A>B').samples).toHaveLength(0);
+});
+
+test('future scheduled endpoint pairs do not appear in the road before reaching A',()=>{
+  const result=runDetailed(scheduledState([5,30]),scheduledState([15,40]));
+  expect(result.scheduleSegments).toHaveLength(0);
+});
+
+test('steady origin headway plus aligned route ETAs projects a likely bus through a long gap',()=>{
+  const route=[{id:'O',seq:1,cumulativeDistanceMeters:0},{id:'A',seq:2,cumulativeDistanceMeters:10000},{id:'B',seq:3,cumulativeDistanceMeters:18000}];
+  const data=new Map([['O',scheduledState([1,26,51])],['A',state([18,43,68])],['B',state([28,53,78])]]);
+  const result=estimator.estimate(route,data,base);
+  expect(result.segments.filter(segment=>segment.fromSeq===2)).toHaveLength(0);
+  const projected=result.scheduleSegments.filter(segment=>segment.fromSeq===2);
+  expect(projected).toHaveLength(1);
+  expect(projected[0]).toMatchObject({scheduleOnly:true,inferredFromScheduleHeadway:true,method:'scheduled-headway-projection',confidence:'low',fromSeq:2,toSeq:3,travelMinutes:10});
+  expect(projected[0].progressStartAt).toBe(base-7*60000);
+  expect(projected[0].progressEndAt).toBe(base+3*60000);
+});
+
+test('irregular or mixed-batch origin schedules do not project route-wide buses',()=>{
+  const route=[{id:'O',seq:1,cumulativeDistanceMeters:0},{id:'A',seq:2,cumulativeDistanceMeters:10000},{id:'B',seq:3,cumulativeDistanceMeters:18000}];
+  const irregular=new Map([['O',scheduledState([1,26,61])],['A',state([18,43,68])],['B',state([28,53,78])]]);
+  expect(estimator.estimate(route,irregular,base).scheduleSegments.filter(segment=>segment.fromSeq===2)).toHaveLength(0);
+  const mismatched=new Map([['O',scheduledState([1,26,51])],['A',state([18,43,68],base,{batchId:2})],['B',state([28,53,78],base,{batchId:2})]]);
+  expect(estimator.estimate(route,mismatched,base).scheduleSegments.filter(segment=>segment.fromSeq===2)).toHaveLength(0);
+});
+
+test('live evidence takes precedence over an overlapping timetable estimate',()=>{
+  const a=state([],base,{etas:[{iso:iso(base-60000),etaSeq:1},{iso:iso(base+20*60000),etaSeq:2,sched:true}]});
+  const b=state([],base,{etas:[{iso:iso(base+9*60000),etaSeq:1},{iso:iso(base+10*60000),etaSeq:2,sched:true}]});
+  const result=runDetailed(a,b);
+  expect(result.segments).toHaveLength(1);
+  expect(result.scheduleSegments).toHaveLength(0);
+});
+
+test('schedule-only marker identity survives small ETA revisions and stale schedules are rejected',()=>{
+  const model=estimator.createModel(), route=stops();
+  const first=runDetailed(scheduledState([20]),scheduledState([10]),8000,base,model).scheduleSegments[0];
+  const now=base+30000;
+  const next=runDetailed(scheduledState([20],now),scheduledState([9.5],now),8000,now,model).scheduleSegments[0];
+  expect(next.markerId).toBe(first.markerId);
+  const stale=scheduledState([2],now,{stale:true});
+  expect(runDetailed(undefined,stale,8000,now,estimator.createModel()).scheduleSegments).toHaveLength(0);
 });
 
 test('verified road mileage is used instead of straight station distance',()=>{
