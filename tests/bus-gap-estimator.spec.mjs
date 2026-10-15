@@ -28,10 +28,24 @@ test('past A plus future B gives endpoint-based progress',()=>{
   expect(result[0].travelMinutes).toBe(10);
 });
 
-test('cold-start B-only uses imminent speed-bound evidence, not every forecast',()=>{
+test('cold-start B-only uses the plausible section window, not every forecast',()=>{
   const result=run(undefined,state([2,10,20]));
-  expect(result).toHaveLength(1);
-  expect(result[0]).toMatchObject({method:'speed-bound',confidence:'low'});
+  expect(result).toHaveLength(2);
+  expect(result.map(x=>x.method)).toEqual(['speed-bound','distance-prior']);
+  expect(result.every(x=>x.confidence==='low')).toBe(true);
+});
+
+test('cold-start downstream queue fills a long corridor within a plausible distance prior',()=>{
+  const result=run(undefined,state([12,25,39,41]),20000);
+  expect(result).toHaveLength(3);
+  expect(result.map(x=>x.arrivalAt)).toEqual([base+12*60000,base+25*60000,base+39*60000]);
+  expect(result.map(x=>x.method)).toEqual(['speed-bound','distance-prior','distance-prior']);
+  expect(result.every(x=>x.confidence==='low' && x.progressStartAt<=base)).toBe(true);
+  expect(result.every(x=>x.travelMinutes===40)).toBe(true);
+});
+
+test('distance-prior back-projection stops outside the section travel window',()=>{
+  expect(run(undefined,state([25]),10000)).toHaveLength(0);
 });
 
 test('20km no-stop section has no artificial fifteen-minute ceiling',()=>{
@@ -43,7 +57,8 @@ test('20km no-stop section has no artificial fifteen-minute ceiling',()=>{
 test('verified road mileage is used instead of straight station distance',()=>{
   const curved=stops(); curved[1].roadGeometryVerified=true; curved[1].roadDistanceFromPreviousMeters=12000;
   const eta=new Map([['B',state([7])]]);
-  expect(estimator.estimate(stops(),eta,base).segments).toHaveLength(0);
+  const unverified=estimator.estimate(stops(),eta,base).segments[0];
+  expect(unverified).toMatchObject({distanceMeters:8000,distanceSource:'stop-distance',travelMinutes:16});
   const result=estimator.estimate(curved,eta,base).segments;
   expect(result).toHaveLength(1);
   expect(result[0]).toMatchObject({distanceMeters:12000,distanceSource:'road',travelMinutes:24});
@@ -124,7 +139,7 @@ test('expired travel-time calibration cannot unlock B-only positions',()=>{
   estimator.estimate(route,new Map([['A',state([10,20])],['B',state([20,30])]]),base,model);
   expect(model.sections.get('A>B').samples.length).toBeGreaterThanOrEqual(2);
   const now=base+16*60000;
-  expect(estimator.estimate(route,new Map([['B',state([8],now)]]),now,model).segments).toHaveLength(0);
+  expect(estimator.estimate(route,new Map([['B',state([17],now)]]),now,model).segments).toHaveLength(0);
   const imminent=estimator.estimate(route,new Map([['B',state([2],now)]]),now,model).segments;
   expect(imminent).toHaveLength(1);
   expect(imminent[0]).toMatchObject({method:'speed-bound',confidence:'low',travelMinutes:16});

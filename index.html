@@ -3504,7 +3504,7 @@ function detailMapBusNumberFontSize(route) {
   return Math.round(size*10)/10;
 }
 function detailMapEstimatedBusIcon(it, segment) {
-  const methodLabels={'paired-endpoints':'兩端 ETA 配對','departure-history':'ETA 隊列變化推算離站','queue-prefix':'兩端到站隊列反推','learned-travel-time':'區段 ETA 時差反推','speed-bound':'道路距離／速度界限反推'};
+  const methodLabels={'paired-endpoints':'兩端 ETA 配對','departure-history':'ETA 隊列變化推算離站','queue-prefix':'兩端到站隊列反推','learned-travel-time':'區段 ETA 時差反推','speed-bound':'道路距離／速度界限反推','distance-prior':'路段距離先驗回推'};
   const note=segment.longGapEstimate ? '；' + (methodLabels[segment.method] || 'ETA 推算') + '，信心' + segment.scoreLabel + '，約 ' + Math.round(segment.travelMinutes) + ' 分鐘區段車程' : '';
   const label = '估算位置：' + it.route + ' 巴士，第 ' + segment.fromSeq + ' 至第 ' + segment.toSeq + ' 站之間' + note + '；並非實時車輛位置或已識別車輛';
   const numberFontSize=detailMapBusNumberFontSize(it.route);

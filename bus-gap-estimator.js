@@ -129,11 +129,17 @@
               const prefix=futureA && end<futureA.time+minTime-15000 && remaining<=duration;
               const learned=section.samples.length>=2 && remaining<=duration;
               const imminent=remaining<=minTime;
-              if (!prefix && !learned && !imminent) return;
+              // A fresh downstream live ETA can support a low-confidence
+              // occupancy hypothesis throughout the plausible section travel
+              // window, even before this browser has calibrated the section.
+              // Requiring only the fastest-travel bound made long corridors
+              // look empty during cold start despite buses queued downstream.
+              const distancePrior=remaining<=duration;
+              if (!prefix && !learned && !imminent && !distancePrior) return;
               start=end-duration;
               if (start>now) return;
-              method=prefix?'queue-prefix':learned?'learned-travel-time':'speed-bound';
-              score=prefix?64:learned?60:54;
+              method=prefix?'queue-prefix':learned?'learned-travel-time':imminent?'speed-bound':'distance-prior';
+              score=prefix?64:learned?60:imminent?54:50;
             }
           }
           const headway=Math.min(index?end-b[index-1].time:Infinity,b[index+1]?b[index+1].time-end:Infinity);
