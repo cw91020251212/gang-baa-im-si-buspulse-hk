@@ -109,3 +109,12 @@ The service-information panel is now dynamic rather than static: it shows the se
 When several consecutive stops report near ETAs, the app does not pretend that each stop represents a separate bus. It shows one conservative between-stop marker when adjacent fresh ETAs support an in-transit inference; otherwise it shows at most one nearest-station approach marker. The timeline uses a deliberately wider station rhythm so users can read a few stops at a time and scroll for the rest.
 
 The detail summary also applies the project-approved **ETA 時間斷層法** to the first live ETA at each stop. A backward jump of more than one minute starts another possible vehicle wave, and the result is shown as **ETA 推算行駛中：N 部**. This is an ETA-based estimate under the open-data constraints, not a GPS or vehicle-ID count; the expandable service section explains the method.
+
+---
+
+<!-- project-status-and-license-notice -->
+## Project status and permissions
+
+This is a personally maintained project for experimentation, learning, and testing. A public demo or deployment does not imply production support or third-party endorsement; features, data, and deployment may be incomplete or change. Verify suitability before relying on it.
+
+The original project code, documentation, and project assets are licensed only for private, non-commercial personal evaluation and testing under [`LICENSE`](LICENSE). Public mirroring, redistribution, republication, or sublicensing requires the copyright holder's prior written permission. Third-party code, data, images, marks, and source materials are excluded and remain subject to their own licenses and terms.
