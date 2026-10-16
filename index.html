@@ -1428,6 +1428,49 @@ function normalizeAlarms(raw) {
   return Object.fromEntries(Object.entries(raw).map(([id, enabled]) => [id, enabled === true]));
 }
 function loadAlarms() { try { return normalizeAlarms(JSON.parse(localStorage.getItem(ALARM_KEY) || '{}')); } catch { return {}; } }
+
+/* ===================================================================
+   STANDARD WEB PUSH (optional until the Cloudflare Worker URL is configured)
+   =================================================================== */
+const PUSH_WORKER_URL = ''; // Filled after the Worker is deployed; never put VAPID private key here.
+const PUSH_VAPID_KEY = 'buspulse.vapid-public-key.v1';
+function pushRoutes() {
+  return items.filter(it => alarms[uid(it)] === true).slice(0, 20).map(it => ({
+    co:it.co, route:it.route, dir:it.dir || '', bound:it.bound || '', service_type:it.service_type || (it.co === 'KMB' ? '1' : ''),
+    stopId:it.stopId || '', seq:Number(it.seq), route_id:it.route_id || '', route_seq:it.route_seq || '',
+    dest:it.dest || '', stopName:it.stopName || '', lead:Number(prefs.lead) || 2, session:ensureAlarmSession(uid(it))
+  }));
+}
+function webPushBytes(value) { const pad='='.repeat((4-value.length%4)%4); const raw=atob((value+pad).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(raw,c=>c.charCodeAt(0)); }
+async function unregisterWebPush() {
+  if (!PUSH_WORKER_URL || !('serviceWorker' in navigator)) return;
+  const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager?.getSubscription();
+  if (!sub) return;
+  await fetch(PUSH_WORKER_URL+'/subscribe',{method:'DELETE',headers:{'content-type':'application/json'},body:JSON.stringify(sub.toJSON())});
+  await sub.unsubscribe();
+}
+async function syncWebPush() {
+  if (!PUSH_WORKER_URL || !('serviceWorker' in navigator)) return { skipped:true };
+  const routes=pushRoutes(); const reg=await navigator.serviceWorker.ready;
+  if (!reg.pushManager) throw new Error('此瀏覽器未提供 Web Push');
+  let sub=await reg.pushManager.getSubscription();
+  if (!routes.length) { await unregisterWebPush(); return { registeredRoutes:0 }; }
+  const keyRes=await fetch(PUSH_WORKER_URL+'/vapid-public-key'); if (!keyRes.ok) throw new Error('讀取背景提醒設定失敗');
+  const {publicKey}=await keyRes.json();
+  let oldKey=''; try { oldKey=localStorage.getItem(PUSH_VAPID_KEY) || ''; } catch {}
+  if (sub && oldKey !== publicKey) { await unregisterWebPush(); sub=null; }
+  if (!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:webPushBytes(publicKey)});
+  const response=await fetch(PUSH_WORKER_URL+'/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({subscription:sub.toJSON(),routes})});
+  if (!response.ok) throw new Error('同步背景提醒失敗（'+response.status+'）');
+  try { localStorage.setItem(PUSH_VAPID_KEY,publicKey); } catch {}
+  return await response.json().catch(()=>({registeredRoutes:routes.length}));
+}
+async function requestWebPushForAlarm(session) {
+  if (!PUSH_WORKER_URL || !('Notification' in window) || Notification.permission !== 'granted') return;
+  if (!isAlarmSessionActive(session.id, session.value)) return;
+  try { await syncWebPush(); } catch (error) { console.warn('Web Push 尚未同步：',error); }
+}
+
 function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} }
 let batteryState = { level:null, charging:null };
 function batteryPathLabel() {
@@ -2786,6 +2829,7 @@ function deactivateAlarm(id) {
   saveAlarms(); saveAlarmSessions(); saveAlarmPlans();
   clearAlarmFallbackTimers(id); stopAlarmAlert(id); cancelExternalAlarm(id, session);
   updateAlarmButton(id); updateInfoBar();
+  if (PUSH_WORKER_URL) syncWebPush().catch(() => {});
 }
 async function toggleAlarm(id, button) {
   if (alarms[id] === true) { deactivateAlarm(id); renderDiagnostics(); return; }
@@ -2799,6 +2843,7 @@ async function toggleAlarm(id, button) {
   const permission = await requestNotifications();
   if (!isAlarmSessionActive(id, session)) return;
   if (permission !== 'granted') alert(permission === 'denied' ? '通知已被封鎖，鬧鐘提醒可能無法顯示。' : '尚未允許系統通知，鬧鐘提醒可能無法顯示。');
+  await requestWebPushForAlarm({id, value:session});
   renderDiagnostics();
 }
 function disableAlarmAfterArrival(id) { deactivateAlarm(id); }

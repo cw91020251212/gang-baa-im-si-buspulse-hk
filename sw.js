@@ -1,5 +1,5 @@
-/* BusPulse HK service worker: app shell cache and authorized local notifications only. */
-const SHELL = 'buspulse-hk-shell-v118-scheduled-estimates';
+/* BusPulse HK service worker: app shell, authorized local alarms and standard Web Push. */
+const SHELL = 'buspulse-hk-shell-v119-web-push-d1';
 const FILES = ['./', './index.html', './bus-gap-estimator.js', './landsd-map-provider.js', './landsd-map-provider.css', './assets/landsd-logo.png', './manifest.json', './icon-192.png', './icon-512.png', './route-location-icon-v6.png', './fare-index.json', './place-index.json'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(SHELL).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
@@ -23,6 +23,21 @@ self.addEventListener('fetch', e => {
       return r;
     }).catch(() => caches.match(req).then(r => r || caches.match('./index.html'))));
   }
+});
+
+self.addEventListener('push', e => {
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; } catch { data = { body:e.data?.text() || '' }; }
+  const title = typeof data.title === 'string' && data.title ? data.title : '港巴即時';
+  const options = {
+    body: typeof data.body === 'string' ? data.body : '', icon:'./icon-192.png', badge:'./icon-192.png',
+    tag: typeof data.tag === 'string' ? data.tag : 'buspulse-web-push', renotify:true,
+    requireInteraction:true, silent:data.silent === true,
+    vibrate:data.silent === true ? [] : [260,100,260],
+    data:{ url:typeof data.url === 'string' ? data.url : './', alarmId:data.alarmId || null, session:data.session || null }
+  };
+  e.waitUntil(self.registration.showNotification(title, options).then(() => self.registration.setAppBadge
+    ? self.registration.setAppBadge(Math.max(1, Number(data.badgeNumber) || 1)).catch(() => {}) : undefined));
 });
 const revokedAlarmSessions = new Set();
 const alarmToken = data => data.alarmId + '|' + data.session;
@@ -77,11 +92,12 @@ self.addEventListener('notificationclick', e => {
   e.notification.close();
   const clearBadge = self.registration.clearAppBadge
     ? self.registration.clearAppBadge().catch(() => {}) : Promise.resolve();
+  const target = e.notification.data?.url || './';
   e.waitUntil(Promise.all([
     clearBadge, clients.matchAll({ type:'window', includeUncontrolled:true })
   ]).then(([, list]) => {
-    const existing = list.find(c => 'focus' in c);
+    const existing = list.find(c => c.url.includes(self.location.origin) && 'focus' in c);
     if (existing) return existing.focus();
-    return clients.openWindow('./');
+    return clients.openWindow(new URL(target, self.location.origin).href);
   }));
 });

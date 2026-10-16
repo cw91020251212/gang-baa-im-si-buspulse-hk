@@ -1,0 +1,16 @@
+name = "gang-baa-im-si-buspulse-hk"
+main = "src/index.js"
+compatibility_date = "2026-10-17"
+
+[vars]
+ALLOWED_ORIGIN = "https://cw91020251212.github.io"
+RATE_LIMIT_PER_MINUTE = "30"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "buspulse-hk"
+database_id = "95255551-c6ee-42a8-a3ae-768e7ef859dc"
+
+[triggers]
+# Keep one production Cron only; this is enabled after endpoint verification.
+crons = ["* * * * *"]

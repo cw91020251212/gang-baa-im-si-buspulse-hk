@@ -1,0 +1,14 @@
+{
+  "name": "buspulse-background-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@block65/webcrypto-web-push": "^2.0.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.31.0"
+  }
+}
