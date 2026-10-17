@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 for (const width of [320, 390]) {
   for (const theme of ['dark', 'light']) {
     for (const font of ['medium', 'large']) {
-      test(`V1.0 stays inside the mobile header at ${width}px in ${theme}/${font}`, async ({ page }) => {
+      test(`V1.0 stays inside the mobile header at ${width}px in ${theme}/${font}`, async ({ page }, testInfo) => {
         await page.setViewportSize({ width, height:844 });
         await page.addInitScript(({ theme, font }) => {
           localStorage.setItem('busboard.preferences.v1', JSON.stringify({ theme, font, screenSaverIdle:0 }));
@@ -24,7 +24,7 @@ for (const width of [320, 390]) {
         expect(layout.version.bottom).toBeLessThanOrEqual(layout.top.bottom);
         expect(layout.top.right).toBeLessThanOrEqual(layout.width + 1);
         if (width === 390 && theme === 'dark' && font === 'medium') {
-          await page.screenshot({ path:'/workspace/buspulse-v1-mobile-preview.png' });
+          await page.screenshot({ path:testInfo.outputPath('mobile-header.png') });
         }
       });
     }
