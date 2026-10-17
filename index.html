@@ -1353,6 +1353,72 @@ const alarmFallbackTimers = new Map();
 const ALARM_PLAN_KEY = 'busboard.alarm-plan.v1';
 const ALARM_STEP_MS = 20000;
 const localAlarmScheduled = new Set();
+const WEB_PUSH_API = 'https://gang-baa-im-si-buspulse-hk.buspulse-hk.workers.dev';
+let webPushSyncTimer = null;
+let webPushPublicKeyPromise = null;
+let webPushSyncState = 'not_configured';
+function base64UrlToBytes(value) {
+  const base64 = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
+  return Uint8Array.from(atob(padded), character => character.charCodeAt(0));
+}
+async function getWebPushPublicKey() {
+  if (!webPushPublicKeyPromise) webPushPublicKeyPromise = fetch(WEB_PUSH_API + '/vapid-public-key', { cache:'no-store' }).then(async response => {
+    if (!response.ok) throw new Error('vapid_key_unavailable');
+    const data = await response.json();
+    if (!data.publicKey) throw new Error('vapid_key_unavailable');
+    return base64UrlToBytes(data.publicKey);
+  }).catch(error => { webPushPublicKeyPromise = null; throw error; });
+  return webPushPublicKeyPromise;
+}
+function currentWebPushWatches() {
+  if (prefs.notificationsEnabled === false || !('Notification' in window) || Notification.permission !== 'granted') return [];
+  return items.filter(it => alarms[uid(it)] === true && alarmSessions[uid(it)]).map(it => ({
+    id:uid(it), session:alarmSessions[uid(it)], co:String(it.co || '').toUpperCase(),
+    route:String(it.route || ''), dir:String(it.dir || it.bound || '').toUpperCase(),
+    service_type:String(it.service_type || '1'), seq:Number(it.seq), stopId:String(it.stopId || ''),
+    route_id:String(it.route_id || ''), route_seq:Number(it.route_seq || 0),
+    leadMinutes:Math.max(1, Math.min(5, Number(prefs.lead) || 2)),
+    destination:it.dest || '', stopName:it.stopName || ''
+  }));
+}
+async function syncWebPushWatches(createIfMissing = false) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    webPushSyncState = 'unsupported';
+    return { ok:false, skipped:true, error:'push_unsupported' };
+  }
+  try {
+    const initialRegistration = await notificationRegistration(8000);
+    const registration = initialRegistration?.active ? initialRegistration : await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise(resolve => setTimeout(() => resolve(null), 8000))
+    ]);
+    if (!registration?.pushManager) throw new Error('service_worker_unavailable');
+    const watches = currentWebPushWatches();
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription && !watches.length) return { ok:true, skipped:true };
+    if (!subscription && !createIfMissing) return { ok:true, skipped:true };
+    if (!subscription) subscription = await registration.pushManager.subscribe({
+      userVisibleOnly:true,
+      applicationServerKey:await getWebPushPublicKey()
+    });
+    const response = await fetch(WEB_PUSH_API + '/subscribe', {
+      method:'POST', headers:{ 'content-type':'application/json' },
+      body:JSON.stringify({ subscription:subscription.toJSON(), routes:watches })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.ok !== true) throw new Error(result.error || 'push_sync_failed');
+    webPushSyncState = 'registered';
+    return { ok:true, registeredRoutes:Number(result.registeredRoutes || 0) };
+  } catch (error) {
+    webPushSyncState = 'error';
+    return { ok:false, error:String(error?.message || error) };
+  }
+}
+function queueWebPushSync() {
+  clearTimeout(webPushSyncTimer);
+  webPushSyncTimer = setTimeout(() => { syncWebPushWatches(false).catch(() => {}); }, 350);
+}
 function localAlarmKey(id, at) { return id + '|' + String(at); }
 async function scheduleNativeLocalAlarm(it, plan) {
   const id = uid(it), session = plan.session || alarmSessions[id];
@@ -1387,7 +1453,7 @@ let alarmPlans = loadAlarmPlans();
 function saveAlarmPlans() { try { localStorage.setItem(ALARM_PLAN_KEY, JSON.stringify(alarmPlans)); } catch {} }
 function loadAlarmSessions() { try { const raw = JSON.parse(localStorage.getItem(ALARM_SESSION_KEY) || '{}'); return raw && typeof raw === 'object' ? raw : {}; } catch { return {}; } }
 let alarmSessions = loadAlarmSessions();
-function saveAlarmSessions() { try { localStorage.setItem(ALARM_SESSION_KEY, JSON.stringify(alarmSessions)); } catch {} }
+function saveAlarmSessions() { try { localStorage.setItem(ALARM_SESSION_KEY, JSON.stringify(alarmSessions)); } catch {} queueWebPushSync(); }
 function newAlarmSession() { return (globalThis.crypto && typeof crypto.randomUUID === 'function') ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(36).slice(2); }
 function ensureAlarmSession(id) {
   if (alarms[id] !== true) return null;
@@ -1428,7 +1494,7 @@ function normalizeAlarms(raw) {
   return Object.fromEntries(Object.entries(raw).map(([id, enabled]) => [id, enabled === true]));
 }
 function loadAlarms() { try { return normalizeAlarms(JSON.parse(localStorage.getItem(ALARM_KEY) || '{}')); } catch { return {}; } }
-function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} }
+function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} queueWebPushSync(); }
 let batteryState = { level:null, charging:null };
 function batteryPathLabel() {
   return /iPhone|iPad|iPod/i.test(navigator.userAgent)
@@ -1561,7 +1627,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') requestBusSaverWakeLock();
 });
 window.addEventListener('pageshow', () => { if (busSaverActive) requestBusSaverWakeLock(); });
-function saveAlarms() { try { localStorage.setItem(ALARM_KEY, JSON.stringify(alarms)); } catch {} }
+function saveAlarms() { try { localStorage.setItem(ALARM_KEY, JSON.stringify(alarms)); } catch {} queueWebPushSync(); }
 function backupFile() {
   const payload = { format:'BusPulse HK backup', version:1, exportedAt:new Date().toISOString(), items, userDefaults, alarms, getoff, prefs };
   const now = new Date(), pad = n => String(n).padStart(2,'0');
@@ -1656,6 +1722,7 @@ function load() {
 }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(items)); } catch {}
+  queueWebPushSync();
 }
 const uid = it => [it.co, it.route, it.dir || it.route_seq, it.stopId || it.seq].join('|');
 function closeArrivalNotifications(id = null, session = null, inactiveOnly = false) {
@@ -2799,6 +2866,10 @@ async function toggleAlarm(id, button) {
   const permission = await requestNotifications();
   if (!isAlarmSessionActive(id, session)) return;
   if (permission !== 'granted') alert(permission === 'denied' ? '通知已被封鎖，鬧鐘提醒可能無法顯示。' : '尚未允許系統通知，鬧鐘提醒可能無法顯示。');
+  else {
+    const pushResult = await syncWebPushWatches(true);
+    if (!pushResult.ok && pushResult.error !== 'push_unsupported') alert('本機到站提醒已開啟，但伺服器推播暫時未能接通；請保持網站通知權限開啟，之後可重新撳路線鈴鐺同步。');
+  }
   renderDiagnostics();
 }
 function disableAlarmAfterArrival(id) { deactivateAlarm(id); }
@@ -4526,9 +4597,14 @@ async function doInstall() {
   deferredPrompt = null;
 }
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () =>
-    navigator.serviceWorker.register('sw.js').catch(() => {}));
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js')
+    .then(() => navigator.serviceWorker.ready)
+    .then(() => getWebPushPublicKey().catch(() => {}))
+    .catch(() => {}));
 }
+window.addEventListener('focus', queueWebPushSync);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) queueWebPushSync(); });
+setTimeout(queueWebPushSync, 1800);
 
 function syncAlarmStateFromStorage() {
   const nextAlarms = loadAlarms(), nextSessions = loadAlarmSessions();

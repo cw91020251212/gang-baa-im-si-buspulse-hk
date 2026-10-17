@@ -1,5 +1,5 @@
-/* BusPulse HK service worker: app shell cache and authorized local notifications only. */
-const SHELL = 'buspulse-hk-shell-v118-scheduled-estimates';
+/* BusPulse HK service worker: app shell cache, authorized local notifications and Web Push. */
+const SHELL = 'buspulse-hk-shell-v119-web-push';
 const FILES = ['./', './index.html', './bus-gap-estimator.js', './landsd-map-provider.js', './landsd-map-provider.css', './assets/landsd-logo.png', './manifest.json', './icon-192.png', './icon-512.png', './route-location-icon-v6.png', './fare-index.json', './place-index.json'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(SHELL).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
@@ -23,6 +23,18 @@ self.addEventListener('fetch', e => {
       return r;
     }).catch(() => caches.match(req).then(r => r || caches.match('./index.html'))));
   }
+});
+self.addEventListener('push', e => {
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; } catch { data = { body:e.data?.text() || '' }; }
+  const title = String(data.title || '巴士就嚟到站');
+  const options = {
+    body:String(data.body || ''), icon:'./icon-192.png', badge:'./icon-192.png',
+    tag:String(data.tag || ('buspulse-push-' + (data.data?.id || Date.now()))),
+    renotify:true, vibrate:[260,100,260,100,260], requireInteraction:true,
+    data:{ ...(data.data || {}), url:data.data?.url || './', webPush:true }
+  };
+  e.waitUntil(self.registration.showNotification(title, options));
 });
 const revokedAlarmSessions = new Set();
 const alarmToken = data => data.alarmId + '|' + data.session;
