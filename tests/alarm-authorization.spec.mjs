@@ -10,16 +10,17 @@ async function prepare(page, enabled = true) {
       localStorage.setItem('busboard.user-defaults.v1', '[]');
       localStorage.setItem('busboard.alarms.v1', JSON.stringify({ [id]:enabled }));
       localStorage.setItem('busboard.alarm-sessions.v1', JSON.stringify(enabled === true ? { [id]:'test-session' } : {}));
-      localStorage.setItem('busboard.preferences.v1', JSON.stringify({ webSound:true, notificationsEnabled:true, screenSaverIdle:0 }));
+      localStorage.setItem('busboard.preferences.v1', JSON.stringify({ sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:0 }));
       localStorage.setItem('test.alarm.initialized', '1');
     }
-    window.__alarm = { sounds:0, stopped:0, notifications:[], scheduled:[], vibration:[], closed:0 };
+    window.__alarm = { audioContexts:0, oscillators:0, notifications:[], scheduled:[], vibration:[], closed:0 };
     window.confirm = () => true;
     window.alert = () => {};
     class FakeAudioContext {
+      constructor() { window.__alarm.audioContexts++; }
       state = 'running'; currentTime = 0; destination = {};
       async resume() { this.state = 'running'; }
-      createOscillator() { return { frequency:{ value:0 }, connect(){ return this; }, start(){ window.__alarm.sounds++; }, stop(){ window.__alarm.stopped++; } }; }
+      createOscillator() { window.__alarm.oscillators++; return { frequency:{ value:0 }, connect(){ return this; }, start(){}, stop(){} }; }
       createGain() { return { gain:{ setValueAtTime(){}, exponentialRampToValueAtTime(){} }, connect(){ return this; } }; }
     }
     window.AudioContext = FakeAudioContext;
@@ -46,7 +47,7 @@ async function prepare(page, enabled = true) {
   await page.evaluate(() => stopLoop());
 }
 
-test('off means no audio, notification, vibration or local schedule even with due ETA', async ({ page }) => {
+test('off means no notification, vibration or local schedule even with due ETA', async ({ page }) => {
   await prepare(page, false);
   const result = await page.evaluate(async () => {
     const it = items[0], id = uid(it), at = Date.now() + 60000;
@@ -55,30 +56,23 @@ test('off means no audio, notification, vibration or local schedule even with du
     checkAlarms(it, { etas:[eta] });
     scheduleAlarmFallbacks(it, { etas:[eta] });
     await notifyArrival(it, 1, 'off-trip');
-    await ringBell({ alarmAuthorized:true }); // A bare boolean is not permission.
     await scheduleNativeLocalAlarm(it, { at, key:String(at) });
     return window.__alarm;
   });
-  expect(result.sounds).toBe(0);
+  expect(result.audioContexts).toBe(0);
+  expect(result.oscillators).toBe(0);
   expect(result.notifications).toHaveLength(0);
   expect(result.scheduled).toHaveLength(0);
   expect(result.vibration.filter(value => value !== 0)).toHaveLength(0);
 });
 
-test('switching off while audio unlock is pending prevents late oscillator creation', async ({ page }) => {
+test('legacy webSound preference never creates Web Audio for an enabled arrival notification', async ({ page }) => {
   await prepare(page);
   const result = await page.evaluate(async () => {
-    const id = uid(items[0]);
-    const ctx = await unlockAudio();
-    let resolve;
-    unlockAudio = () => new Promise(r => { resolve = r; });
-    const pending = ringBell({ alarmAuthorized:true, alarmId:id, session:alarmSessions[id] });
-    await toggleAlarm(id, board.querySelector('[data-alarm-id]'));
-    resolve(ctx);
-    await pending;
-    return window.__alarm.sounds;
+    await notifyArrival(items[0], 1, 'legacy-web-sound');
+    return { audioContexts:window.__alarm.audioContexts, oscillators:window.__alarm.oscillators, notifications:window.__alarm.notifications.length };
   });
-  expect(result).toBe(0);
+  expect(result).toEqual({ audioContexts:0, oscillators:0, notifications:1 });
 });
 
 test('local notification scheduling rechecks the switch after registration resolves', async ({ page }) => {
@@ -97,41 +91,46 @@ test('local notification scheduling rechecks the switch after registration resol
   expect(result).toHaveLength(0);
 });
 
-test('bell stays on during its authorized alert and clicking off stops the sound', async ({ page }) => {
+test('enabled arrival stays active until off cancels its system notification', async ({ page }) => {
   await prepare(page);
   await page.evaluate(async () => { await notifyArrival(items[0], 1, 'one-trip'); });
   await expect(page.locator('[data-alarm-id]')).toHaveClass(/on/);
-  expect(await page.evaluate(() => window.__alarm.sounds)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.__alarm.notifications)).toHaveLength(1);
   await page.locator('[data-alarm-id]').click({ force:true });
   await expect(page.locator('[data-alarm-id]')).not.toHaveClass(/on/);
-  expect(await page.evaluate(() => activeSoundNodes.size)).toBe(0);
+  expect(await page.evaluate(() => activeAlarmAlerts.size)).toBe(0);
+  expect(await page.evaluate(() => window.__alarm.closed)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.__alarm.audioContexts + window.__alarm.oscillators)).toBe(0);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem(ALARM_KEY))[uid(items[0])])).toBe(false);
 });
 
-test('old session cannot sound after off and on, or after another tab saves off', async ({ page }) => {
+test('old session cannot send a notification after off and on, or after another tab saves off', async ({ page }) => {
   await prepare(page);
   const result = await page.evaluate(async () => {
     const it = items[0], id = uid(it), session = alarmSessions[id], button = board.querySelector('[data-alarm-id]');
     await toggleAlarm(id, button);
     await toggleAlarm(id, button);
-    await ringBell({ alarmAuthorized:true, alarmId:id, session });
     localStorage.setItem(ALARM_KEY, JSON.stringify({ [id]:false }));
     await notifyArrival(it, 1, 'old-tab');
     return window.__alarm;
   });
-  expect(result.sounds).toBe(0);
+  expect(result.audioContexts).toBe(0);
+  expect(result.oscillators).toBe(0);
   expect(result.notifications).toHaveLength(0);
 });
 
-test('clear all cancels active sounds, sessions, plans and pending alerts', async ({ page }) => {
+test('clear all cancels active notifications, sessions, plans and pending alerts', async ({ page }) => {
   await prepare(page);
   const result = await page.evaluate(async () => {
     const id = uid(items[0]);
-    await ringBell({ alarmAuthorized:true, alarmId:id, session:alarmSessions[id] });
+    await notifyArrival(items[0], 1, 'clear-all');
     clearAllArrivalAlarms();
-    return { nodes:activeSoundNodes.size, sessions:alarmSessions, plans:alarmPlans, alerts:activeAlarmAlerts.size };
+    return { sessions:alarmSessions, plans:alarmPlans, alerts:activeAlarmAlerts.size, closed:window.__alarm.closed };
   });
-  expect(result).toEqual({ nodes:0, sessions:{}, plans:{}, alerts:0 });
+  expect(result.sessions).toEqual({});
+  expect(result.plans).toEqual({});
+  expect(result.alerts).toBe(0);
+  expect(result.closed).toBeGreaterThan(0);
 });
 
 test('legacy false strings are not restored as enabled alarms', async ({ page }) => {
@@ -141,7 +140,7 @@ test('legacy false strings are not restored as enabled alarms', async ({ page })
   expect(await page.evaluate(() => window.__alarm.notifications)).toHaveLength(0);
 });
 
-test('a delivered alert auto-disarms once after sounding and cannot fire the next bus', async ({ page }) => {
+test('a delivered alert auto-disarms once after 12 seconds and cannot fire the next bus', async ({ page }) => {
   await page.clock.install();
   await prepare(page);
   await page.evaluate(async () => {
@@ -153,13 +152,12 @@ test('a delivered alert auto-disarms once after sounding and cannot fire the nex
   await expect(page.locator('[data-alarm-id]')).not.toHaveClass(/on/);
   await page.evaluate(async () => { await notifyArrival(items[0], 1, 'trip-b'); });
   expect(await page.evaluate(() => window.__alarm.notifications.length)).toBe(1);
-  expect(await page.evaluate(() => activeSoundNodes.size)).toBe(0);
+  expect(await page.evaluate(() => activeAlarmAlerts.size)).toBe(0);
 });
 
 test('switching off while background notification lookup waits blocks every fallback', async ({ page }) => {
   await prepare(page);
   const result = await page.evaluate(async () => {
-    prefs.webSound = false;
     Object.defineProperty(document, 'hidden', { configurable:true, value:true });
     let resolve, started;
     const ready = new Promise(r => { started = r; });
@@ -198,7 +196,7 @@ test('an in-flight scheduled notification is closed if disabled while showNotifi
   expect(result.scheduledKeys).toBe(0);
 });
 
-test('appearance changes and shell re-renders do not enable or sound a disabled alarm', async ({ page }) => {
+test('appearance changes and shell re-renders do not enable or notify a disabled alarm', async ({ page }) => {
   await prepare(page, false);
   const result = await page.evaluate(async () => {
     const it = items[0], id = uid(it), at = Date.now() + 60000;
@@ -206,13 +204,13 @@ test('appearance changes and shell re-renders do not enable or sound a disabled 
     prefs.theme = 'dark'; savePrefs(); applyPrefs(); shell();
     checkAlarms(it, { etas:[{ iso:new Date(at).toISOString(), min:1 }] });
     await notifyArrival(it, 1, 'after-ui-change');
-    return { enabled:JSON.parse(localStorage.getItem(ALARM_KEY))[id], sounds:window.__alarm.sounds, notifications:window.__alarm.notifications.length };
+    return { enabled:JSON.parse(localStorage.getItem(ALARM_KEY))[id], audioContexts:window.__alarm.audioContexts, oscillators:window.__alarm.oscillators, notifications:window.__alarm.notifications.length };
   });
-  expect(result).toEqual({ enabled:false, sounds:0, notifications:0 });
+  expect(result).toEqual({ enabled:false, audioContexts:0, oscillators:0, notifications:0 });
   await expect(page.locator('[data-alarm-id]')).toHaveAttribute('aria-pressed', 'false');
 });
 
-test('retired plans cannot run after re-enabling the same route', async ({ page }) => {
+test('retired plans cannot send a notification after re-enabling the same route', async ({ page }) => {
   await prepare(page);
   const result = await page.evaluate(async () => {
     const it = items[0], id = uid(it), button = board.querySelector('[data-alarm-id]');
@@ -222,17 +220,33 @@ test('retired plans cannot run after re-enabling the same route', async ({ page 
     runAlarmPlan(it, plan);
     return window.__alarm;
   });
-  expect(result.sounds).toBe(0);
+  expect(result.audioContexts).toBe(0);
+  expect(result.oscillators).toBe(0);
   expect(result.notifications).toHaveLength(0);
 });
 
-test('explicit sound preview still works with route alarms off', async ({ page }) => {
+test('settings keep the system notification test but remove custom sound controls', async ({ page }) => {
   await prepare(page, false);
-  expect(await page.evaluate(() => ringBell({ userInitiated:true }))).toBe(true);
-  expect(await page.evaluate(() => window.__alarm.sounds)).toBeGreaterThan(0);
+  await page.locator('#prefsBtn').click();
+  const controls = await page.evaluate(() => ({
+    legacyControls:['soundSel','soundLenSel','webSoundSel','previewSoundBtn'].filter(id => document.getElementById(id)),
+    testButton:!!document.getElementById('testNotificationBtn'),
+    legacyPrefs:['sound','soundLen','webSound','systemSilent'].filter(key => Object.hasOwn(prefs, key))
+  }));
+  expect(controls).toEqual({ legacyControls:[], testButton:true, legacyPrefs:[] });
+  await page.locator('#testNotificationBtn').evaluate(el => { el.closest('details').open = true; });
+  await page.locator('#testNotificationBtn').click();
+  const state = await page.evaluate(() => ({
+    notification:window.__alarm.scheduled.at(-1),
+    audioContexts:window.__alarm.audioContexts,
+    oscillators:window.__alarm.oscillators
+  }));
+  expect(state.notification.options.silent).toBe(false);
+  expect(state.audioContexts).toBe(0);
+  expect(state.oscillators).toBe(0);
 });
 
-test('shared-storage off event immediately silences an already active alert', async ({ page }) => {
+test('shared-storage off event immediately cancels an already active alert', async ({ page }) => {
   await prepare(page);
   const result = await page.evaluate(async () => {
     const id = uid(items[0]);
@@ -240,9 +254,11 @@ test('shared-storage off event immediately silences an already active alert', as
     localStorage.setItem(ALARM_KEY, JSON.stringify({ [id]:false }));
     localStorage.setItem(ALARM_SESSION_KEY, '{}');
     window.dispatchEvent(new StorageEvent('storage', { key:ALARM_KEY }));
-    return { nodes:activeSoundNodes.size, alerts:activeAlarmAlerts.size, enabled:alarms[id] };
+    return { alerts:activeAlarmAlerts.size, enabled:alarms[id], closed:window.__alarm.closed };
   });
-  expect(result).toEqual({ nodes:0, alerts:0, enabled:false });
+  expect(result.alerts).toBe(0);
+  expect(result.enabled).toBe(false);
+  expect(result.closed).toBeGreaterThan(0);
   await expect(page.locator('[data-alarm-id]')).not.toHaveClass(/on/);
 });
 
@@ -256,10 +272,10 @@ test('manual off and on settings survive reload without changing the alarm sessi
   await page.reload({ waitUntil:'domcontentloaded' });
   await expect(page.locator('[data-alarm-id]')).toHaveAttribute('aria-pressed', 'false');
   expect(await page.evaluate(() => alarmSessions[uid(items[0])] || null)).toBeNull();
-  expect(await page.evaluate(() => window.__alarm.sounds)).toBe(0);
+  expect(await page.evaluate(() => window.__alarm.audioContexts + window.__alarm.oscillators)).toBe(0);
 });
 
-test('real service worker handshake allows the enabled bell and rejects it after off', async ({ page, context }) => {
+test('real service worker handshake allows the enabled notification and rejects it after off', async ({ page, context }) => {
   await prepare(page);
   await page.evaluate(() => localStorage.setItem('test.alarm.real-worker', '1'));
   const workerReady = context.waitForEvent('serviceworker');
@@ -272,7 +288,6 @@ test('real service worker handshake allows the enabled bell and rejects it after
   });
   const result = await page.evaluate(async () => {
     Object.defineProperty(document, 'hidden', { configurable:true, value:true });
-    prefs.webSound = false;
     const it = items[0], id = uid(it), session = alarmSessions[id];
     const delivered = await notifyArrival(it, 1, 'real-worker');
     await toggleAlarm(id, board.querySelector('[data-alarm-id]'));
@@ -288,12 +303,15 @@ test('real service worker handshake allows the enabled bell and rejects it after
   expect(await worker.evaluate(() => self.__delivered.length)).toBe(1);
 });
 
-test('deleting a route cancels its active sound and stored authority', async ({ page }) => {
+test('deleting a route cancels its active notification and stored authority', async ({ page }) => {
   await prepare(page);
   await page.evaluate(async () => { await notifyArrival(items[0], 1, 'delete-route'); });
   await page.locator('#fab').click({ force:true });
   await expect(page.locator('[data-del]')).toBeInViewport();
   await page.locator('[data-del]').click();
-  const state = await page.evaluate(() => ({ items:items.length, sessions:alarmSessions, sounds:activeSoundNodes.size, alerts:activeAlarmAlerts.size }));
-  expect(state).toEqual({ items:0, sessions:{}, sounds:0, alerts:0 });
+  const state = await page.evaluate(() => ({ items:items.length, sessions:alarmSessions, alerts:activeAlarmAlerts.size, closed:window.__alarm.closed }));
+  expect(state.items).toBe(0);
+  expect(state.sessions).toEqual({});
+  expect(state.alerts).toBe(0);
+  expect(state.closed).toBeGreaterThan(0);
 });
