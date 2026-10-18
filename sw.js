@@ -116,6 +116,23 @@ async function deliverWebPush(e) {
   } catch { return false; }
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
   const data = payload.data;
+  // The deployed ETA Worker sends notification fields inside `data`, while
+  // this client also supports the stricter consent/session envelope below.
+  // The push subscription is already bound to the user's watches in D1.
+  if (data && typeof data === 'object' && data.kind !== 'bus_arrival') {
+    const title = typeof data.title === 'string' && data.title.trim() ? data.title : '巴士就嚟到站';
+    const body = typeof data.body === 'string' ? data.body : '';
+    if (!body) return false;
+    try {
+      await self.registration.showNotification(title, {
+        body, icon:'./icon-192.png', badge:'./icon-192.png',
+        tag:typeof data.tag === 'string' && data.tag ? data.tag : 'buspulse-webpush',
+        renotify:true, vibrate:[260,100,260], silent:data.silent === true,
+        requireInteraction:true, data:{ url:'./' }
+      });
+      return true;
+    } catch { return false; }
+  }
   if (!data || typeof data !== 'object' || data.kind !== 'bus_arrival' || typeof data.id !== 'string' || !data.id || typeof data.session !== 'string' || !data.session) return false;
   if (!matchingWatch(await readPushState(), data)) return false;
   const title = typeof payload.title === 'string' && payload.title.trim() ? payload.title : '巴士就嚟到站';
