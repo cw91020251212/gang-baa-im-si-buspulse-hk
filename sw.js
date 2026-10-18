@@ -1,14 +1,12 @@
-/* BusPulse HK service worker: app shell, authorized local alarms, and consent-gated Web Push. */
-const SHELL = 'buspulse-hk-shell-v122-single-push-system-sound';
-const PUSH_STATE_CACHE = 'buspulse-hk-push-state-v1';
-const PUSH_STATE_KEY = '/__buspulse_hk_push_state_v1__';
+/* BusPulse HK service worker: app shell, authorized local alarms and standard Web Push. */
+const SHELL = 'buspulse-hk-shell-v120-web-push-url';
 const FILES = ['./', './index.html', './bus-gap-estimator.js', './landsd-map-provider.js', './landsd-map-provider.css', './assets/landsd-logo.png', './manifest.json', './icon-192.png', './icon-512.png', './route-location-icon-v6.png', './fare-index.json', './place-index.json'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(SHELL).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(Promise.all([
-    caches.keys().then(ks => Promise.all(ks.filter(k => k !== SHELL && k !== PUSH_STATE_CACHE).map(k => caches.delete(k)))),
+    caches.keys().then(ks => Promise.all(ks.filter(k => k !== SHELL).map(k => caches.delete(k)))),
     // Retire queued notifications that cannot prove current alarm consent.
     self.registration.getNotifications({ includeTriggered:true }).then(ns => ns.filter(n => n.tag?.startsWith('buspulse-') && !n.tag.startsWith('buspulse-test-')).forEach(n => n.close())).catch(() => {})
   ]).then(() => self.clients.claim()));
@@ -26,47 +24,23 @@ self.addEventListener('fetch', e => {
     }).catch(() => caches.match(req).then(r => r || caches.match('./index.html'))));
   }
 });
+
+self.addEventListener('push', e => {
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; } catch { data = { body:e.data?.text() || '' }; }
+  const title = typeof data.title === 'string' && data.title ? data.title : '港巴即時';
+  const options = {
+    body: typeof data.body === 'string' ? data.body : '', icon:'./icon-192.png', badge:'./icon-192.png',
+    tag: typeof data.tag === 'string' ? data.tag : 'buspulse-web-push', renotify:true,
+    requireInteraction:true, silent:data.silent === true,
+    vibrate:data.silent === true ? [] : [260,100,260],
+    data:{ url:typeof data.url === 'string' ? data.url : './', alarmId:data.alarmId || null, session:data.session || null }
+  };
+  e.waitUntil(self.registration.showNotification(title, options).then(() => self.registration.setAppBadge
+    ? self.registration.setAppBadge(Math.max(1, Number(data.badgeNumber) || 1)).catch(() => {}) : undefined));
+});
 const revokedAlarmSessions = new Set();
 const alarmToken = data => data.alarmId + '|' + data.session;
-let pushStateWrites = Promise.resolve();
-const appScopeURL = () => new URL(self.registration.scope || './', self.location.href || (self.location.origin + '/'));
-const inAppScope = url => { try { const value = new URL(url), scope = appScopeURL(); return value.origin === scope.origin && value.pathname.startsWith(scope.pathname); } catch { return false; } };
-const pushStateRequest = () => new Request(new URL(PUSH_STATE_KEY.slice(1), appScopeURL()).href);
-async function readStoredPushState() {
-  if (!globalThis.caches || typeof caches.open !== 'function' || typeof Request !== 'function' || typeof Response !== 'function') return null;
-  try {
-    const cache = await caches.open(PUSH_STATE_CACHE);
-    const response = await cache.match(pushStateRequest());
-    if (!response) return { enabled:false, watches:[] };
-    const state = await response.json();
-    if (!state || state.enabled !== true || !Array.isArray(state.watches)) return { enabled:false, watches:[] };
-    return { enabled:true, watches:state.watches.filter(w => w && typeof w.id === 'string' && w.id && typeof w.session === 'string' && w.session) };
-  } catch { return null; }
-}
-async function readPushState() {
-  await pushStateWrites;
-  return readStoredPushState();
-}
-function serializePushStateWrite(operation) {
-  const next = pushStateWrites.then(operation, operation);
-  pushStateWrites = next.catch(() => {});
-  return next;
-}
-async function writePushState(state) {
-  if (!globalThis.caches || typeof caches.open !== 'function' || typeof Request !== 'function' || typeof Response !== 'function') return false;
-  try {
-    const cache = await caches.open(PUSH_STATE_CACHE);
-    await cache.put(pushStateRequest(), new Response(JSON.stringify(state), { headers:{ 'Content-Type':'application/json' } }));
-    return true;
-  } catch { return false; }
-}
-async function verifyWindowSource(source) {
-  if (!source?.id || source.type !== 'window' || typeof source.url !== 'string' || !inAppScope(source.url)) return false;
-  try {
-    const current = await self.clients.get(source.id);
-    return !!current && current.type === 'window' && inAppScope(current.url);
-  } catch { return false; }
-}
 async function verifyAlarmClient(source, data) {
   if (!source?.id || typeof data.alarmId !== 'string' || !data.alarmId || typeof data.session !== 'string' || !data.session) return false;
   const client = await self.clients.get(source.id);
@@ -99,107 +73,31 @@ async function deliverAuthorizedArrival(e, data) {
   if (self.registration.setAppBadge) await self.registration.setAppBadge(Math.max(1, Number(data.badgeNumber) || 1)).catch(() => {});
   return true;
 }
-function matchingWatch(state, data) {
-  return !!state?.enabled && state.watches.some(w => w.id === data.id && w.session === data.session);
-}
-async function closePushNotification(id, session) {
-  try {
-    const notifications = await self.registration.getNotifications({ includeTriggered:true });
-    notifications.filter(n => n.data?.kind === 'bus_arrival' && n.data?.id === id && n.data?.session === session).forEach(n => n.close());
-  } catch {}
-}
-async function deliverWebPush(e) {
-  let payload;
-  try {
-    if (!e.data || typeof e.data.json !== 'function') return false;
-    payload = e.data.json();
-  } catch { return false; }
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
-  const data = payload.data;
-  if (!data || typeof data !== 'object' || data.kind !== 'bus_arrival' || typeof data.id !== 'string' || !data.id || typeof data.session !== 'string' || !data.session) return false;
-  if (!matchingWatch(await readPushState(), data)) return false;
-  const title = typeof payload.title === 'string' && payload.title.trim() ? payload.title : '巴士就嚟到站';
-  const body = typeof payload.body === 'string' ? payload.body : '';
-  const tag = typeof payload.tag === 'string' && payload.tag ? payload.tag : `buspulse-webpush-${data.id}`;
-  const options = {
-    body, icon:'./icon-192.png', badge:'./icon-192.png', tag, renotify:true,
-    vibrate:[260,100,260,100,260], silent:false, requireInteraction:true,
-    data:{ kind:'bus_arrival', id:data.id, alarmId:typeof data.alarmId === 'string' ? data.alarmId : data.id, session:data.session, url:'./' }
-  };
-  try { await self.registration.showNotification(title, options); } catch { return false; }
-  // A stop/pause/session change racing showNotification must not leave a stale alert visible.
-  if (!matchingWatch(await readPushState(), data)) {
-    await closePushNotification(data.id, data.session);
-    return false;
-  }
-  return true;
-}
 self.addEventListener('message', e => {
   const data = e.data || {};
-  if (data.type === 'SYNC_WEB_PUSH_STATE') {
-    const operation = async () => {
-      if (!(await verifyWindowSource(e.source)) || typeof data.enabled !== 'boolean' || !Array.isArray(data.watches)) return { ok:false };
-      const normalized = [];
-      if (data.enabled) {
-        for (const item of data.watches) {
-          if (!item || typeof item.id !== 'string' || !item.id || typeof item.session !== 'string' || !item.session) continue;
-          if (!normalized.some(w => w.id === item.id && w.session === item.session)) normalized.push({ id:item.id, session:item.session });
-        }
-      }
-      const previous = await readStoredPushState();
-      if (!(await writePushState({ enabled:data.enabled && normalized.length > 0, watches:normalized }))) return { ok:false };
-      if (previous?.enabled) {
-        const revoked = previous.watches.filter(w => !normalized.some(next => next.id === w.id && next.session === w.session));
-        try {
-          const old = await self.registration.getNotifications({ includeTriggered:true });
-          old.filter(n => n.data?.kind === 'bus_arrival' && revoked.some(w => w.id === n.data.id && w.session === n.data.session)).forEach(n => n.close());
-        } catch {}
-      }
-      return { ok:true };
-    };
-    e.waitUntil(serializePushStateWrite(operation).then(result => e.ports?.[0]?.postMessage(result)).catch(() => e.ports?.[0]?.postMessage({ ok:false })));
-    return;
-  }
   if (data.type === 'CANCEL_ARRIVAL_ALARM') {
     if (typeof data.session === 'string' && data.session) revokedAlarmSessions.add(alarmToken(data));
     if (revokedAlarmSessions.size > 512) revokedAlarmSessions.delete(revokedAlarmSessions.values().next().value);
-    const cancelPushState = serializePushStateWrite(async () => {
-      if (typeof data.alarmId !== 'string' || !data.alarmId || !globalThis.caches || typeof caches.open !== 'function') return;
-      const state = await readStoredPushState();
-      if (!state) return;
-      const watches = state.watches.filter(w => w.id !== data.alarmId || (data.session && w.session !== data.session));
-      await writePushState({ enabled:state.enabled && watches.length > 0, watches });
-    });
-    e.waitUntil(Promise.all([cancelPushState, self.registration.getNotifications({ includeTriggered:true }).then(ns => ns.filter(n => {
+    e.waitUntil(self.registration.getNotifications({ includeTriggered:true }).then(ns => ns.filter(n => {
       const sameRoute = (n.data?.alarmId || n.data?.id) === data.alarmId;
       return sameRoute && (!data.session || !n.data?.session || n.data.session === data.session);
-    }).forEach(n => n.close())).catch(() => {})]));
+    }).forEach(n => n.close())).catch(() => {}));
     return;
   }
   // Legacy BUS_ARRIVAL messages contain no verifiable switch/session: fail closed.
   if (data.type !== 'BUS_ARRIVAL_AUTHORIZED') return;
   e.waitUntil(deliverAuthorizedArrival(e, data).then(delivered => e.ports?.[0]?.postMessage({ delivered })).catch(() => e.ports?.[0]?.postMessage({ delivered:false })));
 });
-// One push event must use only this consent-checked delivery path.
-self.addEventListener('push', e => {
-  e.waitUntil(deliverWebPush(e).catch(() => false));
-});
 self.addEventListener('notificationclick', e => {
-  const notificationData = e.notification?.data || {};
   e.notification.close();
   const clearBadge = self.registration.clearAppBadge
     ? self.registration.clearAppBadge().catch(() => {}) : Promise.resolve();
-  const requested = typeof notificationData.url === 'string' && notificationData.url.startsWith('./') ? notificationData.url : './';
-  const target = new URL(requested, appScopeURL());
-  if (!inAppScope(target.href)) target.href = appScopeURL().href;
+  const target = e.notification.data?.url || './';
   e.waitUntil(Promise.all([
-    clearBadge, self.clients.matchAll({ type:'window', includeUncontrolled:true })
+    clearBadge, clients.matchAll({ type:'window', includeUncontrolled:true })
   ]).then(([, list]) => {
-    const existing = list.find(c => { try { return inAppScope(c.url) && 'focus' in c; } catch { return false; } });
-    if (existing) {
-      if (existing.navigate && target.href !== new URL(existing.url).href) return existing.navigate(target.href).then(() => existing.focus());
-      return existing.focus();
-    }
-    return self.clients.openWindow(target.href);
+    const existing = list.find(c => c.url.includes(self.location.origin) && 'focus' in c);
+    if (existing) return existing.focus();
+    return clients.openWindow(new URL(target, self.location.origin).href);
   }));
 });

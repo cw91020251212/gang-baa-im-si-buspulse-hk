@@ -42,7 +42,6 @@ body{
 .top h1{font-size:17px; font-weight:800; letter-spacing:.3px; flex:1; background:linear-gradient(100deg,#fff 20%,#a9baff); -webkit-background-clip:text; background-clip:text; color:transparent}
 .brandmark{width:31px;height:31px;border-radius:10px;display:block;flex:none;background:url('icon-192.png') center/cover no-repeat;box-shadow:0 5px 16px var(--glow)}
 .brandcopy{flex:1;min-width:0}.brandcopy h1{line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brandcopy small{display:block;color:var(--faint);font-size:9px;font-weight:700;letter-spacing:.45px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.brandcopy h1{display:flex;align-items:center;gap:5px}.brandtitle{min-width:0;overflow:hidden;text-overflow:ellipsis}.app-version{flex:none;font-size:10px;font-weight:600;letter-spacing:0;color:var(--dim)}
 .clock{font-variant-numeric:tabular-nums; font-size:13px; color:var(--dim); font-weight:600}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--now);flex:none}
 .dot.stale{background:var(--soon)}
@@ -999,7 +998,7 @@ body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-a
 <body>
 <div class="top">
   <span class="brandmark" role="img" aria-label="BusPulse HK"></span>
-  <div class="brandcopy"><h1><span class="brandtitle">港巴即時</span><span class="app-version">V1.0</span></h1><small>BusPulse HK · 香港實時到站</small></div>
+  <div class="brandcopy"><h1>港巴即時</h1><small>BusPulse HK · 香港實時到站</small></div>
   <span class="dot" id="dot"></span>
   <span class="clock" id="clock">--:--:--</span>
   <button class="iconbtn" id="prefsBtn" title="顯示設定" aria-label="顯示設定">⚙</button>
@@ -1354,119 +1353,6 @@ const alarmFallbackTimers = new Map();
 const ALARM_PLAN_KEY = 'busboard.alarm-plan.v1';
 const ALARM_STEP_MS = 20000;
 const localAlarmScheduled = new Set();
-const WEB_PUSH_API = 'https://gang-baa-im-si-buspulse-hk.buspulse-hk.workers.dev';
-let webPushSyncTimer = null;
-let webPushPublicKeyPromise = null;
-let webPushSyncChain = Promise.resolve();
-let webPushStatus = { state:'idle', registeredRoutes:0, error:'' };
-function webPushSupported() {
-  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
-}
-function base64UrlToBytes(value) {
-  const base64 = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
-  const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
-  return Uint8Array.from(atob(padded), character => character.charCodeAt(0));
-}
-async function webPushRegistration() {
-  let timer;
-  const ready = async () => {
-    const registration = await navigator.serviceWorker.getRegistration() || await navigator.serviceWorker.register('sw.js');
-    return registration.active ? registration : navigator.serviceWorker.ready;
-  };
-  try {
-    return await Promise.race([ready(), new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error('service_worker_timeout')), 8000);
-    })]);
-  } finally { clearTimeout(timer); }
-}
-async function publishWebPushState(registration = null) {
-  const reg = registration || await webPushRegistration();
-  if (!reg?.active) throw new Error('service_worker_not_active');
-  const watches = currentWebPushWatches().map(({id,session}) => ({id,session}));
-  return new Promise((resolve, reject) => {
-    const channel = new MessageChannel();
-    const finish = error => { clearTimeout(timer); channel.port1.close(); error ? reject(error) : resolve(); };
-    const timer = setTimeout(() => finish(new Error('push_state_sync_timeout')), 4000);
-    channel.port1.onmessage = event => finish(event.data?.ok === true ? null : new Error('push_state_sync_failed'));
-    try { reg.active.postMessage({ type:'SYNC_WEB_PUSH_STATE', enabled:prefs.notificationsEnabled !== false && Notification.permission === 'granted', watches }, [channel.port2]); }
-    catch (error) { finish(error); }
-  });
-}
-async function webPushFetch(path, options = {}) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10000);
-  try { return await fetch(WEB_PUSH_API + path, {...options, signal:controller.signal}); }
-  finally { clearTimeout(timer); }
-}
-async function getWebPushPublicKey() {
-  if (!webPushPublicKeyPromise) webPushPublicKeyPromise = webPushFetch('/vapid-public-key', { cache:'no-store' }).then(async response => {
-    if (!response.ok) throw new Error('vapid_key_unavailable');
-    const data = await response.json();
-    if (typeof data.publicKey !== 'string') throw new Error('vapid_key_unavailable');
-    const bytes = base64UrlToBytes(data.publicKey);
-    if (bytes.length !== 65 || bytes[0] !== 4) throw new Error('vapid_key_invalid');
-    return bytes;
-  }).catch(error => { webPushPublicKeyPromise = null; throw error; });
-  return webPushPublicKeyPromise;
-}
-function currentWebPushWatches() {
-  if (prefs.notificationsEnabled === false || !('Notification' in window) || Notification.permission !== 'granted') return [];
-  return items.filter(it => isAlarmSessionActive(uid(it), alarmSessions[uid(it)])).map(it => ({
-    id:uid(it), session:alarmSessions[uid(it)], co:String(it.co || '').toUpperCase(),
-    route:String(it.route || ''), dir:String(it.dir || it.bound || '').toUpperCase(),
-    service_type:String(it.service_type || '1'), seq:Number(it.seq), stopId:String(it.stopId || ''),
-    route_id:String(it.route_id || ''), route_seq:Number(it.route_seq || 0),
-    leadMinutes:Math.max(1, Math.min(5, Number(prefs.lead) || 2)),
-    destination:it.dest || '', stopName:it.stopName || ''
-  }));
-}
-function syncWebPushWatches(createIfMissing = false) {
-  // Serialise writes: an older enable request must finish before a later off.
-  const task = async () => {
-    if (!webPushSupported()) return { ok:false, skipped:true, error:'push_unsupported' };
-    try {
-      const registration = await webPushRegistration();
-      await publishWebPushState(registration);
-      let subscription = await registration.pushManager.getSubscription();
-      if (!subscription && (!createIfMissing || !currentWebPushWatches().length)) {
-        webPushStatus = {state:'not_subscribed', registeredRoutes:0, error:''};
-        renderDiagnostics();
-        return {ok:true, skipped:true};
-      }
-      if (!subscription) {
-        const applicationServerKey = await getWebPushPublicKey();
-        if (!currentWebPushWatches().length) return {ok:true, skipped:true};
-        subscription = await registration.pushManager.subscribe({userVisibleOnly:true, applicationServerKey});
-      }
-      // Permission, route and session may change while subscription is pending.
-      await publishWebPushState(registration);
-      const routes = currentWebPushWatches();
-      const response = await webPushFetch('/subscribe', {
-        method:'POST', headers:{'content-type':'application/json'},
-        body:JSON.stringify({subscription:subscription.toJSON(), routes})
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || result.ok !== true) throw new Error(result.error || 'push_sync_failed');
-      webPushStatus = {state:'registered', registeredRoutes:Number(result.registeredRoutes || 0), error:''};
-      renderDiagnostics();
-      return {ok:true, registeredRoutes:webPushStatus.registeredRoutes};
-    } catch (error) {
-      webPushStatus = {state:'error', registeredRoutes:0, error:String(error?.message || error)};
-      renderDiagnostics();
-      return {ok:false, error:webPushStatus.error};
-    }
-  };
-  const pending = webPushSyncChain.then(task, task);
-  webPushSyncChain = pending.catch(() => {});
-  return pending;
-}
-function queueWebPushSync() {
-  if (!webPushSupported()) return;
-  // Revoke local consent promptly even if a backend request is still pending.
-  publishWebPushState().catch(() => {});
-  clearTimeout(webPushSyncTimer);
-  webPushSyncTimer = setTimeout(() => { syncWebPushWatches(false).catch(() => {}); }, 350);
-}
 function localAlarmKey(id, at) { return id + '|' + String(at); }
 async function scheduleNativeLocalAlarm(it, plan) {
   const id = uid(it), session = plan.session || alarmSessions[id];
@@ -1501,7 +1387,7 @@ let alarmPlans = loadAlarmPlans();
 function saveAlarmPlans() { try { localStorage.setItem(ALARM_PLAN_KEY, JSON.stringify(alarmPlans)); } catch {} }
 function loadAlarmSessions() { try { const raw = JSON.parse(localStorage.getItem(ALARM_SESSION_KEY) || '{}'); return raw && typeof raw === 'object' ? raw : {}; } catch { return {}; } }
 let alarmSessions = loadAlarmSessions();
-function saveAlarmSessions() { try { localStorage.setItem(ALARM_SESSION_KEY, JSON.stringify(alarmSessions)); } catch {} queueWebPushSync(); }
+function saveAlarmSessions() { try { localStorage.setItem(ALARM_SESSION_KEY, JSON.stringify(alarmSessions)); } catch {} }
 function newAlarmSession() { return (globalThis.crypto && typeof crypto.randomUUID === 'function') ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(36).slice(2); }
 function ensureAlarmSession(id) {
   if (alarms[id] !== true) return null;
@@ -1536,21 +1422,56 @@ function forgetAlarmPlan(id, key) {
   if (!alarmPlans[id].length) delete alarmPlans[id];
   saveAlarmPlans();
 }
-function loadPrefs() {
-  const defaults = { lead:2, time12:false, theme:'dark', font:'normal', notificationsEnabled:true, screenSaverIdle:300000 };
-  try {
-    const stored = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
-    // Ignore legacy website audio preferences when loading saved settings.
-    const { sound, soundLen, webSound, systemSilent, ...current } = stored || {};
-    return Object.assign(defaults, current);
-  } catch { return defaults; }
-}
+function loadPrefs() { try { return Object.assign({ lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:300000 }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch { return { lead:2, time12:false, theme:'dark', font:'normal', sound:'triple', soundLen:'long', webSound:true, systemSilent:false, notificationsEnabled:true, screenSaverIdle:300000 }; } }
 function normalizeAlarms(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
   return Object.fromEntries(Object.entries(raw).map(([id, enabled]) => [id, enabled === true]));
 }
 function loadAlarms() { try { return normalizeAlarms(JSON.parse(localStorage.getItem(ALARM_KEY) || '{}')); } catch { return {}; } }
-function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} queueWebPushSync(); }
+
+/* ===================================================================
+   STANDARD WEB PUSH
+   =================================================================== */
+const PUSH_WORKER_URL = 'https://gang-baa-im-si-buspulse-hk.buspulse-hk.workers.dev'; // Public endpoint; never put the VAPID private key here.
+const PUSH_VAPID_KEY = 'buspulse.vapid-public-key.v1';
+function pushRoutes() {
+  return items.filter(it => alarms[uid(it)] === true).slice(0, 20).map(it => ({
+    co:it.co, route:it.route, dir:it.dir || '', bound:it.bound || '', service_type:it.service_type || (it.co === 'KMB' ? '1' : ''),
+    stopId:it.stopId || '', seq:Number(it.seq), route_id:it.route_id || '', route_seq:it.route_seq || '',
+    dest:it.dest || '', stopName:it.stopName || '', lead:Number(prefs.lead) || 2, session:ensureAlarmSession(uid(it))
+  }));
+}
+function webPushBytes(value) { const pad='='.repeat((4-value.length%4)%4); const raw=atob((value+pad).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(raw,c=>c.charCodeAt(0)); }
+async function unregisterWebPush() {
+  if (!PUSH_WORKER_URL || !('serviceWorker' in navigator)) return;
+  const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager?.getSubscription();
+  if (!sub) return;
+  await fetch(PUSH_WORKER_URL+'/subscribe',{method:'DELETE',headers:{'content-type':'application/json'},body:JSON.stringify(sub.toJSON())});
+  await sub.unsubscribe();
+}
+async function syncWebPush() {
+  if (!PUSH_WORKER_URL || !('serviceWorker' in navigator)) return { skipped:true };
+  const routes=pushRoutes(); const reg=await navigator.serviceWorker.ready;
+  if (!reg.pushManager) throw new Error('此瀏覽器未提供 Web Push');
+  let sub=await reg.pushManager.getSubscription();
+  if (!routes.length) { await unregisterWebPush(); return { registeredRoutes:0 }; }
+  const keyRes=await fetch(PUSH_WORKER_URL+'/vapid-public-key'); if (!keyRes.ok) throw new Error('讀取背景提醒設定失敗');
+  const {publicKey}=await keyRes.json();
+  let oldKey=''; try { oldKey=localStorage.getItem(PUSH_VAPID_KEY) || ''; } catch {}
+  if (sub && oldKey !== publicKey) { await unregisterWebPush(); sub=null; }
+  if (!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:webPushBytes(publicKey)});
+  const response=await fetch(PUSH_WORKER_URL+'/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({subscription:sub.toJSON(),routes})});
+  if (!response.ok) throw new Error('同步背景提醒失敗（'+response.status+'）');
+  try { localStorage.setItem(PUSH_VAPID_KEY,publicKey); } catch {}
+  return await response.json().catch(()=>({registeredRoutes:routes.length}));
+}
+async function requestWebPushForAlarm(session) {
+  if (!PUSH_WORKER_URL || !('Notification' in window) || Notification.permission !== 'granted') return;
+  if (!isAlarmSessionActive(session.id, session.value)) return;
+  try { await syncWebPush(); } catch (error) { console.warn('Web Push 尚未同步：',error); }
+}
+
+function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} }
 let batteryState = { level:null, charging:null };
 function batteryPathLabel() {
   return /iPhone|iPad|iPod/i.test(navigator.userAgent)
@@ -1683,7 +1604,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') requestBusSaverWakeLock();
 });
 window.addEventListener('pageshow', () => { if (busSaverActive) requestBusSaverWakeLock(); });
-function saveAlarms() { try { localStorage.setItem(ALARM_KEY, JSON.stringify(alarms)); } catch {} queueWebPushSync(); }
+function saveAlarms() { try { localStorage.setItem(ALARM_KEY, JSON.stringify(alarms)); } catch {} }
 function backupFile() {
   const payload = { format:'BusPulse HK backup', version:1, exportedAt:new Date().toISOString(), items, userDefaults, alarms, getoff, prefs };
   const now = new Date(), pad = n => String(n).padStart(2,'0');
@@ -1778,7 +1699,6 @@ function load() {
 }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(items)); } catch {}
-  queueWebPushSync();
 }
 const uid = it => [it.co, it.route, it.dir || it.route_seq, it.stopId || it.seq].join('|');
 function closeArrivalNotifications(id = null, session = null, inactiveOnly = false) {
@@ -2909,6 +2829,7 @@ function deactivateAlarm(id) {
   saveAlarms(); saveAlarmSessions(); saveAlarmPlans();
   clearAlarmFallbackTimers(id); stopAlarmAlert(id); cancelExternalAlarm(id, session);
   updateAlarmButton(id); updateInfoBar();
+  if (PUSH_WORKER_URL) syncWebPush().catch(() => {});
 }
 async function toggleAlarm(id, button) {
   if (alarms[id] === true) { deactivateAlarm(id); renderDiagnostics(); return; }
@@ -2918,25 +2839,48 @@ async function toggleAlarm(id, button) {
   delete alarmPlans[id]; alarmSeen.delete(id); clearAlarmFallbackTimers(id);
   save(); saveAlarms(); saveAlarmSessions(); saveAlarmPlans(); updateAlarmButton(id); updateInfoBar();
   const session = alarmSessions[id];
+  unlockAudio();
   const permission = await requestNotifications();
   if (!isAlarmSessionActive(id, session)) return;
   if (permission !== 'granted') alert(permission === 'denied' ? '通知已被封鎖，鬧鐘提醒可能無法顯示。' : '尚未允許系統通知，鬧鐘提醒可能無法顯示。');
-  else {
-    const pushResult = await syncWebPushWatches(true);
-    if (!pushResult.ok && pushResult.error !== 'push_unsupported') alert('本機到站提醒已開啟，但伺服器推播暫時未能接通；請保持網站通知權限開啟，之後可重新撳路線鈴鐺同步。');
-  }
+  await requestWebPushForAlarm({id, value:session});
   renderDiagnostics();
 }
 function disableAlarmAfterArrival(id) { deactivateAlarm(id); }
+let audioCtx = null;
 const activeAlarmAlerts = new Map();
+const activeSoundNodes = new Set();
 function stopAlarmAlert(id) {
   const alert = activeAlarmAlerts.get(id);
   if (alert?.timer) clearTimeout(alert.timer);
   if (alert?.notification) { try { alert.notification.close(); } catch {} }
   if (alert?.card) alert.card.classList.remove('alert-flash');
   activeAlarmAlerts.delete(id);
-  if (!activeAlarmAlerts.size) document.body.classList.remove('alert-active');
+  activeSoundNodes.forEach(node => {
+    if (node.alarmId !== id) return;
+    try { node.stop(); } catch {}
+    activeSoundNodes.delete(node);
+  });
+  if (!activeSoundNodes.size) document.body.classList.remove('alert-active');
   navigator.vibrate?.(0);
+}
+async function unlockAudio() { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'closed') audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') await audioCtx.resume(); return audioCtx; } catch { return null; } }
+async function ringBell(options = {}) {
+  const authorized = () => options.userInitiated === true || isAlarmSessionActive(options.alarmId, options.session);
+  if (!authorized() || prefs.webSound === false) return false;
+  try {
+    const ctx = await unlockAudio();
+    if (!authorized() || prefs.webSound === false || !ctx || ctx.state !== 'running') return false;
+    const now = ctx.currentTime;
+    const melodies = { double:[0,.22,.82,1.04], triple:[0,.22,.44,.98,1.20,1.42,1.96,2.18,2.40], alarm:[0,.22,.44,.66,1.20,1.42,1.64,1.86,2.40,2.62,2.84,3.06] };
+    const melody = melodies[prefs.sound] || melodies.triple;
+    const rounds = prefs.sound === 'alarm' ? 2 : 3;
+    const lengthFactor = prefs.soundLen === 'short' ? .72 : prefs.soundLen === 'long' ? 1.18 : 1;
+    for (let round = 0; round < rounds; round++) melody.forEach((offset, i) => { const at = now + round * (melody[melody.length - 1] + .85) * lengthFactor + offset * lengthFactor; const o=ctx.createOscillator(), g=ctx.createGain(); o.alarmId=options.alarmId; activeSoundNodes.add(o); o.onended=()=>activeSoundNodes.delete(o); o.type='sine'; o.frequency.value=i%3===1?988:740; g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(.28, at+.025); g.gain.exponentialRampToValueAtTime(.0001, at+.3*lengthFactor); o.connect(g).connect(ctx.destination); o.start(at); o.stop(at+.32*lengthFactor); });
+  } catch { return false; }
+  document.body.classList.remove('alert-active'); void document.body.offsetWidth; document.body.classList.add('alert-active'); setTimeout(() => { if (!activeSoundNodes.size) document.body.classList.remove('alert-active'); }, 12000);
+  if (navigator.vibrate) navigator.vibrate([420,120,420,120,420,280,420,120,420,120,420,500,420,120,420]);
+  return true;
 }
 async function notificationRegistration(timeoutMs = 1800) {
   if (!('serviceWorker' in navigator)) return null;
@@ -2974,8 +2918,8 @@ async function notifyArrival(it, min, tripKey) {
   clearAlarmFallbackTimers(id); delete alarmPlans[id]; saveAlarmPlans(); cancelExternalAlarm(id, session, false);
   scrollRouteDetailToAlarmStop(it);
   if (card) { card.classList.remove('alert-flash'); void card.offsetWidth; card.classList.add('alert-flash'); }
-  // Keep the visual alert and cancellable bell; sound comes only from system notifications.
-  document.body.classList.remove('alert-active'); void document.body.offsetWidth; document.body.classList.add('alert-active');
+  // Keep the bell visibly on while it sounds; turning it off must still cancel everything.
+  await ringBell({ alarmId:id, session });
   if (!authorized()) return false;
   if (prefs.notificationsEnabled === false || !('Notification' in window) || Notification.permission !== 'granted') return true;
   const lateMinutes = Math.max(0, Math.round(-Number(min || 0)));
@@ -3203,7 +3147,7 @@ function updateGetoff(it, coords) {
   const before=Math.max(0,state.targetSeq-nearest.seq);
   const note=document.querySelector('#getoffNote'); if(note) note.textContent=nearest.seq >= state.targetSeq ? '已接近／到達目標站：' + state.targetName : '目前接近第 ' + nearest.seq + ' 站，距離目標約 ' + before + ' 個站';
   const key=state.targetSeq + ':' + nearest.seq;
-  if (before <= 1 && nearest.seq < state.targetSeq && state.alertKey !== key) { state.alertKey=key; saveGetoff(); const alarmId=uid(it); const card=board.querySelector('[data-id="'+cssEscape(uid(it))+'"]'); if(card){card.classList.remove('alert-flash');void card.offsetWidth;card.classList.add('alert-flash');setTimeout(()=>card.classList.remove('alert-flash'),12000);} if(prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission==='granted') navigator.serviceWorker?.ready.then(reg=>reg.showNotification('就嚟落車喇',{body:it.route+' 下一個站：'+state.targetName,icon:'./icon-192.png',tag:'getoff-'+uid(it),requireInteraction:true,silent:false})).catch(()=>{}); }
+  if (before <= 1 && nearest.seq < state.targetSeq && state.alertKey !== key) { state.alertKey=key; saveGetoff(); const alarmId=uid(it); if (isAlarmSessionActive(alarmId, alarmSessions[alarmId])) { ringBell({ alarmId, session:alarmSessions[alarmId] }); } const card=board.querySelector('[data-id="'+cssEscape(uid(it))+'"]'); if(card){card.classList.remove('alert-flash');void card.offsetWidth;card.classList.add('alert-flash');setTimeout(()=>card.classList.remove('alert-flash'),12000);} if(prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission==='granted') navigator.serviceWorker?.ready.then(reg=>reg.showNotification('就嚟落車喇',{body:it.route+' 下一個站：'+state.targetName,icon:'./icon-192.png',tag:'getoff-'+uid(it),requireInteraction:true,silent:false})).catch(()=>{}); }
 }
 
 function renderPip() {
@@ -3236,9 +3180,18 @@ async function requestNotifications() {
   if (!('Notification' in window)) return 'unsupported';
   try {
     if (Notification.permission === 'default') await Notification.requestPermission();
-    if (Notification.permission === 'granted' && 'serviceWorker' in navigator) await webPushRegistration();
+    if (Notification.permission === 'granted') await navigator.serviceWorker?.ready;
     return Notification.permission;
   } catch { return Notification.permission || 'error'; }
+}
+async function previewSelectedSound() {
+  if (prefs.webSound === false) {
+    await sendTestNotification();
+    return;
+  }
+  unlockAudio();
+  const played = await ringBell({ userInitiated:true });
+  if (!played) alert('網站聲效未能播放，請確認手機媒體音量及瀏覽器聲音權限。');
 }
 async function sendTestNotification() {
   const permission = await requestNotifications();
@@ -3268,7 +3221,6 @@ function renderDiagnostics() {
   const rows = [
     ['系統通知權限', perm === 'granted' ? '✓ 已允許' : perm === 'denied' ? '✗ 已封鎖' : '⚠ 未決定（請撳上面允許）'],
     ['本地通知支援', ('serviceWorker' in navigator) ? '✓ 已可用' : '✗ 不支援'],
-    ['伺服器 Web Push', !webPushSupported() ? '此瀏覽器不支援' : webPushStatus.state === 'registered' ? '已同步 ' + webPushStatus.registeredRoutes + ' 條（非送達確認）' : webPushStatus.state === 'error' ? '同步失敗：' + webPushStatus.error : '尚未登記；請開啟路線提醒'],
     ['已開啟鬧鐘', armed + ' 條'],
     ['已排定補發計劃', planCount + ' 個'],
     ['上次成功更新', lastOK ? Math.round((Date.now() - lastOK) / 1000) + ' 秒前' : '未更新']
@@ -3319,9 +3271,9 @@ function updateNotificationButton() {
 }
 async function toggleNotificationSetting() {
   if (!('Notification' in window)) return;
-  if (Notification.permission !== 'granted') { const permission = await requestNotifications(); if (permission === 'granted') await syncWebPushWatches(true); updateNotificationButton(); renderDiagnostics(); return; }
+  if (Notification.permission !== 'granted') { await requestNotifications(); updateNotificationButton(); return; }
   prefs.notificationsEnabled = prefs.notificationsEnabled === false;
-  savePrefs(); await syncWebPushWatches(prefs.notificationsEnabled !== false); updateNotificationButton(); renderDiagnostics();
+  savePrefs(); updateNotificationButton(); renderDiagnostics();
 }
 function etaSegmentGapMinutes(a, b, timing) {
   if (!timing) return null;
@@ -4182,8 +4134,11 @@ function viewPrefs() {
     '<div class="lbl">到站提醒</div>' +
     '<div class="pref-row"><div>提早幾多分鐘響鬧<small>揀咗路線卡上方嘅 🔔 後生效；每條路線只提醒一程，響完會自動關閉</small></div><select class="pref-select" id="leadSel"><option value="1">1 分鐘</option><option value="2">2 分鐘</option><option value="3">3 分鐘</option><option value="5">5 分鐘</option></select></div>' +
     '<button class="wide notification-toggle notification-warn" id="notifyBtn" type="button" aria-pressed="false">系統通知：未開啟（撳此允許）</button>' +
-    '<details class="settings-group"><summary>系統通知測試</summary><div class="group-body">' +
-    '<div class="hint">只使用手機／瀏覽器系統通知聲，不播放網站自訂聲音。聲音由系統通知音量、勿擾模式及通知分類設定控制。</div><button class="wide" id="testNotificationBtn">📳 測試手機系統通知聲</button></div></details>' +
+    '<details class="settings-group"><summary>提示聲測試</summary><div class="group-body">' +
+    '<div class="pref-row"><div>提示聲款式<small>測試前景網站提示聲效果</small></div><select class="pref-select" id="soundSel"><option value="double">兩下叮噹</option><option value="triple">三下提示</option><option value="alarm">鬧鐘長響</option></select></div>' +
+    '<div class="pref-row"><div>提示聲長度<small>只影響網站前景播放嘅聲效</small></div><select class="pref-select" id="soundLenSel"><option value="short">較短</option><option value="normal">標準</option><option value="long">較長</option></select></div>' +
+    '<div class="pref-row"><div>聲音來源<small>測試網站聲效或手機系統通知聲</small></div><select class="pref-select" id="webSoundSel"><option value="true">網站聲效＋系統聲</option><option value="false">只用系統通知聲</option></select></div>' +
+    '<button class="wide" id="previewSoundBtn">🔔 試聽程式網站聲效</button><button class="wide" id="testNotificationBtn">📳 測試手機系統通知聲</button></div></details>' +
     '<details class="settings-group"><summary>電量與省電</summary><div class="group-body"><div class="hint">網頁可以讀取低電量提示，但不能代替你關閉系統省電模式；按下面捷徑後，請在手機設定確認關閉。</div><div class="backup-box" id="batteryGuidance">讀取電量中…</div></div></details>' +
         '<details class="settings-group"><summary>螢幕保護</summary><div class="group-body">' +
     '<div class="hint">螢幕保護啟動後會嘗試保持手機螢幕喚醒，避免程式停止提醒；離開螢幕保護即刻釋放，減少耗電。輕觸或操作即可返回。</div>' +
@@ -4195,9 +4150,14 @@ function viewPrefs() {
     '<div class="pref-row"><div>顏色模式<small>可以選擇黑暗或光明版</small></div><select class="pref-select" id="themeSel"><option value="dark">黑暗模式</option><option value="light">光明模式</option></select></div></div></details>' +
     '<details class="settings-group"><summary>本地鬧鐘診斷</summary><div class="group-body"><div class="hint">本地鬧鐘依賴瀏覽器通知權限；請保持網站或已安裝的 App 可正常運作。</div><div class="diag-box" id="diagBox"></div></div></details>' +
     '<button class="wide" id="prefsBack">← 返回路線設定</button>';
-  $('#leadSel').value = String(prefs.lead); $('#busSaverDelay').value = String(prefs.screenSaverIdle); $('#fontSel').value = ['small','medium','large'].includes(prefs.font) ? prefs.font : 'medium'; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
+  $('#leadSel').value = String(prefs.lead); $('#soundSel').value = prefs.sound; $('#soundLenSel').value = prefs.soundLen; $('#webSoundSel').value = String(prefs.webSound !== false); $('#busSaverDelay').value = String(prefs.screenSaverIdle); $('#fontSel').value = ['small','medium','large'].includes(prefs.font) ? prefs.font : 'medium'; $('#timeSel').value = String(prefs.time12); $('#themeSel').value = prefs.theme;
   updateNotificationButton();
   $('#leadSel').addEventListener('change', e => { prefs.lead=+e.target.value; savePrefs(); });
+  $('#soundSel').addEventListener('change', e => { prefs.sound=e.target.value; savePrefs(); });
+  $('#soundLenSel').addEventListener('change', e => { prefs.soundLen=e.target.value; savePrefs(); });
+  $('#webSoundSel').addEventListener('change', e => { prefs.webSound=e.target.value === 'true'; if (!prefs.webSound) prefs.systemSilent=false; savePrefs(); $('#previewSoundBtn').textContent = prefs.webSound ? '🔔 試聽目前提示聲（網站＋系統）' : '📳 試聽目前提示聲（純系統）'; });
+  $('#previewSoundBtn').textContent = prefs.webSound ? '🔔 試聽目前提示聲（網站＋系統）' : '📳 試聽目前提示聲（純系統）';
+  $('#previewSoundBtn').addEventListener('click', previewSelectedSound);
   $('#busSaverDelay').addEventListener('change', e => { prefs.screenSaverIdle=+e.target.value; savePrefs(); scheduleBusSaver(); });
   $('#openBusSaverBtn').addEventListener('click', () => { closeSheet(); openBusSaver(); });
   $('#fontSel').addEventListener('change', e => { prefs.font=e.target.value; savePrefs(); applyPrefs(); });
@@ -4611,15 +4571,9 @@ async function doInstall() {
   deferredPrompt = null;
 }
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js')
-    .then(() => queueWebPushSync())
-    .catch(() => {}));
-  navigator.serviceWorker.addEventListener('controllerchange', queueWebPushSync);
+  window.addEventListener('load', () =>
+    navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
-window.addEventListener('online', queueWebPushSync);
-window.addEventListener('focus', queueWebPushSync);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) queueWebPushSync(); });
-setTimeout(queueWebPushSync, 1800);
 
 function syncAlarmStateFromStorage() {
   const nextAlarms = loadAlarms(), nextSessions = loadAlarmSessions();
@@ -4631,10 +4585,9 @@ function syncAlarmStateFromStorage() {
     }
   }
   alarms = nextAlarms; alarmSessions = nextSessions; alarmPlans = loadAlarmPlans();
-  items.forEach(it => updateAlarmButton(uid(it))); updateInfoBar(); queueWebPushSync();
+  items.forEach(it => updateAlarmButton(uid(it))); updateInfoBar();
 }
 window.addEventListener('storage', event => {
-  if (event.key === PREF_KEY || event.key === null) { prefs = loadPrefs(); queueWebPushSync(); }
   if (event.key === null || [ALARM_KEY, ALARM_SESSION_KEY, ALARM_PLAN_KEY, KEY].includes(event.key)) syncAlarmStateFromStorage();
 });
 if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', event => {
