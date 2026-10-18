@@ -1430,9 +1430,9 @@ function normalizeAlarms(raw) {
 function loadAlarms() { try { return normalizeAlarms(JSON.parse(localStorage.getItem(ALARM_KEY) || '{}')); } catch { return {}; } }
 
 /* ===================================================================
-   STANDARD WEB PUSH (optional until the Cloudflare Worker URL is configured)
+   STANDARD WEB PUSH
    =================================================================== */
-const PUSH_WORKER_URL = ''; // Filled after the Worker is deployed; never put VAPID private key here.
+const PUSH_WORKER_URL = 'https://gang-baa-im-si-buspulse-hk.buspulse-hk.workers.dev'; // Public endpoint; never put the VAPID private key here.
 const PUSH_VAPID_KEY = 'buspulse.vapid-public-key.v1';
 function pushRoutes() {
   return items.filter(it => alarms[uid(it)] === true).slice(0, 20).map(it => ({

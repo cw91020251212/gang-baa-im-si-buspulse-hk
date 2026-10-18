@@ -1,5 +1,5 @@
 /* BusPulse HK service worker: app shell, authorized local alarms and standard Web Push. */
-const SHELL = 'buspulse-hk-shell-v119-web-push-d1';
+const SHELL = 'buspulse-hk-shell-v120-web-push-url';
 const FILES = ['./', './index.html', './bus-gap-estimator.js', './landsd-map-provider.js', './landsd-map-provider.css', './assets/landsd-logo.png', './manifest.json', './icon-192.png', './icon-512.png', './route-location-icon-v6.png', './fare-index.json', './place-index.json'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(SHELL).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
