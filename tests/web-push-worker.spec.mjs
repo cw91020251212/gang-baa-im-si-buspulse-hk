@@ -36,7 +36,7 @@ function harness({ cacheStore = new Map(), withCache = true, alarmAllowed = true
   if (withCache) caches.open = async () => cache;
   const self = {
     location:{ origin:ORIGIN },
-    addEventListener(type, handler) { handlers[type] = handler; },
+    addEventListener(type, handler) { (handlers[type] ||= []).push(handler); },
     skipWaiting:async () => {},
     clients:{
       async get(id) { return id === client.id ? client : null; },
@@ -55,10 +55,11 @@ function harness({ cacheStore = new Map(), withCache = true, alarmAllowed = true
     }
   };
   vm.runInNewContext(source, { self, URL, Request, Response, MessageChannel, setTimeout, clearTimeout, caches });
-  async function dispatch(type, { data, source:from = client, json, ports = [] } = {}) {
+  async function dispatch(type, { data, source:from = client, json, ports = [], ...extra } = {}) {
     const pending = [];
-    const event = { data:json !== undefined ? { json } : data, source:from, ports, waitUntil(promise) { pending.push(promise); } };
-    handlers[type](event);
+    const event = { ...extra, data:json !== undefined ? { json } : data, source:from, ports, waitUntil(promise) { pending.push(promise); } };
+    // EventTarget invokes every listener; retaining only the last hid duplicate push displays.
+    for (const handler of handlers[type] || []) handler(event);
     await Promise.all(pending);
   }
   async function sync(state, from = client) {
@@ -77,6 +78,27 @@ function harness({ cacheStore = new Map(), withCache = true, alarmAllowed = true
 async function seed(worker, state = authorized) {
   expect(await worker.sync(state)).toEqual({ ok:true });
 }
+
+test('a push event has one delivery listener and requests one system notification', async () => {
+  const worker = harness();
+  await seed(worker);
+  await worker.push(arrival());
+  expect(worker.shown).toHaveLength(1);
+  expect(worker.handlers.push).toHaveLength(1);
+  expect(worker.shown[0].options).toMatchObject({ tag:'buspulse-route-1', renotify:true, silent:false });
+});
+
+test('a later authorized push with the same tag makes only one new display request', async () => {
+  const worker = harness();
+  await seed(worker);
+  await worker.push(arrival());
+  await worker.push(arrival({ body:'更新到站提示' }));
+  expect(worker.shown).toHaveLength(2);
+  expect(worker.shown.map(n => n.options.body)).toEqual(['巴士快到站', '更新到站提示']);
+  for (const notification of worker.shown) {
+    expect(notification.options).toMatchObject({ tag:'buspulse-route-1', renotify:true, silent:false });
+  }
+});
 
 test('authorized route push survives service-worker restart without an open page', async () => {
   const persistentCache = new Map();
@@ -109,8 +131,26 @@ test('disabled, missing, malformed and superseded sessions fail closed', async (
   await seed(malformed);
   await malformed.push(new Error('invalid JSON'));
   await malformed.push(null);
+  await malformed.push([]);
   await malformed.push({ title:'missing session', data:{ kind:'bus_arrival', id:'route-1' } });
+  await malformed.dispatch('push');
   expect(malformed.shown).toHaveLength(0);
+});
+
+test('unavailable consent storage blocks push instead of using an unguarded fallback', async () => {
+  const worker = harness({ withCache:false });
+  await worker.push(arrival());
+  expect(worker.shown).toHaveLength(0);
+});
+
+test('notification API rejection does not cause a second display attempt', async () => {
+  const worker = harness();
+  await seed(worker);
+  let attempts = 0;
+  worker.self.registration.showNotification = async () => { attempts++; throw new Error('notification rejected'); };
+  await worker.push(arrival());
+  expect(attempts).toBe(1);
+  expect(worker.shown).toHaveLength(0);
 });
 
 test('push display retains system sound and does not introduce custom audio fields', async () => {
@@ -165,9 +205,7 @@ test('notification clicks stay inside the PWA scope and focus only an in-scope c
     const opened = [];
     worker.self.clients.matchAll = async () => [];
     worker.self.clients.openWindow = async url => { opened.push(url); };
-    let pending;
-    worker.handlers.notificationclick({ notification:{ data:{ url }, close(){} }, waitUntil(promise) { pending = promise; } });
-    await pending;
+    await worker.dispatch('notificationclick', { notification:{ data:{ url }, close(){} } });
     expect(opened).toEqual([SCOPE]);
   }
 
@@ -176,9 +214,7 @@ test('notification clicks stay inside the PWA scope and focus only an in-scope c
   let focused = false;
   worker.self.clients.matchAll = async () => [{ url:`${ORIGIN}/another-app/`, focus() { focused = true; } }];
   worker.self.clients.openWindow = async url => { opened.push(url); };
-  let pending;
-  worker.handlers.notificationclick({ notification:{ data:{ url:'./' }, close(){} }, waitUntil(promise) { pending = promise; } });
-  await pending;
+  await worker.dispatch('notificationclick', { notification:{ data:{ url:'./' }, close(){} } });
   expect(focused).toBe(false);
   expect(opened).toEqual([SCOPE]);
 });
@@ -201,16 +237,13 @@ test('local alarm authorization and legacy rejection remain unchanged', async ()
 test('activation preserves durable push state cache and legacy mocks still accept local alarm messages', async () => {
   const noCache = harness({ withCache:false });
   await noCache.dispatch('message', { data:{ type:'BUS_ARRIVAL', title:'legacy' } });
-  let pending;
-  noCache.handlers.activate({ waitUntil(promise) { pending = promise; } });
-  await pending;
+  await noCache.dispatch('activate');
   expect(noCache.shown).toHaveLength(0);
 
   const cacheStore = new Map();
   const worker = harness({ cacheStore });
   await seed(worker);
-  worker.handlers.activate({ waitUntil(promise) { pending = promise; } });
-  await pending;
+  await worker.dispatch('activate');
   const restarted = harness({ cacheStore });
   await restarted.push(arrival());
   expect(restarted.shown).toHaveLength(1);
