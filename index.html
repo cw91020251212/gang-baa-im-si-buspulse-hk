@@ -1357,24 +1357,61 @@ const localAlarmScheduled = new Set();
 const WEB_PUSH_API = 'https://gang-baa-im-si-buspulse-hk.buspulse-hk.workers.dev';
 let webPushSyncTimer = null;
 let webPushPublicKeyPromise = null;
-let webPushSyncState = 'not_configured';
+let webPushSyncChain = Promise.resolve();
+let webPushStatus = { state:'idle', registeredRoutes:0, error:'' };
+function webPushSupported() {
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
 function base64UrlToBytes(value) {
   const base64 = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
   const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
   return Uint8Array.from(atob(padded), character => character.charCodeAt(0));
 }
+async function webPushRegistration() {
+  let timer;
+  const ready = async () => {
+    const registration = await navigator.serviceWorker.getRegistration() || await navigator.serviceWorker.register('sw.js');
+    return registration.active ? registration : navigator.serviceWorker.ready;
+  };
+  try {
+    return await Promise.race([ready(), new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('service_worker_timeout')), 8000);
+    })]);
+  } finally { clearTimeout(timer); }
+}
+async function publishWebPushState(registration = null) {
+  const reg = registration || await webPushRegistration();
+  if (!reg?.active) throw new Error('service_worker_not_active');
+  const watches = currentWebPushWatches().map(({id,session}) => ({id,session}));
+  return new Promise((resolve, reject) => {
+    const channel = new MessageChannel();
+    const finish = error => { clearTimeout(timer); channel.port1.close(); error ? reject(error) : resolve(); };
+    const timer = setTimeout(() => finish(new Error('push_state_sync_timeout')), 4000);
+    channel.port1.onmessage = event => finish(event.data?.ok === true ? null : new Error('push_state_sync_failed'));
+    try { reg.active.postMessage({ type:'SYNC_WEB_PUSH_STATE', enabled:prefs.notificationsEnabled !== false && Notification.permission === 'granted', watches }, [channel.port2]); }
+    catch (error) { finish(error); }
+  });
+}
+async function webPushFetch(path, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try { return await fetch(WEB_PUSH_API + path, {...options, signal:controller.signal}); }
+  finally { clearTimeout(timer); }
+}
 async function getWebPushPublicKey() {
-  if (!webPushPublicKeyPromise) webPushPublicKeyPromise = fetch(WEB_PUSH_API + '/vapid-public-key', { cache:'no-store' }).then(async response => {
+  if (!webPushPublicKeyPromise) webPushPublicKeyPromise = webPushFetch('/vapid-public-key', { cache:'no-store' }).then(async response => {
     if (!response.ok) throw new Error('vapid_key_unavailable');
     const data = await response.json();
-    if (!data.publicKey) throw new Error('vapid_key_unavailable');
-    return base64UrlToBytes(data.publicKey);
+    if (typeof data.publicKey !== 'string') throw new Error('vapid_key_unavailable');
+    const bytes = base64UrlToBytes(data.publicKey);
+    if (bytes.length !== 65 || bytes[0] !== 4) throw new Error('vapid_key_invalid');
+    return bytes;
   }).catch(error => { webPushPublicKeyPromise = null; throw error; });
   return webPushPublicKeyPromise;
 }
 function currentWebPushWatches() {
   if (prefs.notificationsEnabled === false || !('Notification' in window) || Notification.permission !== 'granted') return [];
-  return items.filter(it => alarms[uid(it)] === true && alarmSessions[uid(it)]).map(it => ({
+  return items.filter(it => isAlarmSessionActive(uid(it), alarmSessions[uid(it)])).map(it => ({
     id:uid(it), session:alarmSessions[uid(it)], co:String(it.co || '').toUpperCase(),
     route:String(it.route || ''), dir:String(it.dir || it.bound || '').toUpperCase(),
     service_type:String(it.service_type || '1'), seq:Number(it.seq), stopId:String(it.stopId || ''),
@@ -1383,40 +1420,50 @@ function currentWebPushWatches() {
     destination:it.dest || '', stopName:it.stopName || ''
   }));
 }
-async function syncWebPushWatches(createIfMissing = false) {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    webPushSyncState = 'unsupported';
-    return { ok:false, skipped:true, error:'push_unsupported' };
-  }
-  try {
-    const initialRegistration = await notificationRegistration(8000);
-    const registration = initialRegistration?.active ? initialRegistration : await Promise.race([
-      navigator.serviceWorker.ready,
-      new Promise(resolve => setTimeout(() => resolve(null), 8000))
-    ]);
-    if (!registration?.pushManager) throw new Error('service_worker_unavailable');
-    const watches = currentWebPushWatches();
-    let subscription = await registration.pushManager.getSubscription();
-    if (!subscription && !watches.length) return { ok:true, skipped:true };
-    if (!subscription && !createIfMissing) return { ok:true, skipped:true };
-    if (!subscription) subscription = await registration.pushManager.subscribe({
-      userVisibleOnly:true,
-      applicationServerKey:await getWebPushPublicKey()
-    });
-    const response = await fetch(WEB_PUSH_API + '/subscribe', {
-      method:'POST', headers:{ 'content-type':'application/json' },
-      body:JSON.stringify({ subscription:subscription.toJSON(), routes:watches })
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok || result.ok !== true) throw new Error(result.error || 'push_sync_failed');
-    webPushSyncState = 'registered';
-    return { ok:true, registeredRoutes:Number(result.registeredRoutes || 0) };
-  } catch (error) {
-    webPushSyncState = 'error';
-    return { ok:false, error:String(error?.message || error) };
-  }
+function syncWebPushWatches(createIfMissing = false) {
+  // Serialise writes: an older enable request must finish before a later off.
+  const task = async () => {
+    if (!webPushSupported()) return { ok:false, skipped:true, error:'push_unsupported' };
+    try {
+      const registration = await webPushRegistration();
+      await publishWebPushState(registration);
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription && (!createIfMissing || !currentWebPushWatches().length)) {
+        webPushStatus = {state:'not_subscribed', registeredRoutes:0, error:''};
+        renderDiagnostics();
+        return {ok:true, skipped:true};
+      }
+      if (!subscription) {
+        const applicationServerKey = await getWebPushPublicKey();
+        if (!currentWebPushWatches().length) return {ok:true, skipped:true};
+        subscription = await registration.pushManager.subscribe({userVisibleOnly:true, applicationServerKey});
+      }
+      // Permission, route and session may change while subscription is pending.
+      await publishWebPushState(registration);
+      const routes = currentWebPushWatches();
+      const response = await webPushFetch('/subscribe', {
+        method:'POST', headers:{'content-type':'application/json'},
+        body:JSON.stringify({subscription:subscription.toJSON(), routes})
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.ok !== true) throw new Error(result.error || 'push_sync_failed');
+      webPushStatus = {state:'registered', registeredRoutes:Number(result.registeredRoutes || 0), error:''};
+      renderDiagnostics();
+      return {ok:true, registeredRoutes:webPushStatus.registeredRoutes};
+    } catch (error) {
+      webPushStatus = {state:'error', registeredRoutes:0, error:String(error?.message || error)};
+      renderDiagnostics();
+      return {ok:false, error:webPushStatus.error};
+    }
+  };
+  const pending = webPushSyncChain.then(task, task);
+  webPushSyncChain = pending.catch(() => {});
+  return pending;
 }
 function queueWebPushSync() {
+  if (!webPushSupported()) return;
+  // Revoke local consent promptly even if a backend request is still pending.
+  publishWebPushState().catch(() => {});
   clearTimeout(webPushSyncTimer);
   webPushSyncTimer = setTimeout(() => { syncWebPushWatches(false).catch(() => {}); }, 350);
 }
@@ -3189,7 +3236,7 @@ async function requestNotifications() {
   if (!('Notification' in window)) return 'unsupported';
   try {
     if (Notification.permission === 'default') await Notification.requestPermission();
-    if (Notification.permission === 'granted') await navigator.serviceWorker?.ready;
+    if (Notification.permission === 'granted' && 'serviceWorker' in navigator) await webPushRegistration();
     return Notification.permission;
   } catch { return Notification.permission || 'error'; }
 }
@@ -3221,6 +3268,7 @@ function renderDiagnostics() {
   const rows = [
     ['系統通知權限', perm === 'granted' ? '✓ 已允許' : perm === 'denied' ? '✗ 已封鎖' : '⚠ 未決定（請撳上面允許）'],
     ['本地通知支援', ('serviceWorker' in navigator) ? '✓ 已可用' : '✗ 不支援'],
+    ['伺服器 Web Push', !webPushSupported() ? '此瀏覽器不支援' : webPushStatus.state === 'registered' ? '已同步 ' + webPushStatus.registeredRoutes + ' 條（非送達確認）' : webPushStatus.state === 'error' ? '同步失敗：' + webPushStatus.error : '尚未登記；請開啟路線提醒'],
     ['已開啟鬧鐘', armed + ' 條'],
     ['已排定補發計劃', planCount + ' 個'],
     ['上次成功更新', lastOK ? Math.round((Date.now() - lastOK) / 1000) + ' 秒前' : '未更新']
@@ -3271,9 +3319,9 @@ function updateNotificationButton() {
 }
 async function toggleNotificationSetting() {
   if (!('Notification' in window)) return;
-  if (Notification.permission !== 'granted') { await requestNotifications(); updateNotificationButton(); return; }
+  if (Notification.permission !== 'granted') { const permission = await requestNotifications(); if (permission === 'granted') await syncWebPushWatches(true); updateNotificationButton(); renderDiagnostics(); return; }
   prefs.notificationsEnabled = prefs.notificationsEnabled === false;
-  savePrefs(); updateNotificationButton(); renderDiagnostics();
+  savePrefs(); await syncWebPushWatches(prefs.notificationsEnabled !== false); updateNotificationButton(); renderDiagnostics();
 }
 function etaSegmentGapMinutes(a, b, timing) {
   if (!timing) return null;
@@ -4564,10 +4612,11 @@ async function doInstall() {
 }
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js')
-    .then(() => navigator.serviceWorker.ready)
-    .then(() => getWebPushPublicKey().catch(() => {}))
+    .then(() => queueWebPushSync())
     .catch(() => {}));
+  navigator.serviceWorker.addEventListener('controllerchange', queueWebPushSync);
 }
+window.addEventListener('online', queueWebPushSync);
 window.addEventListener('focus', queueWebPushSync);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) queueWebPushSync(); });
 setTimeout(queueWebPushSync, 1800);
@@ -4582,9 +4631,10 @@ function syncAlarmStateFromStorage() {
     }
   }
   alarms = nextAlarms; alarmSessions = nextSessions; alarmPlans = loadAlarmPlans();
-  items.forEach(it => updateAlarmButton(uid(it))); updateInfoBar();
+  items.forEach(it => updateAlarmButton(uid(it))); updateInfoBar(); queueWebPushSync();
 }
 window.addEventListener('storage', event => {
+  if (event.key === PREF_KEY || event.key === null) { prefs = loadPrefs(); queueWebPushSync(); }
   if (event.key === null || [ALARM_KEY, ALARM_SESSION_KEY, ALARM_PLAN_KEY, KEY].includes(event.key)) syncAlarmStateFromStorage();
 });
 if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', event => {
