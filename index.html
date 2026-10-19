@@ -1076,14 +1076,17 @@ const CO_NAME = { KMB:'九巴', CTB:'城巴', GMB:'小巴' };
 const REGION  = { HKI:'港島', KLN:'九龍', NT:'新界' };
 
 /* ---- fetch with timeout + JSON ---- */
-async function getJSON(url, ms = 12000) {
+async function getJSON(url, ms = 12000, signal = null) {
   const ac = new AbortController();
+  const abort = () => ac.abort();
+  if (signal?.aborted) ac.abort();
+  else signal?.addEventListener('abort', abort, { once:true });
   const t = setTimeout(() => ac.abort(), ms);
   try {
     const r = await fetch(url, { signal: ac.signal, cache: 'no-store' });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return await r.json();
-  } finally { clearTimeout(t); }
+  } finally { clearTimeout(t); signal?.removeEventListener('abort', abort); }
 }
 
 /* ---- in-memory cache for static data (routes / stop names) ---- */
@@ -1290,16 +1293,16 @@ function parseKmbRouteEta(rows, request) {
   return grouped;
 }
 
-async function etaKMB(it) {
+async function etaKMB(it, signal = null) {
   const d = (await getJSON(
-    KMB + '/route-eta/' + encodeURIComponent(it.route) + '/' + it.service_type
+    KMB + '/route-eta/' + encodeURIComponent(it.route) + '/' + it.service_type, 12000, signal
   )).data;
   return (parseKmbRouteEta(d, it).get(Number(it.seq)) || []).map(e => ({ iso:e.iso, min:e.min, rmk:e.rmk, sched:e.sched, dataTimestamp:e.dataTimestamp }));
 }
 
-async function etaCTB(it) {
+async function etaCTB(it, signal = null) {
   const d = (await getJSON(
-    CTB + '/eta/CTB/' + it.stopId + '/' + encodeURIComponent(it.route)
+    CTB + '/eta/CTB/' + it.stopId + '/' + encodeURIComponent(it.route), 12000, signal
   )).data;
   return (d || []).filter(e => e.eta && e.dir === it.dir).map(e => ({
     iso: e.eta, min: minsFrom(e.eta),
@@ -1307,9 +1310,9 @@ async function etaCTB(it) {
   }));
 }
 
-async function etaGMB(it) {
+async function etaGMB(it, signal = null) {
   const d = (await getJSON(
-    GMB + '/eta/route-stop/' + it.route_id + '/' + it.route_seq + '/' + it.seq
+    GMB + '/eta/route-stop/' + it.route_id + '/' + it.route_seq + '/' + it.seq, 12000, signal
   )).data;
   const rows = Array.isArray(d) ? (d[0] ? d[0].eta : []) : (d.eta || []);
   return (rows || []).filter(e => e.timestamp).map(e => ({
@@ -1318,11 +1321,11 @@ async function etaGMB(it) {
   }));
 }
 
-async function fetchETA(it) {
+async function fetchETA(it, signal = null) {
   try {
-    let list = it.co === 'KMB' ? await etaKMB(it)
-             : it.co === 'CTB' ? await etaCTB(it)
-             : await etaGMB(it);
+    let list = it.co === 'KMB' ? await etaKMB(it, signal)
+             : it.co === 'CTB' ? await etaCTB(it, signal)
+             : await etaGMB(it, signal);
     list = list.filter(e => e.min >= -2).sort((a, b) => a.min - b.min).slice(0, 4);
     return { etas: list, err: null };
   } catch (e) {
@@ -4001,8 +4004,30 @@ function paint(it, res) {
   }
 }
 
+// A suspended request must not own the board forever or overwrite a newer batch.
+const BOARD_REQUEST_DEADLINE = 15000;
+let activeBoardRefresh = null;
+let recoveryRetryTimer = null;
+let recoveryEpoch = 0;
+function cancelBoardRefresh() {
+  const previous = activeBoardRefresh;
+  activeBoardRefresh = null;
+  inFlight = false;
+  previous?.controller.abort();
+  if (refreshBtn) {
+    refreshBtn.disabled = false;
+    refreshBtn.classList.remove('loading');
+    refreshBtn.title = '即刻更新';
+  }
+}
+function clearRecoveryRetry() {
+  clearTimeout(recoveryRetryTimer);
+  recoveryRetryTimer = null;
+  recoveryEpoch += 1;
+}
 async function refresh(options = {}) {
   const manual = options.manual === true;
+  if (activeBoardRefresh && (manual || Date.now() - activeBoardRefresh.startedAt >= BOARD_REQUEST_DEADLINE)) cancelBoardRefresh();
   if (inFlight || !items.length) {
     if (manual && !items.length && refreshBtn) {
       refreshBtn.classList.add('no-data');
@@ -4011,97 +4036,143 @@ async function refresh(options = {}) {
     }
     return;
   }
+  if (manual) clearRecoveryRetry();
   if (manual && refreshBtn) {
     refreshBtn.disabled = true;
     refreshBtn.classList.add('loading');
     refreshBtn.title = '更新中…';
   }
+  const batch = { controller:new AbortController(), startedAt:Date.now() };
+  const epoch = recoveryEpoch;
+  activeBoardRefresh = batch;
   inFlight = true;
+  const deadline = setTimeout(() => batch.controller.abort(), BOARD_REQUEST_DEADLINE);
+  const aborted = new Promise(resolve => batch.controller.signal.addEventListener('abort', () => resolve({ etas:[], err:'連線超時' }), { once:true }));
+  let needsRetry = false, anyOK = false;
   try {
     dot.className = 'dot';
     const snapshot = items.slice();
-    const results = await Promise.all(snapshot.map(fetchETA));
-    snapshot.forEach((it, i) => {
-      if (items.some(x => uid(x) === uid(it))) {
-        const id = uid(it), fresh = results[i];
-        if (!fresh.err && fresh.etas.length) cacheEta(id, fresh.etas);
-        const fallback = fresh.err || !fresh.etas.length ? cachedEta(id) : null;
-        const display = fallback || fresh;
-        latestResults.set(id, display);
-        paint(it, display);
-        scheduleAlarmFallbacks(it, display, { stale: !!display.stale });
-        checkAlarms(it, display);
-      }
-    });
-    renderPip();
-    const anyOK = results.some(r => !r.err);
-    if (anyOK) lastOK = Date.now();
+    await Promise.all(snapshot.map(async it => {
+      // Render each route when it is ready; one slow provider cannot blank all routes.
+      const fresh = await Promise.race([
+        Promise.resolve().then(() => fetchETA(it, batch.controller.signal)).catch(() => ({ etas:[], err:'讀取失敗' })),
+        aborted
+      ]);
+      if (activeBoardRefresh !== batch || !items.some(x => uid(x) === uid(it))) return;
+      const id = uid(it);
+      if (!fresh.err) { anyOK = true; lastOK = Date.now(); }
+      if (fresh.err || !fresh.etas.length) needsRetry = true;
+      if (!fresh.err && fresh.etas.length) cacheEta(id, fresh.etas);
+      const fallback = fresh.err || !fresh.etas.length ? cachedEta(id) : null;
+      const display = fallback || fresh;
+      latestResults.set(id, display);
+      paint(it, display);
+      scheduleAlarmFallbacks(it, display, { stale: !!display.stale });
+      checkAlarms(it, display);
+      updateInfoBar();
+      renderPip();
+    }));
+    if (activeBoardRefresh !== batch) return;
     dot.className = 'dot' + (anyOK ? '' : ' err');
   } catch (e) {
-    // Keep the 25-second loop alive if an unexpected rendering/notification
-    // error escapes one of the per-route handlers.
+    if (activeBoardRefresh !== batch) return;
+    needsRetry = true;
     dot.className = 'dot err';
     console.warn('BusPulse refresh failed', e);
   } finally {
-    inFlight = false;
-    updateInfoBar();
-    if (manual && refreshBtn) {
-      refreshBtn.disabled = false;
-      refreshBtn.classList.remove('loading');
-      refreshBtn.title = dot.classList.contains('err') ? '更新失敗，請稍後再試' : '更新完成';
-      setTimeout(() => { if (refreshBtn) refreshBtn.title = '即刻更新'; }, 1600);
+    clearTimeout(deadline);
+    if (activeBoardRefresh === batch) {
+      activeBoardRefresh = null;
+      inFlight = false;
+      updateInfoBar();
+      if (manual && refreshBtn) {
+        refreshBtn.disabled = false;
+        refreshBtn.classList.remove('loading');
+        refreshBtn.title = dot.classList.contains('err') ? '更新失敗，請稍後再試' : '更新完成';
+        setTimeout(() => { if (refreshBtn && !inFlight) refreshBtn.title = '即刻更新'; }, 1600);
+      }
+      // Radio/network reconnection after sleep may lag the visibility event.
+      // Retry briefly, then leave the normal 25-second polling loop in charge.
+      const attempt = options.recoveryAttempt;
+      if (Number.isInteger(attempt) && attempt < 2 && needsRetry && epoch === recoveryEpoch && !document.hidden) {
+        clearTimeout(recoveryRetryTimer);
+        recoveryRetryTimer = setTimeout(() => {
+          recoveryRetryTimer = null;
+          if (epoch === recoveryEpoch && !document.hidden) refresh({ recoveryAttempt:attempt + 1 });
+        }, attempt === 0 ? 2000 : 5000);
+      }
     }
   }
 }
 
-/* clock + staleness indicator */
+/* clock + staleness indicator + wall-clock suspension watchdog */
+let lastBoardHeartbeat = Date.now();
 setInterval(() => {
+  const now = Date.now(), gap = now - lastBoardHeartbeat;
+  lastBoardHeartbeat = now;
+  if (!document.hidden && gap > 45000) resumeBoard();
   clock.textContent = new Date().toLocaleTimeString('en-GB', { hour12:prefs.time12 });
   if (busSaverTime) busSaverTime.textContent = new Date().toLocaleTimeString('en-GB', { hour12:false, hour:'2-digit', minute:'2-digit' });
-  if (lastOK && Date.now() - lastOK > 75000 && !inFlight) dot.className = 'dot stale';
+  if (lastOK && now - lastOK > 75000 && !inFlight) dot.className = 'dot stale';
   wakeAlarmPlans();
 }, 1000);
 
-/*
-   Keep polling as a self-correcting timeout rather than a chained interval.
-   Browsers still throttle/suspend hidden pages, but this avoids accumulating
-   drift after a throttled callback and makes the first refresh after resume
-   immediate. The alarm fallback timers remain active between polls.
-*/
+// Each loop owns its generation. A pre-suspension callback may finish later,
+// but must never restart a second polling chain after startLoop replaces it.
 let timer = null;
-let nextRefreshAt = 0;
-let loopRunning = false;
-function startLoop() {
+let loopGeneration = 0;
+function startLoop(options = {}) {
   stopLoop();
-  loopRunning = true;
-  refresh();
+  const generation = loopGeneration;
+  refresh(options);
   const schedule = () => {
-    if (!loopRunning) return;
-    const now = Date.now();
-    nextRefreshAt = Math.max(nextRefreshAt + 25000, now + 25000);
+    if (generation !== loopGeneration) return;
     timer = setTimeout(async () => {
+      if (generation !== loopGeneration) return;
       timer = null;
       await refresh();
       schedule();
-    }, Math.max(1000, nextRefreshAt - now));
+    }, 25000);
   };
-  nextRefreshAt = Date.now();
   schedule();
 }
-function stopLoop() { loopRunning = false; if (timer) { clearTimeout(timer); timer = null; } }
-
+function stopLoop() {
+  loopGeneration += 1;
+  if (timer) { clearTimeout(timer); timer = null; }
+}
+let boardWasHidden = false;
+let lastBoardResume = 0;
+function resumeBoard() {
+  if (document.hidden) return;
+  // UI wake-up is unconditional even when network refresh events are coalesced.
+  if (busSaverActive) closeBusSaver();
+  const now = Date.now();
+  // visibilitychange, pageshow and focus often arrive together.
+  if (!boardWasHidden && lastBoardResume && now - lastBoardResume < 1000) return;
+  boardWasHidden = false;
+  lastBoardResume = now;
+  lastBoardHeartbeat = now;
+  clearRecoveryRetry();
+  cancelBoardRefresh();
+  // Never present hour-old arrival times as live data while reconnecting.
+  items.forEach(it => {
+    const display = cachedEta(uid(it)) || { etas:[], err:'重新連線，更新班次中…' };
+    latestResults.set(uid(it), display);
+    paint(it, display);
+  });
+  updateInfoBar();
+  renderPip();
+  wakeAlarmPlans();
+  startLoop({ recoveryAttempt:0 });
+}
 document.addEventListener('visibilitychange', () => {
-  // 不要因為切去音樂／聊天 App 就停止提醒；回到前景時立即補一次更新，
-  // 並重排下一次輪詢，避免背景節流造成長時間漂移。
-  if (!document.hidden) {
-    if (busSaverActive) closeBusSaver();
-    wakeAlarmPlans();
-    refresh();
-    startLoop();
-  }
+  // Keep alarm fallbacks active in the background; replace board requests on return.
+  if (document.hidden) { boardWasHidden = true; clearRecoveryRetry(); }
+  else resumeBoard();
 });
-window.addEventListener('pageshow', () => { if (busSaverActive) closeBusSaver(); wakeAlarmPlans(); refresh(); });
-window.addEventListener('online', () => { wakeAlarmPlans(); refresh(); });
+window.addEventListener('pageshow', resumeBoard);
+window.addEventListener('focus', resumeBoard);
+window.addEventListener('online', resumeBoard);
 refreshBtn.addEventListener('click', () => { refresh({ manual:true }); });
 function bindInfoBar(bar) {
   if (!bar) return;
