@@ -58,7 +58,7 @@ function harness({ cacheStore = new Map(), withCache = true, alarmAllowed = true
   async function dispatch(type, { data, source:from = client, json, ports = [], ...extra } = {}) {
     const pending = [];
     const event = { ...extra, data:json !== undefined ? { json } : data, source:from, ports, waitUntil(promise) { pending.push(promise); } };
-    // EventTarget invokes every listener; retaining only the last hid duplicate push displays.
+    // EventTarget invokes every listener; the worker itself re-notifies one tag.
     for (const handler of handlers[type] || []) handler(event);
     await Promise.all(pending);
   }
@@ -79,22 +79,24 @@ async function seed(worker, state = authorized) {
   expect(await worker.sync(state)).toEqual({ ok:true });
 }
 
-test('a push event has one delivery listener and requests one system notification', async () => {
+test('a push event has one delivery listener and repeats one system notification three times', async () => {
   const worker = harness();
   await seed(worker);
   await worker.push(arrival());
-  expect(worker.shown).toHaveLength(1);
+  expect(worker.shown).toHaveLength(3);
   expect(worker.handlers.push).toHaveLength(1);
-  expect(worker.shown[0].options).toMatchObject({ tag:'buspulse-route-1', renotify:true, silent:false });
+  expect(worker.shown.every(n => n.options.tag === 'buspulse-route-1')).toBe(true);
+  expect(worker.shown.every(n => n.options.renotify === true && n.options.silent === false)).toBe(true);
 });
 
-test('a later authorized push with the same tag makes only one new display request', async () => {
+test('a later authorized push with the same tag repeats one new notification three times', async () => {
   const worker = harness();
   await seed(worker);
   await worker.push(arrival());
   await worker.push(arrival({ body:'更新到站提示' }));
-  expect(worker.shown).toHaveLength(2);
-  expect(worker.shown.map(n => n.options.body)).toEqual(['巴士快到站', '更新到站提示']);
+  expect(worker.shown).toHaveLength(6);
+  expect(worker.shown.slice(0, 3).every(n => n.options.body === '巴士快到站')).toBe(true);
+  expect(worker.shown.slice(3).every(n => n.options.body === '更新到站提示')).toBe(true);
   for (const notification of worker.shown) {
     expect(notification.options).toMatchObject({ tag:'buspulse-route-1', renotify:true, silent:false });
   }
@@ -108,7 +110,7 @@ test('authorized route push survives service-worker restart without an open page
   restarted.self.clients.get = async () => null;
   restarted.self.clients.matchAll = async () => [];
   await restarted.push(arrival());
-  expect(restarted.shown).toHaveLength(1);
+  expect(restarted.shown).toHaveLength(3);
   expect(restarted.shown[0].options.data).toEqual({ kind:'bus_arrival', id:'route-1', alarmId:'route-1', session:'session-1', url:'./' });
 });
 
@@ -171,7 +173,7 @@ test('push-state sync requires a same-scope live window and acknowledges success
   const otherApp = { id:'other', type:'window', url:`${ORIGIN}/other/` };
   expect(await worker.sync(authorized, otherApp)).toEqual({ ok:false });
   await worker.push(arrival());
-  expect(worker.shown).toHaveLength(1);
+  expect(worker.shown).toHaveLength(3);
 });
 
 test('state revocation persists across restart and closes the matching notification', async () => {
@@ -179,9 +181,9 @@ test('state revocation persists across restart and closes the matching notificat
   const worker = harness({ cacheStore });
   await seed(worker);
   await worker.push(arrival());
-  expect(worker.shown).toHaveLength(1);
+  expect(worker.shown).toHaveLength(3);
   expect(await worker.sync({ enabled:false, watches:[] })).toEqual({ ok:true });
-  expect(worker.closed).toHaveLength(1);
+  expect(worker.closed).toHaveLength(3);
   const restarted = harness({ cacheStore });
   await restarted.push(arrival());
   expect(restarted.shown).toHaveLength(0);
@@ -192,8 +194,9 @@ test('CANCEL_ARRIVAL_ALARM persistently revokes the matching route session', asy
   const worker = harness({ cacheStore });
   await seed(worker);
   await worker.push(arrival());
+  expect(worker.shown).toHaveLength(3);
   await worker.dispatch('message', { data:{ type:'CANCEL_ARRIVAL_ALARM', alarmId:'route-1', session:'session-1' } });
-  expect(worker.closed).toHaveLength(1);
+  expect(worker.closed).toHaveLength(3);
   const restarted = harness({ cacheStore });
   await restarted.push(arrival());
   expect(restarted.shown).toHaveLength(0);
@@ -246,5 +249,5 @@ test('activation preserves durable push state cache and legacy mocks still accep
   await worker.dispatch('activate');
   const restarted = harness({ cacheStore });
   await restarted.push(arrival());
-  expect(restarted.shown).toHaveLength(1);
+  expect(restarted.shown).toHaveLength(3);
 });
