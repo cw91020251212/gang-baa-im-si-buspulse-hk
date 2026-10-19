@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.3.0/dist/maplibre-gl.css" crossorigin="">
 <link rel="stylesheet" href="landsd-map-provider.css">
+<link rel="stylesheet" href="trip-progress.css">
 <script type="importmap">
 {"imports":{"leaflet":"https://unpkg.com/leaflet@1.9.4/dist/leaflet-src.esm.js","maplibre-gl":"https://unpkg.com/maplibre-gl@6.3.0/dist/maplibre-gl.mjs"}}
 </script>
@@ -1092,6 +1093,8 @@ body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-a
   <div class="bus-saver-hint">螢幕保護中 · 輕觸返回巴士報時器</div>
 </div>
 <script src="./bus-gap-estimator.js"></script>
+<script src="./trip-progress.js"></script>
+<script src="./trip-progress-ui.js"></script>
 <script>
 'use strict';
 /* ===================================================================
@@ -1712,7 +1715,7 @@ function closeBusSaver() {
   busSaverPathTimer = null;
   scheduleBusSaver();
 }
-function scheduleBusSaver() { clearTimeout(busSaverTimer); busSaverTimer = null; const delay = Number(prefs.screenSaverIdle); if (delay > 0 && items.length && !busSaverActive) busSaverTimer = setTimeout(openBusSaver, delay); }
+function scheduleBusSaver() { clearTimeout(busSaverTimer); busSaverTimer = null; const delay = Number(prefs.screenSaverIdle); if (delay > 0 && items.length && !busSaverActive && !tripProgressSession) busSaverTimer = setTimeout(openBusSaver, delay); }
 function registerBusActivity() { if (busSaverActive) closeBusSaver(); else scheduleBusSaver(); }
 document.addEventListener('visibilitychange', () => {
   if (!busSaverActive) return;
@@ -1997,6 +2000,7 @@ function isCurrentRouteDetailGeneration(generation) {
 }
 function closeRouteDetailState() {
   closeDetailGetoffPicker(false);
+  resetTripProgress();
   disposeDetailRouteMap(routeDetailBody?.querySelector('[data-detail-map-wrap]'));
   routeDetailState.open = false;
   routeDetailState.generation += 1;
@@ -2099,6 +2103,7 @@ function detailActionButtons(it) {
 }
 function acceptDetailLocation(it, pos, source) {
   const accuracy = Number(pos.coords.accuracy), at = Number(pos.timestamp) || Date.now(), state = routeDetailState;
+  if (state.open && state.item && uid(state.item) === uid(it)) acceptTripProgress(it, pos);
   const currentAccuracy = Number(state.gpsPositionAccuracy), currentAt = Number(state.gpsPositionTime) || 0;
   // Prefer a more accurate fix, but allow a newer network fix to replace a
   // stale GPS fix when the bus is indoors or has entered a tunnel.
@@ -2751,7 +2756,7 @@ function renderRouteDetail() {
   routeDetailBody.classList.remove('detail-loading');
   routeDetailBody.innerHTML =
     '<div class="detail-summary">' + detailActionButtons(it) + '<div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><div class="detail-meta-row"><span class="summary-count">共 ' + routeDetailState.stops.length + ' 個站</span><span class="summary-buses" title="ETA 候選位置，不代表實際巴士數">ETA 候選位置：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 個' : '讀取中') + '</span></div><div class="detail-meta-row"><span class="summary-coverage">' + detailEtaCoverageText() + '</span></div><div class="detail-meta-row"><span class="summary-schedule">' + detailScheduleSummary() + '</span></div><div class="detail-meta-row"><span class="summary-fare">全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + customTripPanel(routeDetailState.stops) + '</div>' +
-    detailGetoffStatus(it) +
+    detailGetoffStatus(it) + tripProgressPanel(it) +
     '<div class="detail-map-panel' + (routeDetailState.detailMapOpen ? ' open' : '') + '" data-detail-map-wrap><div class="detail-map-head"><span>路線地圖</span></div>' + (routeDetailState.detailMapOpen ? detailEtaPanel(current) + detailMapContextMarkup(it, current) : '') + '<div class="detail-map-canvas"><div class="route-map"></div><div class="detail-map-bus-legend" data-detail-map-bus-legend hidden></div><div class="map-tools">' + (routeDetailState.detailMapOpen ? '<button class="detail-map-refresh" data-detail-map-refresh type="button" aria-label="即時更新全部車站 ETA" title="即時更新全部車站 ETA"><svg class="detail-map-refresh-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 2v6h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 12a9 9 0 0 0 15 6.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' : '') + '<button class="locate-btn' + (routeDetailState.gpsStatus === 'watching' ? ' is-active' : '') + '" data-detail-map-locate type="button" aria-pressed="' + String(routeDetailState.gpsStatus === 'watching') + '" aria-label="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '" title="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '">' + '<svg class="gps-crosshair" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1.5v5.5M12 17v5.5M1.5 12h5.5M17 12h5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>' + '</button><button class="detail-map-close" type="button" data-detail-map-close aria-label="關閉路線地圖" title="關閉路線地圖"><svg class="map-close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></div></div></div>' +
     '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
     detailGpsPanel(it, current) +
@@ -2760,11 +2765,12 @@ function renderRouteDetail() {
     '<div class="detail-section-title"><span>沿途車站列表</span><small>共 ' + routeDetailState.stops.length + ' 個站</small></div>' +
     '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const isLive = routeDetailState.gpsSeq === st.seq;
     const isTarget = getoff[uid(it)]?.active && getoff[uid(it)].targetSeq === st.seq;
-    const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected ' : '') + (isLive ? 'is-live ' : '') + (isTarget ? 'is-getoff-target ' + (getoff[uid(it)].alertUntil > Date.now() ? 'is-getoff-alert' : '') : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (isLive ? '，你而家接近呢度' : st.seq === selected ? '，已選' : '，按一下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-content"><span class="stop-copy"><strong>' + esc(st.seq) + '　' + detailStopNameMarkup(st.name) + '</strong><small>' + esc(st.name_en || '') + '</small></span>' + '<span class="stop-state">' + (isLive ? '你而家喺呢度' : isTarget ? '落車站' : state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></span></button>'; const near = nearStation === st.seq ? '<div class="detail-between-bus" role="img" aria-label="巴士即將到站" title="巴士即將到站"><span class="bus-front-marker"></span><span class="bus-status-label">' + (nearStationEta?.sched ? '原定班次接近' : '巴士接近中') + '</span></div>' : ''; return row + near + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it, routeDetailState.serviceOpen);
+    const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected ' : '') + (isLive ? 'is-live ' : '') + (isTarget ? 'is-getoff-target ' + (getoff[uid(it)].alertUntil > Date.now() ? 'is-getoff-alert' : '') : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (isLive ? '，你而家接近呢度' : st.seq === selected ? '，已選' : '，按一下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-content"><span class="stop-copy"><strong>' + esc(st.seq) + '　' + detailStopNameMarkup(st.name) + '</strong><small>' + esc(st.name_en || '') + '</small></span>' + '<span class="stop-state">' + (isLive ? '你而家喺呢度' : isTarget ? '落車站' : state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></span></button>'; const near = nearStation === st.seq ? '<div class="detail-between-bus" role="img" aria-label="巴士即將到站" title="巴士即將到站"><span class="bus-front-marker"></span><span class="bus-status-label">' + (nearStationEta?.sched ? '原定班次接近' : '巴士接近中') + '</span></div>' : ''; return row + near + tripProgressTimeline(it, st.seq) + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it, routeDetailState.serviceOpen);
   routeDetail.scrollTop = savedDetailScrollTop;
   const refreshedPicker = routeDetailBody.querySelector('.custom-picker-drawer');
   if (refreshedPicker && savedPickerScrollTop != null) refreshedPicker.scrollTop = savedPickerScrollTop;
   updateRouteDetailCompact();
+  bindTripProgress(it);
   routeDetailBody.querySelector('[data-detail-gps]')?.addEventListener('click', () => startRouteDetailGps(it));
   routeDetailBody.querySelector('[data-detail-gps-stop]')?.addEventListener('click', stopRouteDetailGps);
   routeDetailBody.querySelector('[data-detail-map]')?.addEventListener('click', event => toggleDetailRouteMap(it, event.currentTarget));
@@ -2840,6 +2846,7 @@ function renderRouteDetail() {
   if (focusedGetoffAction) (routeDetailBody.querySelector('[' + focusedGetoffAction + ']') || routeDetailBody.querySelector('[data-detail-getoff-open]'))?.focus({preventScroll:true});
 }
 async function openRouteDetail(it, trigger, options = {}) {
+  resetTripProgress();
   routeDetailReturnFocus = trigger || document.activeElement;
   routeDetailReturnFocusId = routeDetailReturnFocus?.getAttribute?.('data-detail-id') || routeDetailReturnFocus?.getAttribute?.('data-map-id') || uid(it); routeDetailReturnFocusAttr = routeDetailReturnFocus?.hasAttribute?.('data-map-id') ? 'data-map-id' : 'data-detail-id';
   routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.etaHistory.clear(); routeDetailState.gapModel = BusGapEstimator.createModel(); routeDetailState.detailEtaLoading = false; routeDetailState.detailLastFetchAt = 0; routeDetailState.fareLabel = null; routeDetailState.scheduleLabel = null; routeDetailState.serviceOpen = false; routeDetailState.customPickerOpen = false; routeDetailState.customPickerMode = 'from'; routeDetailState.sweepStatus = 'loading'; routeDetailState.detailMapOpen = options.openMap === true; routeDetailState.mapReturnToBoard = options.openMap === true; routeDetailState.mapViewLocked = false; routeDetailState.mapManualSelectedSeq = null;
@@ -3286,6 +3293,7 @@ function startGetoff(it, target) {
   const id = uid(it);
   if (!navigator.geolocation) { alert('此手機不支援 GPS 定位'); return false; }
   if (!Number.isFinite(target.lat) || !Number.isFinite(target.lng)) { alert('呢個站暫時冇 GPS 座標，請揀另一個站'); return false; }
+  resetTripProgress();
   clearGetoffAlert(id);
   if (getoffWatches.has(id)) navigator.geolocation.clearWatch(getoffWatches.get(id));
   const state = { active:true, route:it.route, targetSeq:target.seq, targetName:target.name, targetLat:target.lat, targetLng:target.lng };
@@ -3299,7 +3307,7 @@ function startGetoff(it, target) {
     Promise.resolve(permission).catch(() => {}).finally(() => { if (getoff[id] === state) refreshDetailGetoff(it); });
   }
   getoffWatches.set(id, navigator.geolocation.watchPosition(pos => {
-    if (getoff[id] === state) updateGetoff(it, pos.coords);
+    if (getoff[id] === state) { acceptTripProgress(it, pos); updateGetoff(it, pos.coords); }
   }, () => {
     if (getoff[id] === state) { state.locationError = 'GPS 暫時未能定位，請確認已允許定位及開啟手機 GPS。'; refreshDetailGetoff(it); notifyGetoffError(); }
   }, { enableHighAccuracy:true, maximumAge:15000, timeout:20000 }));
@@ -3308,6 +3316,7 @@ function startGetoff(it, target) {
 }
 function stopGetoff(it) {
   const id = uid(it);
+  if (tripProgressSession?.routeId === id) resetTripProgress();
   clearGetoffAlert(id);
   delete getoff[id]; saveGetoff();
   if (getoffWatches.has(id)) { navigator.geolocation.clearWatch(getoffWatches.get(id)); getoffWatches.delete(id); }

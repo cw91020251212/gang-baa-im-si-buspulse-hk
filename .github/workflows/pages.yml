@@ -62,9 +62,12 @@ jobs:
           rm -rf _site
           mkdir -p _site
           mkdir -p _site/assets
-          cp index.html bus-gap-estimator.js landsd-map-compare.html landsd-map-compare.js landsd-map-provider.js landsd-map-provider.css manifest.json sw.js icon-192.png icon-512.png route-location-icon-v6.png fare-index.json place-index.json _site/
+          cp index.html bus-gap-estimator.js trip-progress.js trip-progress-ui.js trip-progress.css landsd-map-compare.html landsd-map-compare.js landsd-map-provider.js landsd-map-provider.css manifest.json sw.js icon-192.png icon-512.png route-location-icon-v6.png fare-index.json place-index.json _site/
           cp assets/landsd-logo.png _site/assets/
           test -f _site/index.html
+          test -f _site/trip-progress.js
+          test -f _site/trip-progress-ui.js
+          test -f _site/trip-progress.css
           test -f _site/landsd-map-provider.js
           test -f _site/landsd-map-provider.css
           test -f _site/landsd-map-compare.html
