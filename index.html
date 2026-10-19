@@ -824,6 +824,33 @@ body.light .stop-row.is-live.is-selected .stop-dot:after{background:#08734d!impo
 
 .custom-trip-panel{margin:14px 0 18px;padding:14px;border:1px solid rgba(145,170,205,.3);border-radius:16px;background:rgba(20,35,58,.72)}.custom-trip-open{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid rgba(145,170,205,.4);border-radius:12px;background:rgba(10,20,35,.5);color:var(--text);text-align:left;cursor:pointer}.custom-trip-open span{display:flex;flex-direction:column;gap:4px;min-width:0}.custom-trip-open b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.custom-trip-open small{color:var(--faint);font-size:11px}.custom-trip-open strong{flex:none;color:#ffd35a;font-size:12px}.custom-picker-backdrop{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.58)}.custom-picker-drawer{position:fixed;z-index:81;top:0;right:0;bottom:0;width:min(92vw,430px);padding:calc(18px + var(--safe-t)) 16px calc(18px + var(--safe-b));background:#050505;color:#f5f5f5;box-shadow:-10px 0 28px rgba(0,0,0,.4);overflow:auto}.custom-picker-drawer header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.custom-picker-drawer header div{display:flex;flex-direction:column;gap:4px}.custom-picker-drawer header b{font-size:25px;color:#ffd900}.custom-picker-drawer header small{color:#aaa;font-size:12px}.custom-picker-close{width:36px;height:36px;border:0;background:transparent;color:#fff;font-size:30px;cursor:pointer}.custom-picker-tabs{display:flex;border-bottom:1px solid #444;margin-bottom:12px}.custom-picker-tabs button{flex:1;padding:11px 6px;border:1px solid transparent;border-radius:10px 10px 0 0;background:transparent;font:700 16px inherit;cursor:pointer}.custom-picker-tabs button:first-child{color:#36e0a0}.custom-picker-tabs button:last-child{color:#ff8f89}.custom-picker-tabs button:first-child.active{border-color:rgba(54,224,160,.55);border-bottom:4px solid #36e0a0;background:rgba(54,224,160,.12)}.custom-picker-tabs button:last-child.active{border-color:rgba(255,98,92,.55);border-bottom:4px solid #ff625c;background:rgba(255,98,92,.12)}.custom-picker-hint{margin:6px 0 12px;color:#bbb;font-size:13px}.custom-picker-timeline{position:relative;padding:0 0 20px 12px}.custom-picker-timeline:before{content:"";position:absolute;left:23px;top:12px;bottom:18px;width:2px;background:#777}.custom-picker-stop{position:relative;display:flex;align-items:center;width:100%;min-height:82px;padding:10px 8px 10px 0;border:0;background:transparent;color:#fff;text-align:left;cursor:pointer}.custom-picker-dot{z-index:1;flex:none;width:28px;height:28px;margin-right:18px;border:5px solid #aaa;border-radius:50%;background:#050505}.custom-picker-stop.selected .custom-picker-dot{border-color:#fff;background:#fff}.custom-picker-stop.origin .custom-picker-dot{border-color:#36e0a0;background:#36e0a0;box-shadow:0 0 0 3px rgba(54,224,160,.22)}.custom-picker-stop.destination .custom-picker-dot{border-color:#ff625c;background:#ff625c;box-shadow:0 0 0 3px rgba(255,98,92,.24)}.custom-picker-copy{display:flex;flex-direction:column;gap:5px;min-width:0}.custom-picker-copy b{font-size:16px;line-height:1.35}.custom-picker-copy b small{color:#929292;font-size:12px;font-weight:600}.custom-picker-copy em{color:#aaa;font-size:13px;font-style:normal}.custom-picker-stop.selected .custom-picker-copy em,.custom-picker-stop.has-duration .custom-picker-copy em{color:#ffd900;font-weight:800}.custom-picker-stop.origin .custom-picker-copy em{color:#36e0a0;font-weight:800}.custom-picker-stop.destination .custom-picker-copy em{color:#ff8f89;font-weight:800}.custom-picker-stop:active{background:#171717}@media(max-width:430px){.custom-picker-drawer{width:94vw}.custom-picker-copy b{font-size:15px}}
 .custom-trip-fields{display:flex;align-items:end;gap:8px}.custom-trip-fields label{display:flex;flex:1;flex-direction:column;gap:5px;color:var(--faint);font-size:12px;font-weight:800}.custom-trip-fields select{width:100%;min-width:0;padding:10px 8px;border:1px solid rgba(145,170,205,.45);border-radius:10px;background:var(--bg-deep);color:var(--text);font:inherit}.custom-trip-arrow{padding:0 0 10px;color:var(--accent);font-size:20px;font-weight:900}.custom-trip-result{display:flex;flex-direction:column;gap:3px;margin-top:12px;padding:10px 11px;border-radius:10px;background:rgba(10,20,35,.48);color:var(--text)}.custom-trip-result strong{font-size:14px}.custom-trip-result small{color:var(--faint);line-height:1.45}.custom-trip-result.live strong{color:#ffd35a}.custom-trip-result.estimate strong{color:#9fc2ff}.custom-trip-result.unavailable strong,.custom-trip-result.invalid strong{color:#ffb4a8}@media(max-width:430px){.custom-trip-fields{gap:5px}.custom-trip-fields select{font-size:12px;padding-left:5px;padding-right:2px}}
+/* Alighting setup is separate from ordinary ETA browsing. */
+.detail-getoff-status{margin:0 0 10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:13px;line-height:1.5;color:var(--tx)}
+.detail-getoff-status strong{display:block;font-size:15px;overflow-wrap:anywhere}
+.detail-getoff-status small{display:block;color:var(--dim);margin-top:5px}
+.detail-getoff-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+.detail-getoff-actions button,.getoff-picker button{min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card2);color:var(--tx);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.detail-getoff-actions [data-detail-getoff-open],.getoff-picker [data-getoff-confirm]{border-color:var(--now);color:var(--now)}
+.detail-getoff-actions button:focus-visible,.getoff-picker button:focus-visible{outline:3px solid var(--soon);outline-offset:2px}
+.detail-getoff-status.is-getoff-alert,.stop-row.is-getoff-alert .stop-content{animation:getoffFlash 1s ease-in-out infinite;outline:3px solid transparent;outline-offset:-3px}
+@keyframes getoffFlash{50%{background:rgba(255,180,40,.28);outline-color:#d98200}}
+@media(prefers-reduced-motion:reduce){.detail-getoff-status.is-getoff-alert,.stop-row.is-getoff-alert .stop-content{animation:none;outline:3px solid #d98200;outline-offset:-3px}}
+.getoff-picker{width:calc(100% - 24px);max-width:560px;max-height:88vh;max-height:88dvh;margin:auto;padding:0;border:1px solid var(--line);border-radius:16px;background:var(--bg);color:var(--tx);box-shadow:0 16px 60px #0008;overflow:hidden}
+.getoff-picker[open]{display:flex;flex-direction:column}
+.getoff-picker::backdrop{background:rgba(0,0,0,.68)}
+.getoff-picker-head,.getoff-picker-footer{flex:none;padding:14px;border-bottom:1px solid var(--line)}
+.getoff-picker-head h2{font-size:18px;margin:0 0 6px}
+.getoff-picker-head p{font-size:13px;line-height:1.5;color:var(--dim);margin:0;overflow-wrap:anywhere}
+.getoff-picker-list{overflow-y:auto;overscroll-behavior:contain;padding:10px 12px;display:flex;flex-direction:column;gap:7px}
+.getoff-picker .getoff-picker-stop{width:100%;text-align:left;display:flex;align-items:center;gap:10px;flex:none;min-height:52px}
+.getoff-picker-stop span{flex:1;min-width:0;overflow-wrap:anywhere}
+.getoff-picker-stop small{display:block;font-size:11px;font-weight:400;color:var(--dim);margin-top:3px}
+.getoff-picker-stop[aria-pressed="true"]{border-color:var(--now);background:var(--card);outline:2px solid var(--now);outline-offset:-2px}
+.getoff-picker-stop:disabled,.getoff-picker [data-getoff-confirm]:disabled{opacity:.5;cursor:not-allowed}
+.getoff-picker-footer{border-bottom:0;border-top:1px solid var(--line);padding-bottom:calc(14px + var(--safe-b))}
+.getoff-picker-choice{font-size:14px;line-height:1.5;margin:0 0 9px;overflow-wrap:anywhere}
+.getoff-picker-buttons{display:flex;gap:8px;flex-wrap:wrap}
+.getoff-picker-buttons button{flex:1}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="">
 
@@ -1017,6 +1044,11 @@ body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-a
   <div class="info-bar-actions" id="infoBarActions"></div>
 </aside>
 
+<dialog id="getoffPicker" class="getoff-picker" aria-labelledby="getoffPickerTitle" aria-describedby="getoffPickerHelp">
+  <header class="getoff-picker-head"><h2 id="getoffPickerTitle">設下車站</h2><p id="getoffPickerHelp">你想在哪一站下車？選站後按「開始提醒」才會啟用；不會改變你正在查看的到站資料。</p></header>
+  <div class="getoff-picker-list" data-getoff-picker-list></div>
+  <footer class="getoff-picker-footer"><p class="getoff-picker-choice" data-getoff-choice role="status" aria-live="polite">請先選擇下車站</p><div class="getoff-picker-buttons"><button type="button" data-getoff-picker-close>返回</button><button type="button" data-getoff-confirm disabled>開始提醒</button></div></footer>
+</dialog>
 <section class="route-detail" id="routeDetail" aria-hidden="true" aria-labelledby="routeDetailTitle">
   <div class="route-detail-head">
     <button class="detail-back" id="routeDetailBack" type="button" aria-label="返回路線列表">‹</button>
@@ -1342,7 +1374,8 @@ const ALARM_KEY = 'busboard.alarms.v1';
 const ALARM_SESSION_KEY = 'busboard.alarm-sessions.v1';
 const GETOFF_KEY = 'busboard.getoff.v1';
 let getoff = loadGetoff();
-let getoffWatch = null;
+const getoffWatches = new Map();
+const getoffAlerts = new Map();
 function loadGetoff() { try { return JSON.parse(localStorage.getItem(GETOFF_KEY) || '{}') || {}; } catch { return {}; } }
 function saveGetoff() { try { localStorage.setItem(GETOFF_KEY, JSON.stringify(getoff)); } catch {} }
 let prefs = loadPrefs();
@@ -1963,6 +1996,7 @@ function isCurrentRouteDetailGeneration(generation) {
   return routeDetailState.open && routeDetailState.generation === generation;
 }
 function closeRouteDetailState() {
+  closeDetailGetoffPicker(false);
   disposeDetailRouteMap(routeDetailBody?.querySelector('[data-detail-map-wrap]'));
   routeDetailState.open = false;
   routeDetailState.generation += 1;
@@ -2679,6 +2713,7 @@ function renderRouteDetail() {
   if (!it || !routeDetailBody) return;
   if (routeDetailState.detailMapOpen && routeDetailState.mapViewLocked) { updateDetailMapContext(); return; }
   const savedDetailScrollTop = routeDetail.scrollTop;
+  const focusedGetoffAction = ['data-detail-getoff-open','data-detail-getoff-change','data-detail-getoff-cancel'].find(attr => document.activeElement?.hasAttribute(attr));
   const oldDetailMapWrap = routeDetailBody.querySelector('[data-detail-map-wrap]');
   if (oldDetailMapWrap?._map) disposeDetailRouteMap(oldDetailMapWrap);
   const savedPickerScrollTop = routeDetailBody.querySelector('.custom-picker-drawer')?.scrollTop;
@@ -2690,7 +2725,7 @@ function renderRouteDetail() {
   routeDetailOperator.textContent = it.co;
   routeDetailOperator.className = 'detail-title-operator ' + it.co;
   routeDetailRoute.textContent = it.route;
-  routeDetailSubTitle.textContent = (it.origin || it.stopName || '') + ' → ' + (it.dest || '') + ' · 唯讀路線詳情';
+  routeDetailSubTitle.textContent = (it.origin || it.stopName || '') + ' → ' + (it.dest || '') + ' · 路線詳情';
   if (routeDetailState.stopsStatus === 'loading') { routeDetailBody.innerHTML = '<div class="detail-loading">載入路線站點…</div>'; return; }
   if (routeDetailState.stopsStatus === 'error') { routeDetailBody.innerHTML = '<div class="detail-loading">站點讀取失敗，請返回後再試。</div>'; return; }
   const current = selectedStop || { name:'未選擇車站', id:'', seq:'' };
@@ -2716,6 +2751,7 @@ function renderRouteDetail() {
   routeDetailBody.classList.remove('detail-loading');
   routeDetailBody.innerHTML =
     '<div class="detail-summary">' + detailActionButtons(it) + '<div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><div class="detail-meta-row"><span class="summary-count">共 ' + routeDetailState.stops.length + ' 個站</span><span class="summary-buses" title="ETA 候選位置，不代表實際巴士數">ETA 候選位置：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 個' : '讀取中') + '</span></div><div class="detail-meta-row"><span class="summary-coverage">' + detailEtaCoverageText() + '</span></div><div class="detail-meta-row"><span class="summary-schedule">' + detailScheduleSummary() + '</span></div><div class="detail-meta-row"><span class="summary-fare">全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + customTripPanel(routeDetailState.stops) + '</div>' +
+    detailGetoffStatus(it) +
     '<div class="detail-map-panel' + (routeDetailState.detailMapOpen ? ' open' : '') + '" data-detail-map-wrap><div class="detail-map-head"><span>路線地圖</span></div>' + (routeDetailState.detailMapOpen ? detailEtaPanel(current) + detailMapContextMarkup(it, current) : '') + '<div class="detail-map-canvas"><div class="route-map"></div><div class="detail-map-bus-legend" data-detail-map-bus-legend hidden></div><div class="map-tools">' + (routeDetailState.detailMapOpen ? '<button class="detail-map-refresh" data-detail-map-refresh type="button" aria-label="即時更新全部車站 ETA" title="即時更新全部車站 ETA"><svg class="detail-map-refresh-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 2v6h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 12a9 9 0 0 0 15 6.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' : '') + '<button class="locate-btn' + (routeDetailState.gpsStatus === 'watching' ? ' is-active' : '') + '" data-detail-map-locate type="button" aria-pressed="' + String(routeDetailState.gpsStatus === 'watching') + '" aria-label="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '" title="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '">' + '<svg class="gps-crosshair" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1.5v5.5M12 17v5.5M1.5 12h5.5M17 12h5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>' + '</button><button class="detail-map-close" type="button" data-detail-map-close aria-label="關閉路線地圖" title="關閉路線地圖"><svg class="map-close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></div></div></div>' +
     '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
     detailGpsPanel(it, current) +
@@ -2724,7 +2760,7 @@ function renderRouteDetail() {
     '<div class="detail-section-title"><span>沿途車站列表</span><small>共 ' + routeDetailState.stops.length + ' 個站</small></div>' +
     '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const isLive = routeDetailState.gpsSeq === st.seq;
     const isTarget = getoff[uid(it)]?.active && getoff[uid(it)].targetSeq === st.seq;
-    const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected ' : '') + (isLive ? 'is-live ' : '') + (isTarget ? 'is-getoff-target' : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (isLive ? '，你而家接近呢度' : st.seq === selected ? '，已選' : '，按兩下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-content"><span class="stop-copy"><strong>' + esc(st.seq) + '　' + detailStopNameMarkup(st.name) + '</strong><small>' + esc(st.name_en || '') + '</small></span>' + '<span class="stop-state">' + (isLive ? '你而家喺呢度' : isTarget ? '落車站' : state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></span></button>'; const near = nearStation === st.seq ? '<div class="detail-between-bus" role="img" aria-label="巴士即將到站" title="巴士即將到站"><span class="bus-front-marker"></span><span class="bus-status-label">' + (nearStationEta?.sched ? '原定班次接近' : '巴士接近中') + '</span></div>' : ''; return row + near + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it, routeDetailState.serviceOpen);
+    const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected ' : '') + (isLive ? 'is-live ' : '') + (isTarget ? 'is-getoff-target ' + (getoff[uid(it)].alertUntil > Date.now() ? 'is-getoff-alert' : '') : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (isLive ? '，你而家接近呢度' : st.seq === selected ? '，已選' : '，按一下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-content"><span class="stop-copy"><strong>' + esc(st.seq) + '　' + detailStopNameMarkup(st.name) + '</strong><small>' + esc(st.name_en || '') + '</small></span>' + '<span class="stop-state">' + (isLive ? '你而家喺呢度' : isTarget ? '落車站' : state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></span></button>'; const near = nearStation === st.seq ? '<div class="detail-between-bus" role="img" aria-label="巴士即將到站" title="巴士即將到站"><span class="bus-front-marker"></span><span class="bus-status-label">' + (nearStationEta?.sched ? '原定班次接近' : '巴士接近中') + '</span></div>' : ''; return row + near + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it, routeDetailState.serviceOpen);
   routeDetail.scrollTop = savedDetailScrollTop;
   const refreshedPicker = routeDetailBody.querySelector('.custom-picker-drawer');
   if (refreshedPicker && savedPickerScrollTop != null) refreshedPicker.scrollTop = savedPickerScrollTop;
@@ -2751,6 +2787,9 @@ function renderRouteDetail() {
     }
     renderRouteDetail();
   }));
+  routeDetailBody.querySelector('[data-detail-getoff-open]')?.addEventListener('click', () => openDetailGetoffPicker(it));
+  routeDetailBody.querySelector('[data-detail-getoff-change]')?.addEventListener('click', () => openDetailGetoffPicker(it));
+  routeDetailBody.querySelector('[data-detail-getoff-cancel]')?.addEventListener('click', () => stopGetoff(it));
   routeDetailBody.querySelectorAll('[data-detail-stop]').forEach(button => button.addEventListener('click', () => {
     const stop = routeDetailState.stops.find(s => String(s.seq) === button.dataset.detailStop);
     if (!stop) return;
@@ -2798,6 +2837,7 @@ function renderRouteDetail() {
   routeDetailBody.querySelector('.detail-service')?.addEventListener('toggle', event => { routeDetailState.serviceOpen = event.currentTarget.open; });
   if (routeDetailState.pendingCenterStopSeq != null) scheduleCenterDetailStop(routeDetailState.pendingCenterStopSeq);
   updateInfoBar();
+  if (focusedGetoffAction) (routeDetailBody.querySelector('[' + focusedGetoffAction + ']') || routeDetailBody.querySelector('[data-detail-getoff-open]'))?.focus({preventScroll:true});
 }
 async function openRouteDetail(it, trigger, options = {}) {
   routeDetailReturnFocus = trigger || document.activeElement;
@@ -3181,32 +3221,137 @@ async function showGetoffMap(it, stops, button) {
   mapEl.dataset.ready='1';
 }
 
+function getoffHasNativeBridge() { return typeof androidAlarmRequest === 'function' && typeof hasAndroidAlarmBridge !== 'undefined' && hasAndroidAlarmBridge; }
+const getoffPicker = document.querySelector('#getoffPicker');
+let detailGetoffPickerState = null;
+function openDetailGetoffPicker(it) {
+  if (!routeDetailState.open || !routeDetailState.item || uid(routeDetailState.item) !== uid(it)) return;
+  const stops = routeDetailState.stops.slice();
+  // Draft selection is deliberately separate from both ETA selection and the active target.
+  detailGetoffPickerState = { item:it, stops, target:null };
+  getoffPicker.querySelector('[data-getoff-picker-list]').innerHTML = stops.map(st => {
+    const valid = Number.isFinite(st.lat) && Number.isFinite(st.lng);
+    return '<button type="button" class="getoff-picker-stop" data-getoff-pick="' + esc(st.seq) + '" aria-pressed="false"' + (valid ? '' : ' disabled') + '><span>第 ' + esc(st.seq) + ' 站 · ' + esc(st.name) + (valid ? '' : '<small>暫無定位座標，未能設定提醒</small>') + '</span><b aria-hidden="true">○</b></button>';
+  }).join('');
+  const current = getoff[uid(it)];
+  getoffPicker.querySelector('[data-getoff-choice]').textContent = current?.active ? '目前下車站：' + current.targetName + '。選擇新站並按「開始提醒」才會更改。' : '請先選擇下車站；選好後再按「開始提醒」。';
+  getoffPicker.querySelector('[data-getoff-confirm]').disabled = true;
+  if (!getoffPicker.open) getoffPicker.showModal();
+  getoffPicker.querySelector('[data-getoff-pick]:not(:disabled)')?.focus();
+}
+function closeDetailGetoffPicker(restoreFocus = true) {
+  detailGetoffPickerState = null;
+  if (getoffPicker.open) getoffPicker.close();
+  if (restoreFocus && routeDetailState.open) routeDetailBody.querySelector('[data-detail-getoff-change], [data-detail-getoff-open]')?.focus({preventScroll:true});
+}
+getoffPicker.addEventListener('click', event => {
+  const button = event.target.closest('[data-getoff-pick]');
+  const draft = detailGetoffPickerState;
+  if (!button || !draft || button.disabled) return;
+  const target = draft.stops.find(st => String(st.seq) === button.dataset.getoffPick);
+  if (!target) return;
+  draft.target = target;
+  getoffPicker.querySelectorAll('[data-getoff-pick]').forEach(row => {
+    const selected = row === button;
+    row.setAttribute('aria-pressed', String(selected)); row.querySelector('b').textContent = selected ? '✓' : '○';
+  });
+  getoffPicker.querySelector('[data-getoff-choice]').textContent = '確認下車站：第 ' + target.seq + ' 站 · ' + target.name;
+  getoffPicker.querySelector('[data-getoff-confirm]').disabled = false;
+});
+getoffPicker.querySelector('[data-getoff-picker-close]').addEventListener('click', () => closeDetailGetoffPicker());
+getoffPicker.addEventListener('cancel', event => { event.preventDefault(); closeDetailGetoffPicker(); });
+getoffPicker.addEventListener('close', () => { detailGetoffPickerState = null; });
+getoffPicker.querySelector('[data-getoff-confirm]').addEventListener('click', () => {
+  const draft = detailGetoffPickerState;
+  if (!draft?.target || !routeDetailState.open || !routeDetailState.item || uid(routeDetailState.item) !== uid(draft.item)) return;
+  if (startGetoff(draft.item, draft.target)) closeDetailGetoffPicker();
+});
+function detailGetoffStatus(it) {
+  const state = getoff[uid(it)];
+  if (!state?.active) return '<section class="detail-getoff-status" aria-label="下車提醒"><strong>下車提醒</strong><small>與查看到站時間分開；用手機 GPS 判斷接近目的站。</small><div class="detail-getoff-actions"><button type="button" data-detail-getoff-open>設下車站</button></div></section>';
+  const warning = prefs.notificationsEnabled === false ? '系統通知已關閉，只顯示畫面提示。' : !getoffHasNativeBridge() && (!('Notification' in window) || Notification.permission !== 'granted') ? '未允許系統通知，聲音提醒未能啟用。' : '聲音使用系統通知音，受手機通知音量及勿擾設定影響。';
+  return '<section class="detail-getoff-status' + (state.alertUntil > Date.now() ? ' is-getoff-alert' : '') + '" aria-label="下車提醒"><strong>下車提醒中：' + esc(state.targetName) + '</strong><div role="status" aria-live="polite">' + esc(state.locationError || state.progress || '正在取得 GPS 位置…') + '</div><small>' + esc(warning) + ' 請保持此頁開啟。查看其他站的到站時間，不會更改下車站。</small><div class="detail-getoff-actions"><button type="button" data-detail-getoff-change>更改</button><button type="button" data-detail-getoff-cancel>取消提醒</button></div></section>';
+}
+function refreshDetailGetoff(it) {
+  if (document.body.classList.contains('detail-open') && routeDetailState.item && uid(routeDetailState.item) === uid(it)) renderRouteDetail();
+}
+function clearGetoffAlert(id) {
+  const previous = getoffAlerts.get(id);
+  if (previous?.timer) clearTimeout(previous.timer);
+  try { previous?.notification?.close(); } catch {}
+  getoffAlerts.delete(id);
+  board.querySelector('[data-id="' + cssEscape(id) + '"]')?.classList.remove('alert-flash');
+}
 function startGetoff(it, target) {
   const id = uid(it);
-  if (!navigator.geolocation) { alert('此手機不支援 GPS 定位'); return; }
-  const begin = () => {
-    getoff[id] = { active:true, route:it.route, targetSeq:target.seq, targetName:target.name, targetLat:target.lat, targetLng:target.lng };
-    saveGetoff();
-    if (getoffWatch != null) navigator.geolocation.clearWatch(getoffWatch);
-    getoffWatch = navigator.geolocation.watchPosition(pos => updateGetoff(it, pos.coords), () => { notifyGetoffError(); }, { enableHighAccuracy:true, maximumAge:15000, timeout:20000 });
-    closeSheet(); shell(); refresh();
-  };
-  if (target.lat == null || target.lng == null) { alert('呢個站暫時冇 GPS 座標，請揀另一個站'); return; }
-  begin();
+  if (!navigator.geolocation) { alert('此手機不支援 GPS 定位'); return false; }
+  if (!Number.isFinite(target.lat) || !Number.isFinite(target.lng)) { alert('呢個站暫時冇 GPS 座標，請揀另一個站'); return false; }
+  clearGetoffAlert(id);
+  if (getoffWatches.has(id)) navigator.geolocation.clearWatch(getoffWatches.get(id));
+  const state = { active:true, route:it.route, targetSeq:target.seq, targetName:target.name, targetLat:target.lat, targetLng:target.lng };
+  getoff[id] = state;
+  saveGetoff();
+  // Permission is requested from this user gesture; do not subscribe to Web Push.
+  if (prefs.notificationsEnabled !== false) {
+    const permission = getoffHasNativeBridge()
+      ? androidAlarmRequest('requestPermission', { requestExact:false }, 45000)
+      : ('Notification' in window && Notification.permission === 'default' ? Notification.requestPermission() : Promise.resolve());
+    Promise.resolve(permission).catch(() => {}).finally(() => { if (getoff[id] === state) refreshDetailGetoff(it); });
+  }
+  getoffWatches.set(id, navigator.geolocation.watchPosition(pos => {
+    if (getoff[id] === state) updateGetoff(it, pos.coords);
+  }, () => {
+    if (getoff[id] === state) { state.locationError = 'GPS 暫時未能定位，請確認已允許定位及開啟手機 GPS。'; refreshDetailGetoff(it); notifyGetoffError(); }
+  }, { enableHighAccuracy:true, maximumAge:15000, timeout:20000 }));
+  closeSheet(); shell(); refresh(); refreshDetailGetoff(it);
+  return true;
 }
-function stopGetoff(it) { delete getoff[uid(it)]; saveGetoff(); if (getoffWatch != null) { navigator.geolocation.clearWatch(getoffWatch); getoffWatch=null; } closeSheet(); shell(); }
+function stopGetoff(it) {
+  const id = uid(it);
+  clearGetoffAlert(id);
+  delete getoff[id]; saveGetoff();
+  if (getoffWatches.has(id)) { navigator.geolocation.clearWatch(getoffWatches.get(id)); getoffWatches.delete(id); }
+  closeSheet(); shell(); refreshDetailGetoff(it);
+}
 function notifyGetoffError() { const n=document.querySelector('#getoffNote'); if(n) n.textContent='GPS 暫時未能定位，請確認已允許定位及開啟手機 GPS。'; }
+async function notifyGetoff(it, state) {
+  const id = uid(it), authorized = () => getoff[id] === state && state.active && prefs.notificationsEnabled !== false;
+  if (!authorized()) return;
+  const body = it.route + ' 接近下車站：' + state.targetName;
+  if (getoffHasNativeBridge()) {
+    await androidAlarmRequest('notifyNow', { routeId:id, alarmKey:'getoff|' + id + '|' + state.targetSeq + '|' + state.alertUntil, title:'準備下車', body }, 2000);
+    return;
+  }
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const options = { body, icon:'./icon-192.png', tag:'getoff-' + id, renotify:true, requireInteraction:true, silent:false };
+  if (!document.hidden) {
+    try { const n = new Notification('準備下車', options); const entry = getoffAlerts.get(id); if (entry) entry.notification = n; return; } catch {}
+  }
+  const reg = await notificationRegistration();
+  if (authorized() && reg?.active) { try { await reg.showNotification('準備下車', options); } catch {} }
+}
 function updateGetoff(it, coords) {
-  const state=getoff[uid(it)]; if (!state?.active) return;
-  const d=routeStopsCache.get(routeVariantKey(it));
-  if (!d?.length) return;
-  const here={lat:coords.latitude,lng:coords.longitude};
-  let nearest=d[0], best=Infinity;
-  d.forEach(st => { if (st.lat == null || st.lng == null) return; const x=(st.lat-here.lat)*111000, y=(st.lng-here.lng)*111000*Math.cos(here.lat*Math.PI/180), dist=x*x+y*y; if(dist<best){best=dist;nearest=st;} });
-  const before=Math.max(0,state.targetSeq-nearest.seq);
-  const note=document.querySelector('#getoffNote'); if(note) note.textContent=nearest.seq >= state.targetSeq ? '已接近／到達目標站：' + state.targetName : '目前接近第 ' + nearest.seq + ' 站，距離目標約 ' + before + ' 個站';
-  const key=state.targetSeq + ':' + nearest.seq;
-  if (before <= 1 && nearest.seq < state.targetSeq && state.alertKey !== key) { state.alertKey=key; saveGetoff(); const alarmId=uid(it); const card=board.querySelector('[data-id="'+cssEscape(uid(it))+'"]'); if(card){card.classList.remove('alert-flash');void card.offsetWidth;card.classList.add('alert-flash');setTimeout(()=>card.classList.remove('alert-flash'),12000);} if(prefs.notificationsEnabled !== false && 'Notification' in window && Notification.permission==='granted') navigator.serviceWorker?.ready.then(reg=>reg.showNotification('就嚟落車喇',{body:it.route+' 下一個站：'+state.targetName,icon:'./icon-192.png',tag:'getoff-'+uid(it),requireInteraction:true,silent:false})).catch(()=>{}); }
+  const id = uid(it), state = getoff[id];
+  if (!state?.active || !Number.isFinite(coords.latitude) || !Number.isFinite(coords.longitude)) return;
+  const stops = routeStopsCache.get(routeVariantKey(it));
+  const nearest = nearestDetailStop(stops || [], coords);
+  if (!nearest) return;
+  state.locationError = '';
+  const before = Number(state.targetSeq) - Number(nearest.stop.seq);
+  const distance = gpsDistanceMeters({ lat:state.targetLat, lng:state.targetLng }, coords);
+  state.progress = before <= 0 ? '已接近／到達下車站：' + state.targetName : '目前接近第 ' + nearest.stop.seq + ' 站，距離下車站約 ' + before + ' 個站';
+  const note = document.querySelector('#getoffNote'); if (note) note.textContent = state.progress;
+  // Alert once per selected destination, including when a GPS fix skips the preceding stop.
+  // A nearby route station is required so a remote GPS fix cannot trigger an alert.
+  if (!state.alerted && ((before === 1 && nearest.distance <= 500) || distance <= 300)) {
+    state.alerted = true; state.alertUntil = Date.now() + 12000; saveGetoff();
+    const card = board.querySelector('[data-id="' + cssEscape(id) + '"]');
+    if (card) { card.classList.remove('alert-flash'); void card.offsetWidth; card.classList.add('alert-flash'); }
+    const entry = { timer:setTimeout(() => { clearGetoffAlert(id); refreshDetailGetoff(it); }, 12000), notification:null };
+    getoffAlerts.set(id, entry);
+    notifyGetoff(it, state).catch(() => {});
+  }
+  refreshDetailGetoff(it);
 }
 
 function renderPip() {
@@ -4231,7 +4376,7 @@ $('#fab').addEventListener('click', () => { if (!tourSeen()) markTourSeen(); if 
 $('#prefsBtn').addEventListener('click', () => { if (!tourSeen()) markTourSeen(); if (tour.classList.contains('on')) closeTour(); viewPrefs(); openSheet(); });
 $('#routeDetailBack').addEventListener('click', () => closeRouteDetail());
 window.addEventListener('popstate', () => { if (routeDetailState.open) closeRouteDetail({ history:false }); });
-document.addEventListener('keydown', e => { if (routeDetailState.open && e.key === 'Escape') { e.preventDefault(); closeRouteDetail(); } });
+document.addEventListener('keydown', e => { if (routeDetailState.open && e.key === 'Escape') { e.preventDefault(); if (getoffPicker.open) closeDetailGetoffPicker(); else closeRouteDetail(); } });
 busSaver.addEventListener('click', closeBusSaver);
 busSaver.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') { e.preventDefault(); closeBusSaver(); } });
 document.addEventListener('pointerdown', registerBusActivity, { passive:true });
