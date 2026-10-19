@@ -1,5 +1,5 @@
 /* BusPulse HK service worker: app shell, authorized local alarms, and consent-gated Web Push. */
-const SHELL = 'buspulse-hk-shell-v123-web-push-url';
+const SHELL = 'buspulse-hk-shell-v124-repeat-system-alert';
 const PUSH_STATE_CACHE = 'buspulse-hk-push-state-v1';
 const PUSH_STATE_KEY = '/__buspulse_hk_push_state_v1__';
 const FILES = ['./', './index.html', './bus-gap-estimator.js', './landsd-map-provider.js', './landsd-map-provider.css', './assets/landsd-logo.png', './manifest.json', './icon-192.png', './icon-512.png', './route-location-icon-v6.png', './fare-index.json', './place-index.json'];
@@ -126,7 +126,15 @@ async function deliverWebPush(e) {
     vibrate:[260,100,260,100,260], silent:false, requireInteraction:true,
     data:{ kind:'bus_arrival', id:data.id, alarmId:typeof data.alarmId === 'string' ? data.alarmId : data.id, session:data.session, url:'./' }
   };
-  try { await self.registration.showNotification(title, options); } catch { return false; }
+  try {
+    // Re-notify the same tagged notification instead of creating three visible
+    // messages. Android/browser notification channels may still rate-limit the
+    // sound, but this gives the system three chances while keeping one card.
+    for (let i = 0; i < 3; i++) {
+      await self.registration.showNotification(title, options);
+      if (i < 2) await new Promise(resolve => setTimeout(resolve, 900));
+    }
+  } catch { return false; }
   // A stop/pause/session change racing showNotification must not leave a stale alert visible.
   if (!matchingWatch(await readPushState(), data)) {
     await closePushNotification(data.id, data.session);
