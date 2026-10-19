@@ -57,7 +57,7 @@ test('six minute GPS gap advances only estimated progress, never sends an alight
   await expect(page.locator('[data-trip-status]')).toContainText('低信心');
   await expect(page.locator('[data-trip-marker]')).toContainText('估算／低信心');
   await expect(page.locator('#busSaver')).not.toHaveClass(/on/);
-  await page.locator('.trip-progress').screenshot({path:'/workspace/BusPulseHK-trip-progress-local-preview.png'});
+  await page.locator('.trip-progress').screenshot({path:test.info().outputPath('trip-progress-preview.png')});
   expect(await page.evaluate(()=>notifications.length)).toBe(0);
   expect(requests.some(url=>/22\.3|114\.2|latitude|longitude/.test(url))).toBe(false);
   await page.evaluate(()=>emit(22.303));
