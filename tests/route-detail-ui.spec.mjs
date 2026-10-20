@@ -93,17 +93,16 @@ test('opens full-screen timeline and changes selected stop without side effects'
   const gpsCss = (await page.locator('style').allTextContents()).join('\n');
   expect(gpsCss).toContain('data:image/svg+xml');
   expect(gpsCss).toContain("content:'↻'");
-  await expect(page.locator('.detail-inference').first()).toContainText('估計位置');
+  await expect(page.locator('.detail-inference, .summary-buses')).toHaveCount(0);
   await expect(page.locator('.detail-eta.near-arrival .near-arrival-dot').first()).toBeVisible();
   const markerCss = (await page.locator('style').allTextContents()).join('\n');
   expect(markerCss).toContain('@keyframes busBounce');
   expect(markerCss).toContain('@keyframes nearArrivalFlash');
-  await expect(page.locator('.detail-bus-status')).toContainText('巴士');
+  await expect(page.locator('.detail-bus-status')).toHaveCount(0);
   await expect(page.locator('[aria-label="巴士即將到站"]')).toHaveCount(0);
-  await expect(page.locator('[aria-label="估計巴士位置"]').first()).toBeVisible();
+  await expect(page.locator('[aria-label="估計巴士位置"]')).toHaveCount(0);
   await expect(page.locator('.stop-copy small').first()).toContainText('FIRST STATION');
   await expect(page.locator('.stop-copy small').first()).not.toContainText('STOP-');
-  await expect(page.locator('.detail-inference').first()).toContainText('估計位置');
   await expect(page.locator('.detail-reverse')).toHaveCSS('position', 'absolute');
   await expect(page.locator('.detail-service')).toContainText('營運時間表及服務資料');
   await expect(page.locator('.detail-service')).toContainText('官方班次、服務更新');
@@ -589,6 +588,29 @@ test('arrow keys move between stops and keep the selected ETA panel in sync', as
   await expect(first).toBeFocused();
 });
 
+test('GPS trip marker does not change the manually selected ETA stop', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__gps={callbacks:[],next:1};
+    Object.defineProperty(navigator,'geolocation',{configurable:true,value:{
+      watchPosition(success){const id=window.__gps.next++;window.__gps.callbacks.push({id,success});return id;},
+      clearWatch(){}
+    }});
+  });
+  await prepare(page);
+  await page.locator('[data-detail-id]').click();
+  await page.locator('[data-detail-stop="2"]').click();
+  await expect(page.locator('.detail-current-name')).toContainText('第二站');
+  await expect(page.locator('[data-detail-stop="2"]')).toHaveClass(/is-selected/);
+  await page.locator('[data-detail-gps]').click();
+  await expect.poll(()=>page.evaluate(()=>routeDetailState.gpsStatus)).toBe('watching');
+  await page.evaluate(()=>window.__gps.callbacks[0].success({coords:{latitude:22.305,longitude:114.205,accuracy:12},timestamp:Date.now()}));
+  await expect(page.locator('.stop-timeline [data-trip-marker]')).toHaveCount(1);
+  await expect(page.locator('[data-trip-marker]')).toHaveCount(1);
+  await expect(page.locator('.detail-current-name')).toContainText('第二站');
+  await expect(page.locator('[data-detail-stop="2"]')).toHaveClass(/is-selected/);
+  expect(await page.evaluate(()=>routeDetailState.selectedSeq)).toBe(2);
+});
+
 test('returning to the app closes the screen saver before showing the main UI', async ({ page }) => {
   await page.goto('./?smoke=route-detail-ui', { waitUntil: 'domcontentloaded' });
   const state = await page.evaluate(() => {
@@ -620,7 +642,7 @@ test('screen saver defaults to five minutes without overriding saved preferences
   await expect(page.locator('#busSaverDelay')).toHaveValue('45000');
 });
 
-test('main-board map opens selectable map with estimated buses and manual ETA refresh', async ({ page }) => {
+test('main-board map opens selectable map without estimated buses and manual ETA refresh', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('buspulse.first-use-tour.v1','1'));
   const getEtaRequestCount = await prepare(page);
   await page.setViewportSize({ width:320, height:800 });
@@ -638,12 +660,7 @@ test('main-board map opens selectable map with estimated buses and manual ETA re
   await expect(page.locator('.detail-map-panel.open .detail-eta')).toHaveCount(3);
   await expect.poll(() => page.locator('.detail-map-panel.open .detail-eta strong').first().textContent(), { timeout:10000 }).not.toContain('—');
   await expect(page.locator('.detail-map-panel.open .image-stop-marker-wrap')).toHaveCount(3);
-  await expect.poll(() => page.locator('.detail-map-panel.open .detail-estimated-bus').count(), { timeout:10000 }).toBeGreaterThan(0);
-  await expect(page.locator('.detail-map-panel.open .detail-estimated-bus').first()).toHaveCSS('width','21px');
-  await expect(page.locator('.detail-map-panel.open .detail-estimated-bus').first()).toHaveCSS('height','21px');
-  const numberFontSize=await page.locator('.detail-map-panel.open .detail-estimated-bus strong').first().evaluate(el => parseFloat(getComputedStyle(el).fontSize));
-  expect(numberFontSize).toBeGreaterThanOrEqual(8.5);
-  expect(numberFontSize).toBeLessThanOrEqual(9);
+  await expect(page.locator('.detail-map-panel.open .detail-estimated-bus')).toHaveCount(0);
   const mapRefresh=page.locator('[data-detail-map-refresh]');
   await expect(mapRefresh).toBeVisible();
   await expect(mapRefresh).toHaveAttribute('aria-label','即時更新全部車站 ETA');
@@ -653,12 +670,8 @@ test('main-board map opens selectable map with estimated buses and manual ETA re
   const refreshPaths=await mapRefresh.locator('svg path').evaluateAll(paths=>paths.map(path=>path.getAttribute('d')));
   expect(refreshPaths).toEqual(['M21 2v6h-6','M3 12a9 9 0 0 1 15-6.7L21 8','M3 12a9 9 0 0 0 15 6.7']);
   const legend=page.locator('[data-detail-map-bus-legend]');
-  await expect(legend).toBeVisible();
-  await expect(legend).toContainText('ETA 推算點');
-  await expect(legend).not.toContainText('部 ETA 估算巴士');
-  await expect(legend).toHaveAttribute('title',/非全線實際巴士車數/);
-  await expect(legend.locator('span').last()).toHaveCSS('text-shadow','none');
-  await expect(page.locator('.detail-map-panel.open .detail-estimated-bus strong').first()).toHaveCSS('text-shadow','none');
+  await expect(legend).toBeHidden();
+  await expect(legend).not.toContainText('ETA 推算點');
   const controlsOverlapLegend=await page.evaluate(() => {
     const a=document.querySelector('[data-detail-map-refresh]').getBoundingClientRect();
     const b=document.querySelector('[data-detail-map-bus-legend]').getBoundingClientRect();
@@ -795,7 +808,7 @@ test('official ETA stays raw when a different arrival moves into the same rank',
   expect(result.rawIso).toBe(result.expected);
 });
 
-test('long ETA candidates do not fly in a straight line when route geometry is missing', async ({ page }) => {
+test('missing route geometry shows no estimated map bus or estimate legend', async ({ page }) => {
   await page.addInitScript(()=>localStorage.setItem('buspulse.first-use-tour.v1','1'));
   await prepare(page);
   await page.evaluate(()=>{
@@ -807,7 +820,7 @@ test('long ETA candidates do not fly in a straight line when route geometry is m
     mapRoutePath=async()=>[];
   });
   await page.locator('[data-map-id]').first().click();
-  await expect(page.locator('[data-detail-map-bus-legend]')).toContainText('道路資料不足');
+  await expect(page.locator('[data-detail-map-bus-legend]')).toBeHidden();
   await expect(page.locator('.detail-map-panel.open .detail-estimated-bus')).toHaveCount(0);
 });
 

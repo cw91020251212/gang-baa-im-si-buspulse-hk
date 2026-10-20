@@ -12,7 +12,6 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.3.0/dist/maplibre-gl.css" crossorigin="">
 <link rel="stylesheet" href="landsd-map-provider.css">
-<link rel="stylesheet" href="trip-progress.css">
 <script type="importmap">
 {"imports":{"leaflet":"https://unpkg.com/leaflet@1.9.4/dist/leaflet-src.esm.js","maplibre-gl":"https://unpkg.com/maplibre-gl@6.3.0/dist/maplibre-gl.mjs"}}
 </script>
@@ -1023,6 +1022,7 @@ body.light .detail-map-panel.open .detail-map-canvas .map-tools .locate-btn.is-a
 .detail-map-panel.open .route-map .detail-estimated-bus {width:21px!important;height:21px!important;min-width:21px!important;min-height:21px!important;}
 .detail-map-panel.open .route-map .detail-estimated-bus small {right:-3px!important;top:-3px!important;width:9px!important;height:9px!important;font-size:6px!important;}
 </style>
+<link rel="stylesheet" href="trip-progress.css">
 </head>
 <body>
 <div class="top">
@@ -1715,7 +1715,7 @@ function closeBusSaver() {
   busSaverPathTimer = null;
   scheduleBusSaver();
 }
-function scheduleBusSaver() { clearTimeout(busSaverTimer); busSaverTimer = null; const delay = Number(prefs.screenSaverIdle); if (delay > 0 && items.length && !busSaverActive && !tripProgressSession) busSaverTimer = setTimeout(openBusSaver, delay); }
+function scheduleBusSaver() { clearTimeout(busSaverTimer); busSaverTimer = null; const delay = Number(prefs.screenSaverIdle); if (delay > 0 && items.length && !busSaverActive && !tripProgressJourneys.size) busSaverTimer = setTimeout(openBusSaver, delay); }
 function registerBusActivity() { if (busSaverActive) closeBusSaver(); else scheduleBusSaver(); }
 document.addEventListener('visibilitychange', () => {
   if (!busSaverActive) return;
@@ -2000,6 +2000,7 @@ function isCurrentRouteDetailGeneration(generation) {
 }
 function closeRouteDetailState() {
   closeDetailGetoffPicker(false);
+  if (routeDetailState.item && !getoff[uid(routeDetailState.item)]?.active) tripProgressJourneys.delete(uid(routeDetailState.item));
   resetTripProgress();
   disposeDetailRouteMap(routeDetailBody?.querySelector('[data-detail-map-wrap]'));
   routeDetailState.open = false;
@@ -2085,13 +2086,14 @@ function nearestDetailStop(stops, coords) {
     return !best || distance < best.distance ? { stop:st, distance } : best;
   }, null);
 }
-function detailGpsPanel(it, current) {
-  const state = routeDetailState, target = getoff[uid(it)];
-  if (state.gpsStatus === 'error') return '<div class="detail-gps-panel is-error" role="status"><span>GPS 暫時未能定位，請確認已允許定位。</span></div>';
+function detailGpsPanel(it) {
+  const state = routeDetailState;
+  if (state.gpsStatus === 'error') return '<div class="detail-gps-panel is-error" role="status">暫時未能定位，請允許手機定位。</div>';
   if (state.gpsStatus !== 'watching') return '';
-  const targetNote = target?.active ? (state.gpsSeq >= target.targetSeq ? '你就嚟到喇：' + target.targetName : state.gpsSeq != null && target.targetSeq - state.gpsSeq <= 1 ? '你就嚟到喇，下一個落車：' + target.targetName : '落車站：' + target.targetName) : '';
-  const source = state.gpsSource === 'network' ? '網絡／基站定位' : state.gpsSource === 'eta' ? '巴士 API ETA 數據推算' : 'GPS 定位', stale = state.gpsSource === 'eta' ? ' · GPS 暫時中斷，使用巴士數據推算' : state.gpsErrorCount > 0 ? ' · 訊號暫時中斷，保留最後位置' : '';
-  return '<div class="detail-gps-panel is-live" role="status"><span><b>● GPS／網絡跟車中</b>　目前接近第 ' + esc(state.gpsSeq || current?.seq || '—') + ' 站「' + esc(current?.name || '讀取中') + '」<small>' + esc(source + stale) + (targetNote ? ' · ' + targetNote : '') + '</small></span></div>';
+  const session = tripProgressJourneys.get(uid(it));
+  const position = session && tripProgressSnapshot(session);
+  if ((!position || position.status === 'waiting') && state.gpsErrorCount > 0) return '<div class="detail-gps-panel is-error" role="status">暫時未能定位，請確認手機定位已開啟。</div>';
+  return !position || position.status === 'waiting' ? '<div class="detail-gps-panel" role="status">正在定位…</div>' : '';
 }
 function detailActionButtons(it) {
   const state = routeDetailState;
@@ -2111,7 +2113,7 @@ function acceptDetailLocation(it, pos, source) {
   const nearest = nearestDetailStop(state.stops, pos.coords);
   state.gpsPosition = pos.coords; state.gpsPositionAccuracy = Number.isFinite(accuracy) ? accuracy : null; state.gpsSource = source; state.gpsPositionTime = at; state.gpsErrorCount = 0;
   state.gpsSeq = nearest?.stop?.seq || state.gpsSeq;
-  if (nearest?.stop) { state.selectedSeq = nearest.stop.seq; state.selectedStopId = nearest.stop.id; }
+  // GPS moves only the position marker; ETA browsing remains the user's choice.
   if (getoff[uid(it)]?.active) updateGetoff(it, pos.coords);
   if (routeDetailState.detailMapOpen) {
     focusDetailMapOnPosition(pos.coords, { pan:state.mapManualSelectedSeq == null });
@@ -2153,6 +2155,8 @@ function focusDetailMapOnPosition(coords, options = {}){
 function startRouteDetailGps(it, options = {}) {
   if (routeDetailState.gpsWatch != null || routeDetailState.gpsNetworkWatch != null) return;
   if (!navigator.geolocation) { routeDetailState.gpsStatus = 'error'; routeDetailState.gpsError = 'unsupported'; if (options.render !== false) renderRouteDetail(); else updateDetailMapGpsControl(); return; }
+  if (!getoff[uid(it)]?.active) tripProgressJourneys.delete(uid(it));
+  ensureTripProgress(it);
   routeDetailState.gpsStatus = 'watching'; routeDetailState.gpsError = null; routeDetailState.gpsErrorCount = 0; routeDetailState.mapManualSelectedSeq = null;
   if (options.render !== false) renderRouteDetail(); else updateDetailMapGpsControl();
   routeDetailState.gpsWatch = navigator.geolocation.watchPosition(pos => acceptDetailLocation(it, pos, 'gps'), detailLocationError, { enableHighAccuracy:true, maximumAge:10000, timeout:20000 });
@@ -2164,6 +2168,7 @@ function stopRouteDetailGps(options = {}) {
   if (routeDetailState.gpsWatch != null && navigator.geolocation) navigator.geolocation.clearWatch(routeDetailState.gpsWatch);
   if (routeDetailState.gpsNetworkWatch != null && navigator.geolocation) navigator.geolocation.clearWatch(routeDetailState.gpsNetworkWatch);
   routeDetailState.gpsWatch = null; routeDetailState.gpsNetworkWatch = null; routeDetailState.gpsStatus = 'idle'; routeDetailState.gpsSeq = null; routeDetailState.gpsPosition = null; routeDetailState.gpsPositionAccuracy = null; routeDetailState.gpsSource = null; routeDetailState.gpsPositionTime = 0; routeDetailState.gpsErrorCount = 0;
+  if (routeDetailState.item && !getoff[uid(routeDetailState.item)]?.active) { tripProgressJourneys.delete(uid(routeDetailState.item)); resetTripProgress(); }
   if (options.render !== false) renderRouteDetail(); else { routeDetailState.mapLocationMarker?.remove?.(); routeDetailState.mapLocationMarker = null; updateDetailMapGpsControl(); }
 }
 function detailVehicleStatus(stop) {
@@ -2384,6 +2389,7 @@ function reverseDetailItem(it) {
 async function switchRouteDetailDirection() {
   const next = reverseDetailItem(routeDetailState.item);
   if (!next) return;
+  selectTripProgress(next);
   const request = beginRouteDetailGeneration();
   routeDetailState.item = next; routeDetailState.routeId = uid(next); routeDetailState.variantKey = routeVariantKey(next);
   routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = null; routeDetailState.selectedStopId = null; routeDetailState.etaByStop.clear(); routeDetailState.etaHistory.clear(); routeDetailState.gapModel = BusGapEstimator.createModel(); routeDetailState.etaRequest = null; routeDetailState.fareLabel = null; routeDetailState.sweepStatus = 'loading';
@@ -2724,7 +2730,7 @@ function renderRouteDetail() {
   const savedPickerScrollTop = routeDetailBody.querySelector('.custom-picker-drawer')?.scrollTop;
   const currentService = routeDetailBody.querySelector('.detail-service');
   if (currentService) routeDetailState.serviceOpen = currentService.open;
-  const selected = routeDetailState.mapManualSelectedSeq || routeDetailState.gpsSeq || routeDetailState.selectedSeq;
+  const selected = routeDetailState.mapManualSelectedSeq || routeDetailState.selectedSeq;
   const selectedStop = routeDetailState.stops.find(s => s.seq === selected) || routeDetailState.stops[0];
   if (selectedStop) { routeDetailState.selectedSeq = selectedStop.seq; routeDetailState.selectedStopId = selectedStop.id; }
   routeDetailOperator.textContent = it.co;
@@ -2734,43 +2740,27 @@ function renderRouteDetail() {
   if (routeDetailState.stopsStatus === 'loading') { routeDetailBody.innerHTML = '<div class="detail-loading">載入路線站點…</div>'; return; }
   if (routeDetailState.stopsStatus === 'error') { routeDetailBody.innerHTML = '<div class="detail-loading">站點讀取失敗，請返回後再試。</div>'; return; }
   const current = selectedStop || { name:'未選擇車站', id:'', seq:'' };
-  const busEstimate = estimateActiveBusWaves();
-  const inferred = deriveEstimatedSegments(routeDetailState.stops, routeDetailState.etaByStop);
-  routeDetailState.vehicleInference = inferred[0] ? { status:'estimated', ...inferred[0] } : { status:'hidden', reason:'暫無足夠資料推算巴士位置' };
-  // The header and timeline use one synchronized, deduplicated ETA-segment
-  // result.  The separate time-drop estimate remains available for diagnosis,
-  // but is not allowed to disagree with what the user can see.
-  const virtualSegments = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop);
-  applyEtaPositionFallback(virtualSegments);
-  const markerAfter = new Map(); virtualSegments.forEach(segment => { const markup='<div class="detail-inference virtual" role="status" aria-label="估計 ' + esc(it.route) + ' 巴士位於第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間"><span class="virtual-bus-card"><span class="virtual-route-label" aria-hidden="true">' + esc(it.route) + '</span><span class="bus-front-marker enroute" role="img" aria-label="估計巴士位置" title="估計 ' + esc(it.route) + ' 巴士位置"></span></span><span class="virtual-bus-copy"><b>' + (segment.confidence === 'low' ? '低信心度：估計位置附近有巴士' : segment.approaching ? '估計位置：巴士即將到站' : '估計位置：巴士正在途中行駛') + '</b><small>' + (segment.confidence === 'low' ? '按站點距離及 ETA 推算：' + esc(Math.round(segment.travelMinutes)) + ' 分鐘路段；' : segment.confidence === 'medium' ? '按站序及 ETA 推算；' : '按同一 ETA 波次推算；') + '第 ' + esc(segment.fromSeq) + ' 至第 ' + esc(segment.toSeq) + ' 站之間 · 信心度 ' + esc(segment.score) + '/100（' + esc(segment.scoreLabel) + '）</small></span></div>'; markerAfter.set(segment.fromSeq,(markerAfter.get(segment.fromSeq) || '')+markup); });
-  const visibleBusCount = virtualSegments.length;
-  const enRouteSeqs = new Set(virtualSegments.map(segment => segment.fromSeq));
-  const nearStation = null;
-  const nearStationEta = null;
-  for (let i = 0; i < routeDetailState.stops.length - 1; i++) {
-    const a = detailEtaStateFor(routeDetailState.stops[i]), b = detailEtaStateFor(routeDetailState.stops[i + 1]);
-    const ea = detailFirstLiveEta(routeDetailState.stops[i]);
-    const eb = detailFirstLiveEta(routeDetailState.stops[i + 1]);
-    if (ea && eb && detailEtaIsApproaching(ea) && Date.parse(eb.iso) > Date.parse(ea.iso) && Date.parse(eb.iso) - Date.parse(ea.iso) <= 20 * 60000) enRouteSeqs.add(routeDetailState.stops[i].seq);
-  }
+  routeDetailState.vehicleInference = {status:'hidden'};
+  prepareTripProgressRoad(it, routeDetailState.stops);
+  const nearStation = null, nearStationEta = null;
   routeDetailBody.classList.remove('detail-loading');
   routeDetailBody.innerHTML =
-    '<div class="detail-summary">' + detailActionButtons(it) + '<div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><div class="detail-meta-row"><span class="summary-count">共 ' + routeDetailState.stops.length + ' 個站</span><span class="summary-buses" title="ETA 候選位置，不代表實際巴士數">ETA 候選位置：' + (routeDetailState.etaByStop.size ? visibleBusCount + ' 個' : '讀取中') + '</span></div><div class="detail-meta-row"><span class="summary-coverage">' + detailEtaCoverageText() + '</span></div><div class="detail-meta-row"><span class="summary-schedule">' + detailScheduleSummary() + '</span></div><div class="detail-meta-row"><span class="summary-fare">全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + customTripPanel(routeDetailState.stops) + '</div>' +
-    detailGetoffStatus(it) + tripProgressPanel(it) +
+    '<div class="detail-summary">' + detailActionButtons(it) + '<div class="detail-route-line"><span class="tag ' + esc(it.co) + '"><i class="detail-route-icon" aria-hidden="true">🚌</i>' + esc(CO_NAME[it.co] || it.co) + ' ' + esc(it.route) + '</span><span>往 ' + esc(it.dest || '終點') + '</span></div><div class="detail-meta"><div class="detail-meta-row"><span class="summary-count">共 ' + routeDetailState.stops.length + ' 個站</span></div><div class="detail-meta-row"><span class="summary-coverage">' + detailEtaCoverageText() + '</span></div><div class="detail-meta-row"><span class="summary-schedule">' + detailScheduleSummary() + '</span></div><div class="detail-meta-row"><span class="summary-fare">全程車資：' + esc(routeDetailState.fareLabel || '讀取中') + '</span></div></div>' + (reverseDetailItem(it) ? '<button class="detail-reverse" type="button" data-detail-reverse>↔ 對調方向</button>' : '') + customTripPanel(routeDetailState.stops) + '</div>' +
+    detailGetoffStatus(it) +
     '<div class="detail-map-panel' + (routeDetailState.detailMapOpen ? ' open' : '') + '" data-detail-map-wrap><div class="detail-map-head"><span>路線地圖</span></div>' + (routeDetailState.detailMapOpen ? detailEtaPanel(current) + detailMapContextMarkup(it, current) : '') + '<div class="detail-map-canvas"><div class="route-map"></div><div class="detail-map-bus-legend" data-detail-map-bus-legend hidden></div><div class="map-tools">' + (routeDetailState.detailMapOpen ? '<button class="detail-map-refresh" data-detail-map-refresh type="button" aria-label="即時更新全部車站 ETA" title="即時更新全部車站 ETA"><svg class="detail-map-refresh-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 2v6h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 12a9 9 0 0 0 15 6.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' : '') + '<button class="locate-btn' + (routeDetailState.gpsStatus === 'watching' ? ' is-active' : '') + '" data-detail-map-locate type="button" aria-pressed="' + String(routeDetailState.gpsStatus === 'watching') + '" aria-label="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '" title="' + (routeDetailState.gpsStatus === 'watching' ? '停止 GPS 定位' : '開啟 GPS 定位') + '">' + '<svg class="gps-crosshair" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1.5v5.5M12 17v5.5M1.5 12h5.5M17 12h5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>' + '</button><button class="detail-map-close" type="button" data-detail-map-close aria-label="關閉路線地圖" title="關閉路線地圖"><svg class="map-close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></div></div></div>' +
-    '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + detailVehicleStatus(current) + '</div>' +
+    '<div class="detail-live-dock"><div class="detail-current"><div class="detail-current-label">目前顯示車站</div><div class="detail-current-name">第 ' + esc(current.seq) + ' 站 · ' + esc(current.name) + '</div>' + '</div>' +
     detailGpsPanel(it, current) +
     '<div class="detail-status" role="status" aria-live="polite">' + esc(detailStatusText(current)) + detailStatusAction(current) + '</div></div>' +
     detailEtaPanel(current) +
     '<div class="detail-section-title"><span>沿途車站列表</span><small>共 ' + routeDetailState.stops.length + ' 個站</small></div>' +
-    '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const isLive = routeDetailState.gpsSeq === st.seq;
+    '<div class="stop-timeline" role="list">' + routeDetailState.stops.map(st => { const state = detailEtaStateFor(st); const next = state.etas?.[0]; const isLive = false;
     const isTarget = getoff[uid(it)]?.active && getoff[uid(it)].targetSeq === st.seq;
-    const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected ' : '') + (isLive ? 'is-live ' : '') + (isTarget ? 'is-getoff-target ' + (getoff[uid(it)].alertUntil > Date.now() ? 'is-getoff-alert' : '') : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (isLive ? '，你而家接近呢度' : st.seq === selected ? '，已選' : '，按一下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-content"><span class="stop-copy"><strong>' + esc(st.seq) + '　' + detailStopNameMarkup(st.name) + '</strong><small>' + esc(st.name_en || '') + '</small></span>' + '<span class="stop-state">' + (isLive ? '你而家喺呢度' : isTarget ? '落車站' : state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></span></button>'; const near = nearStation === st.seq ? '<div class="detail-between-bus" role="img" aria-label="巴士即將到站" title="巴士即將到站"><span class="bus-front-marker"></span><span class="bus-status-label">' + (nearStationEta?.sched ? '原定班次接近' : '巴士接近中') + '</span></div>' : ''; return row + near + tripProgressTimeline(it, st.seq) + (markerAfter.get(st.seq) || ''); }).join('') + '</div>' + detailServiceBlock(it, routeDetailState.serviceOpen);
+    const row = '<button class="stop-row ' + (st.seq === selected ? 'is-selected ' : '') + (isLive ? 'is-live ' : '') + (isTarget ? 'is-getoff-target ' + (getoff[uid(it)].alertUntil > Date.now() ? 'is-getoff-alert' : '') : '') + '" type="button" role="listitem" data-detail-stop="' + esc(st.seq) + '" aria-current="' + (st.seq === selected ? 'true' : 'false') + '" aria-label="第 ' + esc(st.seq) + ' 站 ' + esc(st.name) + (isLive ? '，你而家接近呢度' : st.seq === selected ? '，已選' : '，按一下查看') + '"><span class="stop-dot" aria-hidden="true"></span><span class="stop-content"><span class="stop-copy"><strong>' + esc(st.seq) + '　' + detailStopNameMarkup(st.name) + '</strong><small>' + esc(st.name_en || '') + '</small></span>' + '<span class="stop-state">' + (isLive ? '你而家喺呢度' : isTarget ? '落車站' : state.status === 'loading' ? '讀取中' : next ? detailEtaLabel(next) : state.status === 'error' ? '讀取失敗' : '未有班次') + '</span></span></button>'; const near = nearStation === st.seq ? '<div class="detail-between-bus" role="img" aria-label="巴士即將到站" title="巴士即將到站"><span class="bus-front-marker"></span><span class="bus-status-label">' + (nearStationEta?.sched ? '原定班次接近' : '巴士接近中') + '</span></div>' : ''; return row; }).join('') + tripProgressTimeline(it) + '</div>' + detailServiceBlock(it, routeDetailState.serviceOpen);
   routeDetail.scrollTop = savedDetailScrollTop;
   const refreshedPicker = routeDetailBody.querySelector('.custom-picker-drawer');
   if (refreshedPicker && savedPickerScrollTop != null) refreshedPicker.scrollTop = savedPickerScrollTop;
   updateRouteDetailCompact();
-  bindTripProgress(it);
+  updateTripProgressMarker(it);
   routeDetailBody.querySelector('[data-detail-gps]')?.addEventListener('click', () => startRouteDetailGps(it));
   routeDetailBody.querySelector('[data-detail-gps-stop]')?.addEventListener('click', stopRouteDetailGps);
   routeDetailBody.querySelector('[data-detail-map]')?.addEventListener('click', event => toggleDetailRouteMap(it, event.currentTarget));
@@ -2799,7 +2789,7 @@ function renderRouteDetail() {
   routeDetailBody.querySelectorAll('[data-detail-stop]').forEach(button => button.addEventListener('click', () => {
     const stop = routeDetailState.stops.find(s => String(s.seq) === button.dataset.detailStop);
     if (!stop) return;
-    routeDetailState.selectedSeq = stop.seq; routeDetailState.selectedStopId = stop.id; routeDetailState.pendingCenterStopSeq = stop.seq; renderRouteDetail();
+    routeDetailState.mapManualSelectedSeq = stop.seq; routeDetailState.selectedSeq = stop.seq; routeDetailState.selectedStopId = stop.id; routeDetailState.pendingCenterStopSeq = stop.seq; renderRouteDetail();
     const selectedButton = routeDetailBody.querySelector('[data-detail-stop="' + cssEscape(String(stop.seq)) + '"]');
     selectedButton?.focus({ preventScroll:true });
   }));
@@ -2846,7 +2836,7 @@ function renderRouteDetail() {
   if (focusedGetoffAction) (routeDetailBody.querySelector('[' + focusedGetoffAction + ']') || routeDetailBody.querySelector('[data-detail-getoff-open]'))?.focus({preventScroll:true});
 }
 async function openRouteDetail(it, trigger, options = {}) {
-  resetTripProgress();
+  selectTripProgress(it);
   routeDetailReturnFocus = trigger || document.activeElement;
   routeDetailReturnFocusId = routeDetailReturnFocus?.getAttribute?.('data-detail-id') || routeDetailReturnFocus?.getAttribute?.('data-map-id') || uid(it); routeDetailReturnFocusAttr = routeDetailReturnFocus?.hasAttribute?.('data-map-id') ? 'data-map-id' : 'data-detail-id';
   routeDetailState.open = true; routeDetailState.item = it; routeDetailState.routeId = uid(it); routeDetailState.variantKey = routeVariantKey(it); routeDetailState.stops = []; routeDetailState.stopsStatus = 'loading'; routeDetailState.selectedSeq = Number(it.seq) || null; routeDetailState.etaByStop.clear(); routeDetailState.etaHistory.clear(); routeDetailState.gapModel = BusGapEstimator.createModel(); routeDetailState.detailEtaLoading = false; routeDetailState.detailLastFetchAt = 0; routeDetailState.fareLabel = null; routeDetailState.scheduleLabel = null; routeDetailState.serviceOpen = false; routeDetailState.customPickerOpen = false; routeDetailState.customPickerMode = 'from'; routeDetailState.sweepStatus = 'loading'; routeDetailState.detailMapOpen = options.openMap === true; routeDetailState.mapReturnToBoard = options.openMap === true; routeDetailState.mapViewLocked = false; routeDetailState.mapManualSelectedSeq = null;
@@ -2857,7 +2847,7 @@ async function openRouteDetail(it, trigger, options = {}) {
   try {
     const stops = await getRouteStopsCached(it, { signal:request.signal });
     if (!isCurrentRouteDetailGeneration(request.generation)) return;
-    routeDetailState.stops = stops; routeDetailState.stopsStatus = 'ready'; routeDetailState.etaRequest = request; renderRouteDetail(); if (options.openMap) routeDetailState.mapViewLocked = true; if (getoff[uid(it)]?.active) startRouteDetailGps(it); loadDetailFare(it, request.generation); loadDetailSchedule(it, request.generation); loadRouteDetailEtas(it, request, routeDetailState.selectedStopId).then(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'ready'; }).catch(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'error'; });
+    routeDetailState.stops = stops; routeDetailState.stopsStatus = 'ready'; routeDetailState.etaRequest = request; renderRouteDetail(); if (options.openMap) routeDetailState.mapViewLocked = true; if (getoff[uid(it)]?.active && !tripProgressJourneys.has(uid(it))) startRouteDetailGps(it); loadDetailFare(it, request.generation); loadDetailSchedule(it, request.generation); loadRouteDetailEtas(it, request, routeDetailState.selectedStopId).then(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'ready'; }).catch(() => { if (isCurrentRouteDetailGeneration(request.generation)) routeDetailState.sweepStatus = 'error'; });
   } catch (e) {
     if (!isCurrentRouteDetailGeneration(request.generation)) return;
     routeDetailState.stopsStatus = 'error'; renderRouteDetail();
@@ -3275,9 +3265,10 @@ getoffPicker.querySelector('[data-getoff-confirm]').addEventListener('click', ()
 });
 function detailGetoffStatus(it) {
   const state = getoff[uid(it)];
-  if (!state?.active) return '<section class="detail-getoff-status" aria-label="下車提醒"><strong>下車提醒</strong><small>與查看到站時間分開；用手機 GPS 判斷接近目的站。</small><div class="detail-getoff-actions"><button type="button" data-detail-getoff-open>設下車站</button></div></section>';
-  const warning = prefs.notificationsEnabled === false ? '系統通知已關閉，只顯示畫面提示。' : !getoffHasNativeBridge() && (!('Notification' in window) || Notification.permission !== 'granted') ? '未允許系統通知，聲音提醒未能啟用。' : '聲音使用系統通知音，受手機通知音量及勿擾設定影響。';
-  return '<section class="detail-getoff-status' + (state.alertUntil > Date.now() ? ' is-getoff-alert' : '') + '" aria-label="下車提醒"><strong>下車提醒中：' + esc(state.targetName) + '</strong><div role="status" aria-live="polite">' + esc(state.locationError || state.progress || '正在取得 GPS 位置…') + '</div><small>' + esc(warning) + ' 請保持此頁開啟。查看其他站的到站時間，不會更改下車站。</small><div class="detail-getoff-actions"><button type="button" data-detail-getoff-change>更改</button><button type="button" data-detail-getoff-cancel>取消提醒</button></div></section>';
+  if (!state?.active) return '<section class="detail-getoff-status" aria-label="下車提醒"><div class="detail-getoff-actions"><button type="button" data-detail-getoff-open>設下車站</button></div></section>';
+  const warning = prefs.notificationsEnabled === false || !getoffHasNativeBridge() && (!('Notification' in window) || Notification.permission !== 'granted') ? '未開啟系統通知，只顯示畫面提示。' : '前一站提醒 · 請保持頁面開啟。';
+  const message = state.locationError ? '暫時未能定位，請確認手機定位已開啟。' : state.alerted ? '準備下車' : warning;
+  return '<section class="detail-getoff-status' + (state.alertUntil > Date.now() ? ' is-getoff-alert' : '') + '" aria-label="下車提醒"><strong>下車站：' + esc(state.targetName) + '</strong><small role="status" aria-live="polite">' + esc(message) + '</small><div class="detail-getoff-actions"><button type="button" data-detail-getoff-change>更改</button><button type="button" data-detail-getoff-cancel>取消提醒</button></div></section>';
 }
 function refreshDetailGetoff(it) {
   if (document.body.classList.contains('detail-open') && routeDetailState.item && uid(routeDetailState.item) === uid(it)) renderRouteDetail();
@@ -3293,12 +3284,12 @@ function startGetoff(it, target) {
   const id = uid(it);
   if (!navigator.geolocation) { alert('此手機不支援 GPS 定位'); return false; }
   if (!Number.isFinite(target.lat) || !Number.isFinite(target.lng)) { alert('呢個站暫時冇 GPS 座標，請揀另一個站'); return false; }
-  resetTripProgress();
   clearGetoffAlert(id);
   if (getoffWatches.has(id)) navigator.geolocation.clearWatch(getoffWatches.get(id));
-  const state = { active:true, route:it.route, targetSeq:target.seq, targetName:target.name, targetLat:target.lat, targetLng:target.lng };
+  const state = { active:true, route:it.route, targetSeq:target.seq, targetName:target.name, targetLat:target.lat, targetLng:target.lng, orderedJourney:true };
   getoff[id] = state;
   saveGetoff();
+  ensureTripProgress(it);
   // Permission is requested from this user gesture; do not subscribe to Web Push.
   if (prefs.notificationsEnabled !== false) {
     const permission = getoffHasNativeBridge()
@@ -3316,7 +3307,9 @@ function startGetoff(it, target) {
 }
 function stopGetoff(it) {
   const id = uid(it);
-  if (tripProgressSession?.routeId === id) resetTripProgress();
+  const keepTracking = routeDetailState.open && routeDetailState.item && uid(routeDetailState.item) === id && routeDetailState.gpsStatus === 'watching';
+  if (!keepTracking) tripProgressJourneys.delete(id);
+  if (!keepTracking && tripProgressSession?.routeId === id) resetTripProgress();
   clearGetoffAlert(id);
   delete getoff[id]; saveGetoff();
   if (getoffWatches.has(id)) { navigator.geolocation.clearWatch(getoffWatches.get(id)); getoffWatches.delete(id); }
@@ -3346,13 +3339,17 @@ function updateGetoff(it, coords) {
   const nearest = nearestDetailStop(stops || [], coords);
   if (!nearest) return;
   state.locationError = '';
-  const before = Number(state.targetSeq) - Number(nearest.stop.seq);
+  const ordered = (stops || []).slice().sort((a, b) => Number(a.seq) - Number(b.seq));
+  const before = ordered.findIndex(s => Number(s.seq) === Number(state.targetSeq)) - ordered.findIndex(s => Number(s.seq) === Number(nearest.stop.seq));
   const distance = gpsDistanceMeters({ lat:state.targetLat, lng:state.targetLng }, coords);
   state.progress = before <= 0 ? '已接近／到達下車站：' + state.targetName : '目前接近第 ' + nearest.stop.seq + ' 站，距離下車站約 ' + before + ' 個站';
   const note = document.querySelector('#getoffNote'); if (note) note.textContent = state.progress;
-  // Alert once per selected destination, including when a GPS fix skips the preceding stop.
-  // A nearby route station is required so a remote GPS fix cannot trigger an alert.
-  if (!state.alerted && ((before === 1 && nearest.distance <= 500) || distance <= 300)) {
+  // The journey uses ordered, trusted fixes only; tunnel estimates never notify.
+  const journey = tripProgressJourneys.get(id);
+  const approaching = journey
+    ? journey.lastFixAccepted && BusTripProgress.shouldAlert(journey.model, Date.now(), Number(state.targetSeq))
+    : !state.orderedJourney && Number.isFinite(coords.accuracy) && coords.accuracy <= 100 && ((before === 1 && nearest.distance <= 500) || distance <= 300);
+  if (!state.alerted && approaching) {
     state.alerted = true; state.alertUntil = Date.now() + 12000; saveGetoff();
     const card = board.querySelector('[data-id="' + cssEscape(id) + '"]');
     if (card) { card.classList.remove('alert-flash'); void card.offsetWidth; card.classList.add('alert-flash'); }
@@ -3827,7 +3824,7 @@ function updateDetailMapEstimatedVehicles(wrap, it, stops, road, now = Date.now(
     prepareDetailMapRoadDistances(routeDetailState.stops || [],road);
     wrap._estimatedRoadFor=road; wrap._estimatedRoadRouteKey=routeKey;
   }
-  const candidates = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop, now);
+  const candidates = []; // Device position only; no inferred buses in route detail.
   const segments = selectDetailMapBusSegments(candidates, 8, segment => detailMapEstimatedBusProgress(segment, stops, routeDetailState.etaByStop, now));
   const active = new Set();
   segments.forEach(segment => {
@@ -3920,7 +3917,7 @@ async function initDetailRouteMap(it) {
     }
     const points = routeMapBoundsPoints(stops, road);
     addImageStyleRouteLine(map, road);
-    const selected = routeDetailState.mapManualSelectedSeq || routeDetailState.gpsSeq || routeDetailState.selectedSeq;
+    const selected = routeDetailState.mapManualSelectedSeq || routeDetailState.selectedSeq;
     stops.forEach(st => {
       const marker = imageStyleStopMarker(st, Number(st.seq) === Number(selected));
       marker.bindPopup('<b>第 ' + st.seq + ' 站</b><br>' + esc(st.name));

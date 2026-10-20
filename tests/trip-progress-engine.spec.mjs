@@ -16,10 +16,58 @@ function fix(atMeters, time = t0, extra = {}) {
 }
 
 test('exports a global API and accepts valid zero latitude/longitude', () => {
-  expect(engine).toMatchObject({ create: expect.any(Function), ingest: expect.any(Function), snapshot: expect.any(Function) });
+  expect(engine).toMatchObject({ create: expect.any(Function), ingest: expect.any(Function), snapshot: expect.any(Function), shouldAlert: expect.any(Function) });
   const m = model([0, 1000]);
   expect(engine.ingest(m, fix(0), t0).accepted).toBe(true);
   expect(engine.snapshot(m, t0).status).toBe('gps');
+});
+
+test('alerts near the ordered trip penultimate stop even when stop sequence values are sparse', () => {
+  const m = model([0, 1000, 2000], { seqs: [10, 30, 80] });
+  expect(engine.shouldAlert(null, t0)).toBe(false);
+  expect(engine.shouldAlert(m, t0)).toBe(false);
+  engine.ingest(m, fix(0), t0);
+  expect(engine.shouldAlert(m, t0)).toBe(false);
+  expect(engine.ingest(m, fix(950, t0 + 60_000), t0 + 60_000).accepted).toBe(true);
+  expect(engine.snapshot(m, t0 + 60_000).seq).toBe(10);
+  expect(engine.shouldAlert(m, t0 + 60_000)).toBe(true);
+});
+
+test('alerts after GPS has already passed the preceding stop and on first fix of an adjacent-stop trip', () => {
+  const m = model([0, 1000, 2000], { seqs: [10, 30, 80] });
+  engine.ingest(m, fix(0), t0);
+  expect(engine.ingest(m, fix(1200, t0 + 120_000), t0 + 120_000).accepted).toBe(true);
+  expect(engine.snapshot(m, t0 + 120_000).seq).toBe(30);
+  expect(engine.shouldAlert(m, t0 + 120_000)).toBe(true);
+
+  const adjacent = model([0, 100]);
+  expect(engine.ingest(adjacent, fix(0), t0).accepted).toBe(true);
+  expect(engine.shouldAlert(adjacent, t0)).toBe(true);
+});
+
+test('does not alert when trusted GPS remains far from the preceding stop', () => {
+  const m = model([0, 1000, 2000], { seqs: [10, 30, 80] });
+  engine.ingest(m, fix(0), t0);
+  expect(engine.ingest(m, fix(500, t0 + 60_000), t0 + 60_000).accepted).toBe(true);
+  expect(engine.shouldAlert(m, t0 + 60_000)).toBe(false);
+});
+
+test('a short preceding leg does not alert at the boarding stop two stops before alighting', () => {
+  const m = model([0, 100, 200]);
+  engine.ingest(m, fix(0), t0);
+  expect(engine.shouldAlert(m, t0)).toBe(false);
+  engine.ingest(m, fix(80, t0 + 20_000), t0 + 20_000);
+  expect(engine.shouldAlert(m, t0 + 20_000)).toBe(true);
+});
+
+test('estimates do not alert, but a recovered fresh GPS fix near the preceding stop does', () => {
+  const m = model([0, 1000, 2000], { seqs: [10, 30, 80] });
+  engine.ingest(m, fix(0, t0, { speed: 10 }), t0);
+  expect(engine.snapshot(m, t0 + 40_000).status).toBe('estimated');
+  expect(engine.shouldAlert(m, t0 + 40_000)).toBe(false);
+  expect(engine.ingest(m, fix(900, t0 + 41_000), t0 + 41_000).accepted).toBe(true);
+  expect(engine.snapshot(m, t0 + 41_000).status).toBe('gps');
+  expect(engine.shouldAlert(m, t0 + 41_000)).toBe(true);
 });
 
 test('cold start is limited to the boarding segment and rejects missing/NaN coordinates', () => {
@@ -163,4 +211,21 @@ test('GPS recovery may cover a long distance when elapsed-time speed remains pla
   const recovered = engine.ingest(m, fix(9000, t0 + 15 * 60_000), t0 + 15 * 60_000);
   expect(recovered.accepted).toBe(true);
   expect(engine.snapshot(m, t0 + 15 * 60_000).progress).toBeGreaterThan(0.85);
+});
+
+test('existing-timeline tracking can start at a trusted mid-route fix without assuming the origin', () => {
+  const m = model([0, 1000, 2000, 3000], { create: {startAnywhere:true} });
+  expect(engine.ingest(m, fix(2400), t0).accepted).toBe(true);
+  expect(engine.snapshot(m,t0)).toMatchObject({seq:3,nextSeq:4});
+  const normal=model([0,1000,2000,3000]);
+  expect(engine.ingest(normal,fix(2400),t0).accepted).toBe(false);
+});
+
+test('selected alighting stop uses its own preceding stop rather than the route terminus', () => {
+  const m=model([0,1000,2000,3000],{seqs:[10,20,40,90],create:{startAnywhere:true}});
+  engine.ingest(m,fix(950),t0);
+  expect(engine.shouldAlert(m,t0,40)).toBe(true);
+  expect(engine.shouldAlert(m,t0,90)).toBe(false);
+  expect(engine.shouldAlert(m,t0,10)).toBe(false);
+  expect(engine.shouldAlert(m,t0,999)).toBe(false);
 });

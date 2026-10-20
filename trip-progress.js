@@ -78,7 +78,7 @@
     }
     return { cumulative, projectionSegments };
   }
-  function create({ stops, boardingSeq, targetSeq, roadFactor = 1.25, roadLines } = {}) {
+  function create({ stops, boardingSeq, targetSeq, roadFactor = 1.25, roadLines, startAnywhere = false } = {}) {
     if (!Array.isArray(stops) || stops.length < 2) throw new TypeError('stops must contain at least two ordered stops');
     if (!validNumber(roadFactor) || roadFactor < 1) throw new TypeError('roadFactor must be a finite number >= 1');
     const ordered = stops.map(s => ({ ...s })).sort((a, b) => a.seq - b.seq);
@@ -98,7 +98,7 @@
     const model = {
       tripStops, boardingSeq, targetSeq, roadFactor, cumulative, projectionSegments, geometrySource,
       samples: [], lastFix: null, lastProgress: 0, lastSegment: 0, confirmedIndex: 0,
-      lastKnownSpeed: null
+      lastKnownSpeed: null, startAnywhere
     };
     model.totalMeters = cumulative[cumulative.length - 1];
     return model;
@@ -132,7 +132,7 @@
     // first fix on a repeated/overlapping route to an arbitrary downstream occurrence.
     for (const segment of model.projectionSegments) {
       const i = segment.leg;
-      if (!last && i !== 0) continue;
+      if (!last && !model.startAnywhere && i !== 0) continue;
       const raw = project(point, segment.a, segment.b);
       const t = Math.max(segment.minT, Math.min(segment.maxT, raw.t));
       const p = { t, distance: raw.distance };
@@ -142,7 +142,7 @@
       }
       if (p.distance > deviationLimit) continue;
       const along = segment.offset + p.t * haversine(segment.a, segment.b);
-      if (!last && along > Math.max(500, fix.accuracy * 2)) continue;
+      if (!last && !model.startAnywhere && along > Math.max(500, fix.accuracy * 2)) continue;
       let penalty = 0;
       if (last) {
         const elapsed = (stamp - last.timestamp) / 1000;
@@ -221,5 +221,21 @@
     };
   }
 
-  root.BusTripProgress = Object.freeze({ create, ingest, snapshot });
+  function shouldAlert(model, now = Date.now(), targetSeq = model?.targetSeq) {
+    if (!model || !Array.isArray(model.tripStops) || model.tripStops.length < 2 || !model.lastFix || !validNumber(now) || !validNumber(model.lastFix.timestamp)) return false;
+    const elapsed = (now - model.lastFix.timestamp) / 1000;
+    // Match snapshot's trusted-GPS freshness boundary; estimates and paused states never alert.
+    if (elapsed < -FUTURE_TOLERANCE / 1000 || elapsed > LOST_SIGNAL_MS / 1000) return false;
+    const targetIndex = model.tripStops.findIndex(s => Number(s.seq) === Number(targetSeq));
+    if (targetIndex < 1) return false;
+    const precedingStopIndex = targetIndex - 1;
+    const precedingStopMeters = model.cumulative?.[precedingStopIndex];
+    if (!validNumber(precedingStopMeters) || !validNumber(model.lastProgress)) return false;
+    // Keep the approach window within the final part of a short station leg.
+    const precedingLeg = precedingStopIndex > 0 ? precedingStopMeters - model.cumulative[precedingStopIndex - 1] : 0;
+    const approachMeters = Math.min(120, Math.max(0, precedingLeg * 0.35));
+    return model.lastProgress >= precedingStopMeters - approachMeters;
+  }
+
+  root.BusTripProgress = Object.freeze({ create, ingest, snapshot, shouldAlert });
 })(typeof globalThis !== 'undefined' ? globalThis : this);
