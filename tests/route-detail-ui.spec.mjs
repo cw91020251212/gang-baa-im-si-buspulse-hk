@@ -642,7 +642,7 @@ test('screen saver defaults to five minutes without overriding saved preferences
   await expect(page.locator('#busSaverDelay')).toHaveValue('45000');
 });
 
-test('main-board map opens selectable map without estimated buses and manual ETA refresh', async ({ page }) => {
+test('main-board map opens selectable map with ETA-estimated buses and manual ETA refresh', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('buspulse.first-use-tour.v1','1'));
   const getEtaRequestCount = await prepare(page);
   await page.setViewportSize({ width:320, height:800 });
@@ -660,7 +660,8 @@ test('main-board map opens selectable map without estimated buses and manual ETA
   await expect(page.locator('.detail-map-panel.open .detail-eta')).toHaveCount(3);
   await expect.poll(() => page.locator('.detail-map-panel.open .detail-eta strong').first().textContent(), { timeout:10000 }).not.toContain('—');
   await expect(page.locator('.detail-map-panel.open .image-stop-marker-wrap')).toHaveCount(3);
-  await expect(page.locator('.detail-map-panel.open .detail-estimated-bus')).toHaveCount(0);
+  await expect(page.locator('.detail-map-panel.open .detail-estimated-bus').first()).toBeVisible();
+  await expect(page.locator('.detail-map-panel.open .detail-estimated-bus strong').first()).toHaveText('74X');
   const mapRefresh=page.locator('[data-detail-map-refresh]');
   await expect(mapRefresh).toBeVisible();
   await expect(mapRefresh).toHaveAttribute('aria-label','即時更新全部車站 ETA');
@@ -670,8 +671,8 @@ test('main-board map opens selectable map without estimated buses and manual ETA
   const refreshPaths=await mapRefresh.locator('svg path').evaluateAll(paths=>paths.map(path=>path.getAttribute('d')));
   expect(refreshPaths).toEqual(['M21 2v6h-6','M3 12a9 9 0 0 1 15-6.7L21 8','M3 12a9 9 0 0 0 15 6.7']);
   const legend=page.locator('[data-detail-map-bus-legend]');
-  await expect(legend).toBeHidden();
-  await expect(legend).not.toContainText('ETA 推算點');
+  await expect(legend).toBeVisible();
+  await expect(legend).toContainText('ETA 推算點');
   const controlsOverlapLegend=await page.evaluate(() => {
     const a=document.querySelector('[data-detail-map-refresh]').getBoundingClientRect();
     const b=document.querySelector('[data-detail-map-bus-legend]').getBoundingClientRect();

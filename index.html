@@ -3824,7 +3824,7 @@ function updateDetailMapEstimatedVehicles(wrap, it, stops, road, now = Date.now(
     prepareDetailMapRoadDistances(routeDetailState.stops || [],road);
     wrap._estimatedRoadFor=road; wrap._estimatedRoadRouteKey=routeKey;
   }
-  const candidates = []; // Device position only; no inferred buses in route detail.
+  const candidates = deriveVirtualBusSegments(routeDetailState.stops, routeDetailState.etaByStop, now);
   const segments = selectDetailMapBusSegments(candidates, 8, segment => detailMapEstimatedBusProgress(segment, stops, routeDetailState.etaByStop, now));
   const active = new Set();
   segments.forEach(segment => {
