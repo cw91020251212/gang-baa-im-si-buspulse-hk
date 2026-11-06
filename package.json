@@ -2,9 +2,17 @@
   "name": "buspulse-hk",
   "private": true,
   "type": "module",
+  "packageManager": "npm@10.9.9",
   "scripts": {
+    "prepare:cesium": "node scripts/prepare-cesium.mjs",
+    "check": "node scripts/check-syntax.mjs",
+    "test:3d-runtime": "node scripts/check-3d-runtime.mjs",
+    "pretest": "npm run prepare:cesium && npm run check && npm run test:3d-runtime",
     "test": "playwright test",
     "test:smoke": "playwright test tests/smoke.spec.mjs"
+  },
+  "dependencies": {
+    "cesium": "1.147.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0"

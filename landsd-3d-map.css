@@ -1,0 +1,86 @@
+/* Only the optional scene and this map's Leaflet panes are affected. */
+.buspulse-is-3d > .leaflet-map-pane {
+  visibility: hidden;
+  pointer-events: none;
+}
+.buspulse-is-3d .leaflet-control-zoom { display: none; }
+.buspulse-3d-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 450;
+  overflow: hidden;
+  background: #dce4e7;
+}
+.buspulse-3d-canvas { position: absolute; inset: 0; }
+.buspulse-3d-canvas .cesium-widget,
+.buspulse-3d-canvas .cesium-widget canvas { width: 100%; height: 100%; }
+.buspulse-3d-source { position: absolute; right: 4px; bottom: 18px; max-width: calc(100% - 130px); padding: 2px 4px; color: #174d3d; background: rgba(255,255,255,.9); border-radius: 3px; font: 10px/1.3 system-ui,sans-serif; z-index: 5000; }
+.buspulse-3d-source a { color: inherit; }
+.buspulse-3d-markers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+.buspulse-3d-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  height: max-content;
+  touch-action: manipulation;
+}
+.buspulse-3d-marker > .leaflet-marker-icon { position: relative; }
+.buspulse-3d-marker:focus-visible { outline: 3px solid #07583d; outline-offset: 3px; }
+.buspulse-3d-circle svg { display: block; overflow: visible; }
+.buspulse-3d-popup {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 4000;
+  pointer-events: auto;
+}
+.buspulse-3d-popup .leaflet-popup { visibility: visible; transition: none; }
+.buspulse-3d-popup .leaflet-popup-content-wrapper { max-width: min(300px, 80vw); }
+.buspulse-3d-status {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  transform: translateX(-50%);
+  max-width: 65%;
+  padding: 5px 9px;
+  border-radius: 6px;
+  color: #174d3d;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, .16);
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 4500;
+}
+.buspulse-3d-control { overflow: hidden; background: #fff; }
+.buspulse-3d-control button {
+  display: block;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #07583d;
+  background: #fff;
+  font: 700 14px/34px system-ui, sans-serif;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.buspulse-3d-control button:hover { background: #edf6f1; }
+.buspulse-3d-control button:focus-visible { outline: 2px solid #07583d; outline-offset: -3px; }
+.buspulse-3d-control button[aria-busy="true"] { color: #667b71; }
+.buspulse-3d-zoom button { border-top: 1px solid #d7e3dc; font-size: 23px; }
+.buspulse-3d-zoom[hidden],
+.buspulse-3d-status[hidden],
+.buspulse-3d-marker[hidden],
+.buspulse-3d-popup[hidden] { display: none; }
+/* Cesium's attribution remains visible and clickable; it is never hidden. */
+.buspulse-3d-canvas .cesium-viewer-bottom { z-index: 5000; }
+@media (pointer: coarse) {
+  .buspulse-3d-control button { width: 38px; height: 38px; line-height: 38px; }
+}

@@ -30,16 +30,8 @@ jobs:
         run: npm ci
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
-      - name: Run all tests
+      - name: Run all tests and runtime checks
         run: npm test
-      - name: Check inline JavaScript and service worker syntax
-        run: |
-          sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > /tmp/buspulse-inline.js
-          node --check /tmp/buspulse-inline.js
-          node --check landsd-map-compare.js
-          node --check landsd-map-provider.js
-          node --check sw.js
-          node --check bus-gap-estimator.js
       - name: Check whitespace
         run: git diff --check
 
@@ -53,30 +45,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Node for fixed 3D SDK
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Prepare production SDK assets
+        run: npm ci --omit=dev --no-audit --no-fund && npm run prepare:cesium
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
           enablement: true
       - name: Stage runtime site only
-        run: |
-          rm -rf _site
-          mkdir -p _site
-          mkdir -p _site/assets
-          cp index.html bus-gap-estimator.js trip-progress.js trip-progress-ui.js trip-progress.css landsd-map-compare.html landsd-map-compare.js landsd-map-provider.js landsd-map-provider.css manifest.json sw.js icon-192.png icon-512.png route-location-icon-v6.png fare-index.json place-index.json _site/
-          cp assets/landsd-logo.png _site/assets/
-          test -f _site/index.html
-          test -f _site/trip-progress.js
-          test -f _site/trip-progress-ui.js
-          test -f _site/trip-progress.css
-          test -f _site/landsd-map-provider.js
-          test -f _site/landsd-map-provider.css
-          test -f _site/landsd-map-compare.html
-          test -f _site/landsd-map-compare.js
-          test -f _site/assets/landsd-logo.png
-          test -f _site/sw.js
-          test ! -e _site/tests
-          test ! -e _site/node_modules
-          find _site -maxdepth 1 -type f -printf '%f\n' | sort
+        run: node scripts/stage-site.mjs
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:

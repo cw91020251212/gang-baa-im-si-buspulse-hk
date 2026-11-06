@@ -1,8 +1,8 @@
 /* BusPulse HK service worker: app shell, authorized local alarms, and consent-gated Web Push. */
-const SHELL = 'buspulse-hk-shell-v124-repeat-system-alert';
+const SHELL = 'buspulse-hk-shell-v125-landsd-3d';
 const PUSH_STATE_CACHE = 'buspulse-hk-push-state-v1';
 const PUSH_STATE_KEY = '/__buspulse_hk_push_state_v1__';
-const FILES = ['./', './index.html', './bus-gap-estimator.js', './landsd-map-provider.js', './landsd-map-provider.css', './assets/landsd-logo.png', './manifest.json', './icon-192.png', './icon-512.png', './route-location-icon-v6.png', './fare-index.json', './place-index.json'];
+const FILES = ['./', './index.html', './bus-gap-estimator.js', './landsd-map-provider.js', './landsd-map-provider.css', './landsd-3d-map.js', './landsd-3d-map.css', './landsd-3d-runtime.js', './scene3d.js', './assets/landsd-logo.png', './manifest.json', './icon-192.png', './icon-512.png', './route-location-icon-v6.png', './fare-index.json', './place-index.json'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(SHELL).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
 });

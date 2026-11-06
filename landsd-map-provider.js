@@ -179,6 +179,10 @@
       observer: null
     };
     states.set(map, state);
+    window.BusPulse3DMap?.install(map, {
+      suspendBasemap: () => suspend(map, true),
+      resumeBasemap: () => resume(map, true)
+    });
     if (map.attributionControl) map.attributionControl.addAttribution(ROUTE_ATTRIBUTION);
     map.once('unload', () => {
       state.disposed = true;
@@ -253,9 +257,10 @@
     return task;
   }
 
-  function suspend(map) {
+  function suspend(map, from3d = false) {
     const state = states.get(map);
     if (!state || state.disposed) return;
+    if (!from3d) window.BusPulse3DMap?.suspend(map);
     state.suspended = true;
     state.generation++;
     state.pending = null;
@@ -263,7 +268,7 @@
     removeFallback(state);
   }
 
-  function resume(map) {
+  function resume(map, from3d = false) {
     const state = states.get(map);
     if (!state || state.disposed) return addToMap(map);
     if (!state.suspended && (state.glLayer || state.pending)) return state.pending || Promise.resolve(state);
