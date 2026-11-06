@@ -27,3 +27,9 @@
 全畫面期間暫停Leaflet原生視窗resize listener，只由新控制處理尺寸並還原精確中心；退出後恢復原listener。不改原trackResize選项或地圖方法。依據[Leaflet公開trackResize／invalidateSize契約](https://leafletjs.com/reference.html#map-trackresize)及1.9.4原始碼，原生延後resize會再次clear `_lastCenter`，雙重尺寸還原會造成少量像素偏移；新控制只在尺寸真的改變時處理。歷史同類问题見[Leaflet #6051](https://github.com/Leaflet/Leaflet/issues/6051)，本次修正針對實測雙重resize，唔改官方SDK。
 
 2026-11-06路線色／全畫面改善驗證：29項3D與全畫面測試通過，原詳細頁／GPS／路線地圖受影響項目已通過；JS語法及22項靜態資產打包通過。真實官方SDK雙層路線回傳原紅色rgba(229,38,53,0.98)，zIndex2蓋在灰框zIndex1上。390×844手機實景畫布全畫面填滿，切回2D保持全畫面，Escape恢復原340px容器，無JS錯誤。
+
+## 紅線／全畫面正式站驗收完成
+
+2026-11-06已發布程式版本`0336b6615131b0313035b8e18dc8f450b2ca2434`。[Github Pages部署42146760331](https://github.com/cw91020251212/gang-baa-im-si-buspulse-hk/actions/runs/42146760331)成功，CI 229項通過、2項重試後通過、2項跳過；22項應用資產及完整SDK已打包。
+
+正式網址手機390×844真實SDK核對：原紅色rgba(229,38,53,0.98)、3px主線zIndex2；灰框rgba(75,85,93,0.96)、5px、zIndex1。全畫面地圖及3D畫布均為390×844、座標(0,0)，切回2D保持全畫面；Escape返回原340px容器，無JavaScript錯誤。正式全畫面JS/CSS、橋接程式及Service Worker均HTTP200。
