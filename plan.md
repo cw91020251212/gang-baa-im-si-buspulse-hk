@@ -7,3 +7,7 @@
 ## 結構
 
 `index.html`保留原主程式及UI，只載入新增橋接檔案。`landsd-map-provider.js`是各地圖共用入口，安裝切換控制並協調2D暫停／恢復。新增`landsd-3d-map.js`與CSS負責Cesium場景及原Leaflet圖層投影；`landsd-3d-runtime.js`及`scene3d.js`復用已驗證模型載入與距離換算。`scripts/prepare-cesium.mjs`準備固定SDK資產，原GitHub Pages workflow保存純靜態發布方式。新增測試與原測試共同保護巴士資料及地圖互動。
+
+## 路線顏色及全畫面改善
+
+原路線係灰色5px外框加紅色`#e52635`3px主線，3D須保持紅線蓋在灰框上，原路徑、顏色和透明度不變。各地圖增加獨立四角全畫面掣，2D／3D都可用盡畫面；退出／Escape回原面板尺寸，切換模式保持全畫面及視野。全畫面樣式限定地圖容器，深色與淺色控制各自獨立。

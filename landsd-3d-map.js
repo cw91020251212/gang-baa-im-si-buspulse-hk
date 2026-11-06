@@ -250,7 +250,9 @@
       parts.forEach(part => {
         record.entities.push(state.viewer.entities.add({ polyline: {
           positions: state.C.Cartesian3.fromDegreesArray(part.flatMap(ll => [ll.lng, ll.lat])),
-          width: options.weight ?? 3, material, clampToGround: true
+          // Ground batches otherwise reorder overlapping opaque/translucent
+          // strokes: the original grey casing must remain BELOW the red route.
+          width: options.weight ?? 3, material, clampToGround: true, zIndex: record.lineOrder
         } }));
       });
     }
@@ -272,6 +274,7 @@
         : layer instanceof L.Polyline ? 'line' : null;
     if (!kind) return;
     const record = { layer, kind, entities: [], dom: null, signature: null };
+    if (kind === 'line') record.lineOrder = ++state.lineOrder;
     state.records.set(layer, record);
     record.onChange = () => requestProjection(state);
     layer.on('move', record.onChange);
@@ -527,6 +530,7 @@
 
   function dispose(state) {
     if (state.disposed) return;
+    state.fullscreen?.dispose();
     state.disposed = true;
     stop(state, false);
     state.observer?.disconnect();
@@ -541,8 +545,9 @@
     const state = { map, hooks, container: map.getContainer(), mode: '2d', phase: 'ready',
       loading: false, pending: 0, viewer: null, disposed: false, error: null,
       generation: 0, abort: null, records: new Map(), handlers: [], popup: null,
-      frameTimer: null, lastFrame: 0, syncing: false, cameraDirty: false };
+      frameTimer: null, lastFrame: 0, syncing: false, cameraDirty: false, lineOrder: 0 };
     states.set(map, state);
+    state.fullscreen = window.BusPulseMapFullscreen?.install(map);
     const control = state.control = window.L.control({ position: 'topleft' });
     control.onAdd = () => {
       const root = window.L.DomUtil.create('div', 'leaflet-bar buspulse-3d-control');
@@ -595,7 +600,7 @@
     state.controller = Object.freeze({
       toggle: () => state.mode === '3d' ? stop(state, true) : start(state),
       setMode: mode => mode === '3d' ? start(state) : stop(state, true),
-      suspend: () => stop(state, false),
+      suspend: () => { state.fullscreen?.exit(); stop(state, false); },
       getState: () => state
     });
     updateControl(state);
@@ -603,7 +608,7 @@
   }
 
   window.BusPulse3DMap = Object.freeze({ install,
-    suspend: map => { const state = states.get(map); if (state) stop(state, false); },
+    suspend: map => { const state = states.get(map); if (state) { state.fullscreen?.exit(); stop(state, false); } },
     getState: map => states.get(map) || null
   });
 })();

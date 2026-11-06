@@ -11,11 +11,12 @@ const runtimeBody = await readFile(new URL('./fixtures/landsd-3d-runtime.mock.mj
 const fixtureHTML = `<!doctype html><html><head><meta charset="utf-8">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="/landsd-3d-map.css">
+<link rel="stylesheet" href="/map-fullscreen.css">
 <style>body{margin:0;font-family:system-ui}.map{width:360px;height:300px;position:relative;margin:12px}
 .image-stop-marker-wrap{background:none;border:0}.image-stop-marker{display:block;width:18px;height:18px;background:#e52635;border-radius:50%}.image-stop-marker.selected{background:#07583d}
 .eta-bus{background:#07583d;color:white;width:30px;height:20px}.popup-select{padding:8px}</style>
 </head><body><button id="outside">Unchanged outside control</button><div id="map" class="map"></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="/landsd-3d-map.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="/map-fullscreen.js"></script><script src="/landsd-3d-map.js"></script>
 <script>
 window.makeMap = function(id, mapOptions = {}) {
   const map = L.map(id, { zoomControl: true, attributionControl: true, zoomSnap: 0, ...mapOptions }).setView([22.3, 114.17], 14.375);
@@ -328,4 +329,55 @@ test('render/context failures fall back and an idle bridge does not create a bus
   await page.evaluate(() => __sceneMock.viewers[1].canvas.dispatchEvent(new Event('webglcontextlost',{cancelable:true})));
   await expect(page.locator('#map .buspulse-3d-overlay')).toHaveCount(0);
   expect(await page.evaluate(() => __sceneMock.destroyed)).toBe(2);
+});
+
+test('original red route stays above its grey casing in 3D, including style updates and mode re-entry', async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => {
+    fixture.route.remove();
+    const points = [[22.3,114.17],[22.301,114.171],[22.302,114.172]];
+    window.casing = L.polyline(points,{color:'#4b555d',weight:5,opacity:.96,lineCap:'round',lineJoin:'round'}).addTo(fixture.map);
+    window.redRoute = L.polyline(points,{color:'#e52635',weight:3,opacity:.98,lineCap:'round',lineJoin:'round'}).addTo(fixture.map);
+  });
+  await enable(page);
+  const strokes = () => page.evaluate(() => BusPulse3DMap.getState(fixture.map).viewer.entities.values.map(e => ({...e.polyline.material,width:e.polyline.width,z:e.polyline.zIndex,clamp:e.polyline.clampToGround})).sort((a,b)=>a.z-b.z));
+  const first = await strokes();
+  expect(first.map(({z,...rest})=>rest)).toEqual([
+    {color:'#4b555d',alpha:.96,width:5,clamp:true},
+    {color:'#e52635',alpha:.98,width:3,clamp:true}
+  ]);
+  expect(first[1].z).toBeGreaterThan(first[0].z);
+  await page.evaluate(() => casing.setStyle({weight:6}));
+  await expect.poll(strokes).toEqual([{...first[0],width:6},first[1]]);
+  await page.locator('#map .buspulse-3d-toggle').click();
+  await enable(page);
+  const reentered=await strokes();
+  expect(reentered[1].color).toBe('#e52635');
+  expect(reentered[1].z).toBeGreaterThan(reentered[0].z);
+  expect(await page.evaluate(()=>redRoute.options.color)).toBe('#e52635');
+});
+
+test('fullscreen persists across 2D/3D switching and panel suspension restores the original map', async ({page})=>{
+  await page.setViewportSize({width:390,height:844});
+  await open(page);
+  const start=await page.evaluate(()=>({centre:fixture.map.getCenter(),zoom:fixture.map.getZoom()}));
+  await page.locator('#map .buspulse-map-fullscreen-toggle').click();
+  await expect.poll(()=>page.locator('#map').boundingBox()).toMatchObject({x:0,y:0,width:390,height:844});
+  await enable(page);
+  await expect.poll(()=>page.locator('#map').boundingBox()).toMatchObject({x:0,y:0,width:390,height:844});
+  const stop=await projected(page,'marker');
+  await stop.click();
+  await page.locator('#map .popup-select').click();
+  expect(await page.evaluate(()=>fixture.counters.selected)).toBe(1);
+  await page.locator('#map .leaflet-popup-close-button').click();
+  await page.locator('#map .buspulse-3d-toggle').click();
+  await expect.poll(()=>page.locator('#map').boundingBox()).toMatchObject({width:390,height:844});
+  await page.evaluate(()=>fixture.controller.suspend());
+  await expect(page.locator('#map .buspulse-map-fullscreen-toggle')).toHaveAttribute('aria-pressed','false');
+  await expect.poll(()=>page.locator('#map').boundingBox()).toMatchObject({width:360,height:300});
+  const finish=await page.evaluate(()=>({centre:fixture.map.getCenter(),zoom:fixture.map.getZoom()}));
+  expect(finish.centre.lat).toBeCloseTo(start.centre.lat,7);
+  expect(finish.centre.lng).toBeCloseTo(start.centre.lng,7);
+  expect(finish.zoom).toBeCloseTo(start.zoom,7);
+  expect(await page.evaluate(()=>BusPulse3DMap.getState(fixture.map).mode)).toBe('2d');
 });
